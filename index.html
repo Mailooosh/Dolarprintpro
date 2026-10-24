@@ -1397,6 +1397,20 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 
 <script>
 "use strict";
+/* ================= canonical host =================
+   Deriv's OAuth app has exactly one registered redirect URI: https://www.dolarprintpro.site/callback
+   It matches character-for-character, so a client who opens the bare apex (dolarprintpro.site) and signs
+   in gets bounced by Deriv to the "We couldn't find that page" error card. The PKCE state also lives in
+   per-origin sessionStorage, so the sign-in must start and finish on the SAME origin. Send the apex to
+   www — keeping the path and query — before anything else runs. Guarded so it can never loop, and inert
+   on file:// , localhost and the Vercel preview hosts. */
+(function canonicalHost(){
+  try {
+    var h = location.hostname;
+    if (h === "dolarprintpro.site")
+      location.replace("https://www.dolarprintpro.site" + location.pathname + location.search + location.hash);
+  } catch(e){}
+})();
 /* ================= helpers ================= */
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
