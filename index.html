@@ -339,6 +339,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .mrow label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);display:flex;flex-direction:column;gap:5px}
 .steps{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .steps b{color:var(--text)}
+.steps code{font:600 11px var(--mono);color:var(--amber);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
 #acctPick{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px}
 #acctPick.hidden{display:none}
 /* ---------- TP / SL result popup — neon HUD scene ---------- */
@@ -1272,27 +1273,36 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
   <div class="mcard">
     <h2>Log in to your Deriv account</h2>
     <div class="steps">
-      <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → <b>Get started</b> → your app) and put its <b>App ID / Client ID</b> below. That number identifies your app only — it is not a secret and it grants no access by itself.</span>
-      <span>2. Add the <b>Redirect URI</b> shown below to that app, character for character — Deriv refuses a mismatch, including a missing trailing slash or a different host.</span>
-      <span>3. Press <b>LOG IN WITH DERIV</b>. Deriv opens its own sign-in page and asks the client to approve the scopes listed. This site never sees or stores anyone's password, and no token is typed in here.</span>
-      <span>4. The token Deriv returns is short-lived (about an hour) and is kept in this browser tab only — not on any server and not in long-term storage. When it lapses, the page asks the client to sign in again.</span>
-    </div>
-    <div class="mrow">
-      <label>Deriv OAuth Client ID (App ID)<input type="text" id="oauthClientId" placeholder="e.g. 12345" autocomplete="off" inputmode="numeric" spellcheck="false"></label>
-    </div>
-    <div class="mrow">
-      <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade account_manage" autocomplete="off" spellcheck="false"></label>
-    </div>
-    <div class="mrow">
-      <label>Redirect URI to register on your Deriv app
-        <div class="urichip"><code id="oauthRedirect">—</code><button class="btn btn-ghost btn-xs" id="oauthCopyBtn" type="button">COPY</button></div>
-      </label>
+      <span>Press <b>LOG IN WITH DERIV</b>. Deriv opens its <b>own</b> sign-in page — type your email and password <b>there</b>, never here.</span>
+      <span>Deriv then shows <b>"Authorize … to access your account"</b>. Tap <b>Allow access</b> and this page comes back with your balance, ready to trade.</span>
+      <span>This site never sees your password, never stores a token on a server, and asks you for <b>no App ID and no API token</b>. The login lasts about an hour, then the page simply asks you to sign in again.</span>
     </div>
     <div class="note" id="oauthStatus"></div>
     <div id="acctPick" class="hidden"></div>
     <div class="oauthhero">
       <button class="btn btn-red" id="oauthLoginBtn">LOG IN WITH DERIV</button>
     </div>
+    <details class="adv">
+      <summary>Owner settings — Deriv OAuth app, scopes and redirect URL</summary>
+      <div class="note" style="margin-top:0">Only the person who owns this site needs this panel. Clients just press the button above: the app ID below is already built into the page, so it is only here to switch the site to a different Deriv app. A <b>Client ID is public by design</b> — it travels in the browser address to Deriv and grants nothing on its own; the secret half is the list of redirect URLs registered on the app plus the client's own login.</div>
+      <div class="steps">
+        <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → <b>Get started</b> → your app) and put its <b>App ID / Client ID</b> below. Deriv answers an unknown id with <code>invalid_client</code> — a Deriv error page, not this one.</span>
+        <span>2. Add the <b>Redirect URI</b> shown below to that app's registered redirect URLs, character for character — Deriv refuses a mismatch, including a missing trailing slash or a different host, and answers <code>redirect_uri does not match</code>.</span>
+        <span>3. Press <b>LOG IN WITH DERIV</b>. Deriv opens its own sign-in page and asks the client to approve the scopes listed. No token is typed in here.</span>
+        <span>4. The token Deriv returns is short-lived (about an hour) and is kept in this browser tab only — not on any server and not in long-term storage. When it lapses, the page asks the client to sign in again.</span>
+      </div>
+      <div class="mrow">
+        <label>Deriv OAuth Client ID (App ID)<input type="text" id="oauthClientId" placeholder="already baked into this build" autocomplete="off" inputmode="numeric" spellcheck="false"></label>
+      </div>
+      <div class="mrow">
+        <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade account_manage" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <div class="mrow">
+        <label>Redirect URI to register on your Deriv app
+          <div class="urichip"><code id="oauthRedirect">—</code><button class="btn btn-ghost btn-xs" id="oauthCopyBtn" type="button">COPY</button></div>
+        </label>
+      </div>
+    </details>
     <details class="adv">
       <summary>Advanced — paste an API token instead (single personal account)</summary>
       <div class="note" style="margin-top:0">This older path uses one token that belongs to one Deriv account — every person using the site would trade on <b>that</b> account. Use the sign-in above for clients. New-format tokens (pat_…) are exchanged for a one-time Deriv session over api.derivws.com REST, and the socket then connects to the session URL Deriv returns — that URL contains your temporary session credential, so it changes on every connect. Classic tokens connect directly over WebSocket. Either way your token goes only to Deriv's official endpoints (api.derivws.com) and is never sent anywhere else.</div>
@@ -6257,7 +6267,9 @@ function openAuth(){
   const ai = $("#appIdInput");
   if (ai && !ai.value) ai.value = store.get("dt_app_id") || "";
   const cid = $("#oauthClientId");
-  if (cid && !cid.value) cid.value = store.get("dt_client_id") || "";
+  /* Show the id that will actually be used. The owner's saved override wins, otherwise the id
+     baked into this build — never a stale value from a visitor's first attempt.                  */
+  if (cid && !cid.value) cid.value = store.get("dt_client_id_owner") || OAUTH_CLIENT_ID || store.get("dt_client_id") || "";
   const sc = $("#oauthScope");
   if (sc && !sc.value) sc.value = store.get("dt_oauth_scope") || OAUTH_DEFAULT_SCOPE;
   oauthRefreshUi();
@@ -6474,6 +6486,14 @@ function switchAccountTo(target){
 const OAUTH_AUTHORIZE_URL = "https://auth.deriv.com/oauth2/auth";
 const OAUTH_TOKEN_URL     = "https://auth.deriv.com/oauth2/token";
 const OAUTH_DEFAULT_SCOPE = "trade account_manage";
+/* The owner's registered Deriv OAuth application ("Dollarprinter V2"), baked in so a client never
+   types anything: they press one button, sign in on Deriv's own page and tap Allow access.
+   A client_id is PUBLIC by design — it travels in the browser address sent to Deriv and grants
+   nothing on its own; the secret half is the redirect-URL list on the app plus the user's login.
+   Deriv answers an unknown id with `invalid_client`, and an id whose app does not list this page's
+   address answers with `redirect_uri does not match` — both land on a Deriv error page, not here.
+   Override in the modal's Owner settings to run the site against a different app.               */
+const OAUTH_CLIENT_ID = "34iyncRMY1FxE4TWisRR1";
 const OAUTH_KEY       = "dt_oauth";        /* sessionStorage { t, exp, cid, rid, acct } */
 const OAUTH_STATE_KEY = "dt_oauth_state";  /* sessionStorage { v, verifier, cid, rid, scopes, at } */
 let oauthTimer = null, oauthWarned = false;
@@ -6484,7 +6504,12 @@ let oauthNote = null;
 
 function oauthClientId(){
   const el = $("#oauthClientId");
-  return (el && el.value.trim()) || store.get("dt_client_id") || "";
+  const typed = el && el.value.trim();
+  /* Order matters. An owner's deliberate override (typed in Owner settings) wins; otherwise the
+     app id BAKED INTO THIS BUILD wins over anything this browser remembers, because a visitor who
+     once typed a wrong App ID — or the documentation's sample 1089 — would otherwise be bounced by
+     Deriv's invalid_client error page on every later attempt and blame the site.                  */
+  return typed || store.get("dt_client_id_owner") || OAUTH_CLIENT_ID || store.get("dt_client_id") || "";
 }
 function oauthScopes(){
   const el = $("#oauthScope");
@@ -6539,10 +6564,10 @@ function oauthRefreshUi(){
   }
   if (btn) btn.disabled = false;
   if (!oauthClientId()){
-    oauthSetStatus("Step 1: put the App ID / Client ID of your registered Deriv OAuth app above. Step 2: register this Redirect URI on that same app, exactly as shown.", "");
+    oauthSetStatus("No Deriv app id is built into this copy. Open Owner settings below and put the App ID / Client ID of your registered Deriv OAuth app there, then register this Redirect URI on that same app.", "");
     return;
   }
-  oauthSetStatus("Ready. Deriv will show its own login page and ask this client to approve: " + oauthScopes() + ". No password and no token is typed into this site.", "good");
+  oauthSetStatus("Ready. Press the button, sign in on Deriv's own page, then tap Allow access. Deriv will ask this client to approve: " + oauthScopes() + ". No password, App ID or token is typed into this site.", "good");
 }
 function oauthSave(patch){
   try {
@@ -7031,6 +7056,15 @@ function init(){
     if (!el) return;
     el.addEventListener("input", () => { oauthNote = null; store.set(p[1], el.value.trim()); oauthRefreshUi(); });
   });
+  /* A client id typed into Owner settings is remembered as an explicit override and survives a
+     reload; re-typing the baked id clears the override so the build's own app takes over again.
+     Ordinary clients never reach this field — they just press the button.                        */
+  const cidEl = $("#oauthClientId");
+  if (cidEl) cidEl.addEventListener("input", () => {
+    const v = cidEl.value.trim();
+    if (v && v !== OAUTH_CLIENT_ID) store.set("dt_client_id_owner", v);
+    else store.set("dt_client_id_owner", "");
+  });
   oauthRefreshUi();
   $("#authConnect").addEventListener("click", async () => {
     const token = $("#tokenInput").value.trim();
@@ -7183,6 +7217,7 @@ function init(){
   window.DT = { state, api, bots: BOTS, signal, scan, activity,
     auth: { start: startOAuthLogin, callback: handleOAuthCallback, session: oauthLoad, clear: oauthClear,
             redirect: oauthRedirectUri, env: oauthEnvProblem, refresh: oauthRefreshUi, expire: oauthExpired,
+            clientId: oauthClientId, scopes: oauthScopes,
             authorize: authorizeWithToken },
     scanPop: { open: scanPopOpen, close: scanPopClose, render: scanPopRender, state: scanPop, defs: SCAN_POP } };
   setConn("connecting");
