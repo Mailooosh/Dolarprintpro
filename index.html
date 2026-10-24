@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deriv Terminal — Live Digit Distribution, Recovery Bots & AI Digit-Heat Signals</title>
+<title>DolarPrintPro</title>
 <style>
 :root{
   --bg:#070b11; --panel:#0e141d; --panel2:#131b27; --line:#1d2937; --line2:#2a3a4f;
@@ -333,6 +333,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 /* ---------- modal / toast ---------- */
 .modal{position:fixed;inset:0;background:rgba(3,7,12,.74);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
 .modal.hidden{display:none}
+.hidden{display:none !important}
 .mcard{background:var(--panel);border:1px solid var(--line2);border-radius:13px;width:min(520px,94vw);max-height:92vh;overflow:auto;padding:20px}
 .mcard h2{font-size:17px;margin-bottom:12px}
 .mrow{display:grid;gap:10px;margin:12px 0}
@@ -340,8 +341,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .steps{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .steps b{color:var(--text)}
 .steps code{font:600 11px var(--mono);color:var(--amber);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
-#acctPick{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px}
-#acctPick.hidden{display:none}
+/* Round 65: the owner/PAT panels hide behind one ⚙ row so the client's card is just a button. */
+details.gear{border:none;background:transparent;padding:0;margin-top:10px}
+details.gear>summary{text-align:center;font-size:15px;letter-spacing:.3em;color:var(--dim);padding:4px 0}
+details.gear>summary:hover{color:var(--muted)}
+details.gear[open]{padding-bottom:0}
+details.gear details.adv{margin-top:8px}
 /* ---------- TP / SL result popup — neon HUD scene ---------- */
 #resultModal{flex-direction:column;background:rgba(3,7,12,.86)}
 #resultModal::before{content:"";position:absolute;inset:0;background:url('tp-scene.jpg') center 30%/cover no-repeat;filter:blur(7px) brightness(.45) saturate(1.25);opacity:0;transition:opacity .3s;pointer-events:none}
@@ -1268,54 +1273,56 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 </footer>
 </div>
 
-<!-- ============ AUTH MODAL ============ -->
+<!-- ============ AUTH MODAL ============
+     Round 65: the client sees ONE button. The explanatory paragraphs and the in-card account
+     chooser are gone — Deriv itself is asked for the "Authorize … Allow access / Deny" screen
+     (prompt=consent on the authorize URL) and the trading account is picked by the rules in
+     authorizeWithToken(), with the header's account menu as the way to change it. The owner
+     panels live behind the single ⚙ row so nothing else is on screen. -->
 <div class="modal hidden" id="authModal">
   <div class="mcard">
     <h2>Log in to your Deriv account</h2>
-    <div class="steps">
-      <span>Press <b>LOG IN WITH DERIV</b>. Deriv opens its <b>own</b> sign-in page — type your email and password <b>there</b>, never here.</span>
-      <span>Deriv then shows <b>"Authorize … to access your account"</b>. Tap <b>Allow access</b> and this page comes back with your balance, ready to trade.</span>
-      <span>This site never sees your password, never stores a token on a server, and asks you for <b>no App ID and no API token</b>. The login lasts about an hour, then the page simply asks you to sign in again.</span>
-    </div>
-    <div class="note" id="oauthStatus"></div>
-    <div id="acctPick" class="hidden"></div>
+    <div class="note hidden" id="oauthStatus"></div>
     <div class="oauthhero">
       <button class="btn btn-red" id="oauthLoginBtn">LOG IN WITH DERIV</button>
     </div>
-    <details class="adv">
-      <summary>Owner settings — Deriv OAuth app, scopes and redirect URL</summary>
-      <div class="note" style="margin-top:0">Only the person who owns this site needs this panel. Clients just press the button above: the app ID below is already built into the page, so it is only here to switch the site to a different Deriv app. A <b>Client ID is public by design</b> — it travels in the browser address to Deriv and grants nothing on its own; the secret half is the list of redirect URLs registered on the app plus the client's own login.</div>
-      <div class="steps">
-        <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → <b>Get started</b> → your app) and put its <b>App ID / Client ID</b> below. Deriv answers an unknown id with <code>invalid_client</code> — a Deriv error page, not this one.</span>
-        <span>2. Add the <b>Redirect URI</b> shown below to that app's registered redirect URLs, character for character — Deriv refuses a mismatch, including a missing trailing slash or a different host, and answers <code>redirect_uri does not match</code>.</span>
-        <span>3. Press <b>LOG IN WITH DERIV</b>. Deriv opens its own sign-in page and asks the client to approve the scopes listed. No token is typed in here.</span>
-        <span>4. The token Deriv returns is short-lived (about an hour) and is kept in this browser tab only — not on any server and not in long-term storage. When it lapses, the page asks the client to sign in again.</span>
-      </div>
-      <div class="mrow">
-        <label>Deriv OAuth Client ID (App ID)<input type="text" id="oauthClientId" placeholder="already baked into this build" autocomplete="off" inputmode="numeric" spellcheck="false"></label>
-      </div>
-      <div class="mrow">
-        <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade" autocomplete="off" spellcheck="false"></label>
-      </div>
-      <div class="mrow">
-        <label>Redirect URI to register on your Deriv app
-          <div class="urichip"><code id="oauthRedirect">—</code><button class="btn btn-ghost btn-xs" id="oauthCopyBtn" type="button">COPY</button></div>
-        </label>
-      </div>
-    </details>
-    <details class="adv">
-      <summary>Advanced — paste an API token instead (single personal account)</summary>
-      <div class="note" style="margin-top:0">This older path uses one token that belongs to one Deriv account — every person using the site would trade on <b>that</b> account. Use the sign-in above for clients. New-format tokens (pat_…) are exchanged for a one-time Deriv session over api.derivws.com REST, and the socket then connects to the session URL Deriv returns — that URL contains your temporary session credential, so it changes on every connect. Classic tokens connect directly over WebSocket. Either way your token goes only to Deriv's official endpoints (api.derivws.com) and is never sent anywhere else.</div>
-      <div class="mrow">
-        <label>Deriv App ID<input type="text" id="appIdInput" placeholder="e.g. 12345 (needed for pat_ tokens)" autocomplete="off" inputmode="numeric"></label>
-      </div>
-      <div class="mrow">
-        <label>API token<input type="password" id="tokenInput" placeholder="pat_… (new) or the classic token" autocomplete="off"></label>
-        <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="rememberChk" checked> Remember token in this browser (localStorage)</label>
-      </div>
-      <div class="mfoot">
-        <button class="btn btn-ghost" id="authConnect">Authorize token</button>
-      </div>
+    <details class="adv gear">
+      <summary>⚙</summary>
+      <details class="adv">
+        <summary>Owner settings — Deriv OAuth app, scopes and redirect URL</summary>
+        <div class="note" style="margin-top:0">Only the person who owns this site needs this panel. Clients just press the button above: the app ID below is already built into the page, so it is only here to switch the site to a different Deriv app. A <b>Client ID is public by design</b> — it travels in the browser address to Deriv and grants nothing on its own; the secret half is the list of redirect URLs registered on the app plus the client's own login.</div>
+        <div class="steps">
+          <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → <b>Get started</b> → your app) and put its <b>App ID / Client ID</b> below. Deriv answers an unknown id with <code>invalid_client</code> — a Deriv error page, not this one.</span>
+          <span>2. Add the <b>Redirect URI</b> shown below to that app's registered redirect URLs, character for character — Deriv refuses a mismatch, including a missing trailing slash or a different host, and answers <code>redirect_uri does not match</code>.</span>
+          <span>3. Press <b>LOG IN WITH DERIV</b>. Deriv opens its own sign-in page and asks the client to approve the scopes listed. No token is typed in here.</span>
+          <span>4. The token Deriv returns is short-lived (about an hour) and is kept in this browser tab only — not on any server and not in long-term storage. When it lapses, the page asks the client to sign in again.</span>
+        </div>
+        <div class="mrow">
+          <label>Deriv OAuth Client ID (App ID)<input type="text" id="oauthClientId" placeholder="already baked into this build" autocomplete="off" inputmode="numeric" spellcheck="false"></label>
+        </div>
+        <div class="mrow">
+          <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade" autocomplete="off" spellcheck="false"></label>
+        </div>
+        <div class="mrow">
+          <label>Redirect URI to register on your Deriv app
+            <div class="urichip"><code id="oauthRedirect">—</code><button class="btn btn-ghost btn-xs" id="oauthCopyBtn" type="button">COPY</button></div>
+          </label>
+        </div>
+      </details>
+      <details class="adv">
+        <summary>Advanced — paste an API token instead (single personal account)</summary>
+        <div class="note" style="margin-top:0">This older path uses one token that belongs to one Deriv account — every person using the site would trade on <b>that</b> account. Use the sign-in above for clients. New-format tokens (pat_…) are exchanged for a one-time Deriv session over api.derivws.com REST, and the socket then connects to the session URL Deriv returns — that URL contains your temporary session credential, so it changes on every connect. Classic tokens connect directly over WebSocket. Either way your token goes only to Deriv's official endpoints (api.derivws.com) and is never sent anywhere else.</div>
+        <div class="mrow">
+          <label>Deriv App ID<input type="text" id="appIdInput" placeholder="e.g. 12345 (needed for pat_ tokens)" autocomplete="off" inputmode="numeric"></label>
+        </div>
+        <div class="mrow">
+          <label>API token<input type="password" id="tokenInput" placeholder="pat_… (new) or the classic token" autocomplete="off"></label>
+          <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="rememberChk" checked> Remember token in this browser (localStorage)</label>
+        </div>
+        <div class="mfoot">
+          <button class="btn btn-ghost" id="authConnect">Authorize token</button>
+        </div>
+      </details>
     </details>
     <div class="mfoot">
       <button class="btn btn-ghost" id="authClose">Cancel</button>
@@ -6291,9 +6298,6 @@ function openAuth(){
 }
 function closeAuth(){
   $("#authModal").classList.add("hidden");
-  const box = $("#acctPick");
-  box.classList.add("hidden"); box.innerHTML = "";
-  if (acctResolve){ acctResolve(null); acctResolve = null; }
 }
 async function doAuthorize(token, silent, remember){
   const res = await api.send({ authorize: token });
@@ -6381,20 +6385,23 @@ async function fetchOtpUrl(accountId, token, appId){
   if (!url) throw new Error("Deriv did not return a session URL for this account");
   return url;
 }
-let acctResolve = null;
-function pickAccount(accounts){
-  return new Promise(res => {
-    acctResolve = res;
-    const box = $("#acctPick");
-    box.innerHTML = "<div style='font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)'>This token can access several accounts — pick the one to trade</div>" +
-      accounts.map((a, i) =>
-        "<div class='acctOpt' data-i='" + i + "'><span><b>" + a.id + "</b> <small>" + (a.currency || "") + "</small></span><span class='badge " + (a.isVirtual ? "demo" : "live") + "'>" + (a.isVirtual ? "DEMO" : "LIVE") + "</span></div>").join("");
-    box.classList.remove("hidden");
-    box.querySelectorAll(".acctOpt").forEach(el => el.addEventListener("click", () => {
-      box.classList.add("hidden"); box.innerHTML = "";
-      if (acctResolve){ acctResolve(accounts[+el.dataset.i]); acctResolve = null; }
-    }));
-  });
+/* Round 65 — the in-card "pick the one to trade" chooser is GONE. The user's instruction was to
+   stop asking clients to choose between their demo and real accounts inside this site and let
+   Deriv's own page carry the authorisation (see prompt=consent in startOAuthLogin). The account is
+   now resolved automatically, in this order:
+     1. an explicit preferredAcct (the header account menu, i.e. a deliberate user switch),
+     2. the side this browser last traded on, remembered as dt_acct_kind = "demo" | "real",
+     3. the DEMO/virtual account — never a real-money account by default,
+     4. whatever is there.
+   The header's account menu (renderAcctSelect / switchAccountTo) stays the one-tap way over to the
+   other side, and choosing there is what feeds rule 2 next time. */
+function autoPickAccount(accounts, preferredAcct){
+  if (!accounts || !accounts.length) return null;
+  const kind = store.get("dt_acct_kind");
+  return accounts.find(a => a.id === preferredAcct)
+    || (kind ? accounts.find(a => (a.isVirtual ? "demo" : "real") === kind) : null)
+    || accounts.find(a => a.isVirtual)
+    || accounts[0];
 }
 /* Shared "token → Deriv session" path for both credential styles:
    mode "pat"   — a pasted personal token; needs the Deriv-App-ID header, and with
@@ -6413,10 +6420,9 @@ async function authorizeWithToken(token, appId, mode, silent, remember, preferre
   if (!accounts.length) throw new Error(isOAuth
     ? "Deriv granted the sign-in but no account is reachable — check the scopes your app requests include trade"
     : "This token has no accessible accounts — make sure it was created with Read + Trade scopes");
-  let acct = accounts.find(a => a.id === preferredAcct) || (accounts.length === 1 ? accounts[0] : null);
-  if (!acct && silent) return null;                    // can't choose silently — the user can authorize manually
-  if (!acct) acct = await pickAccount(accounts);
+  const acct = autoPickAccount(accounts, preferredAcct);
   if (!acct){ const e = new Error("no account selected"); e.code = "Cancelled"; throw e; }
+  store.set("dt_acct_kind", acct.isVirtual ? "demo" : "real");   // the next sign-in opens where this one closed
   const provider = () => fetchOtpUrl(acct.id, token, isOAuth ? "" : appId);
   state.authBusy = true;
   try {
@@ -6458,7 +6464,9 @@ async function authorizeWithToken(token, appId, mode, silent, remember, preferre
   resubscribeBalance();
   renderAccount(); renderSignalCard();
   if (!silent){
-    toast((isOAuth ? "Signed in: " : "Authorized: ") + acct.id + " (" + (acct.isVirtual ? "DEMO" : "LIVE") + ") — Deriv session opened", "success");
+    /* Round 38 rule: the login id stays out of the UI — say which SIDE opened, and where to change it. */
+    toast((isOAuth ? "Signed in — trading the " : "Authorized — trading the ") + (acct.isVirtual ? "DEMO" : "REAL")
+      + " account" + (state.acctList.length > 1 ? " (change it in the account menu at the top)" : ""), "success");
     if (isOAuth && state.account.scopes.indexOf("trade") < 0)
       toast("This sign-in did not include the trade scope — buying is blocked until the client approves it", "warn", 9000);
   }
@@ -6574,6 +6582,9 @@ function oauthSetStatus(msg, kind){
   const el = $("#oauthStatus");
   if (!el) return;
   el.textContent = msg || "";
+  /* Round 65: the client's card is one button — the note only exists to carry something the client
+     has to read (a refusal, an expiry, "signed in"), so an empty message takes the box away.       */
+  el.classList.toggle("hidden", !msg);
   el.classList.toggle("bad", kind === "bad");
   el.classList.toggle("good", kind === "good");
 }
@@ -6591,10 +6602,12 @@ function oauthRefreshUi(){
   }
   if (btn) btn.disabled = false;
   if (!oauthClientId()){
-    oauthSetStatus("No Deriv app id is built into this copy. Open Owner settings below and put the App ID / Client ID of your registered Deriv OAuth app there, then register this Redirect URI on that same app.", "");
+    oauthSetStatus("No Deriv app id is built into this copy. Open the ⚙ row below, then Owner settings, and put the App ID / Client ID of your registered Deriv OAuth app there — the Redirect URI shown there must also be registered on that same app.", "");
     return;
   }
-  oauthSetStatus("Ready. Press the button, sign in on Deriv's own page, then tap Allow access. Deriv will ask this client to approve: " + oauthScopes() + ". No password, App ID or token is typed into this site.", "good");
+  /* Nothing to say: the card is just the button. The status box stays hidden until there is a real
+     message (an env problem above, or an oauthPinned result).                                      */
+  if (!oauthNote) oauthSetStatus("", "");
 }
 function oauthSave(patch){
   try {
@@ -6643,7 +6656,14 @@ async function startOAuthLogin(){
       + "&scope=" + encodeURIComponent(scopes)
       + "&state=" + encodeURIComponent(st)
       + "&code_challenge=" + encodeURIComponent(challenge)
-      + "&code_challenge_method=S256";
+      + "&code_challenge_method=S256"
+      /* Round 65: ask Deriv for its "Authorize … to access your account / Allow access / Deny" card on
+         every sign-in instead of letting it remember the earlier grant and skip straight back to us.
+         MEASURED against auth.deriv.com the same day: this endpoint really does read `prompt` —
+         `prompt=none` answers login_required on our own redirect URI, while a value it does not know
+         (`prompt=banana`) is ignored, not refused — so `prompt=consent` is accepted here and costs
+         nothing even on a client that has already approved the app.                                */
+      + "&prompt=consent";
     oauthSetStatus("Waiting for Deriv's sign-in page…", "");
     setTimeout(() => { if (btn){ btn.disabled = false; btn.textContent = "LOG IN WITH DERIV"; } }, 1500);
     location.assign(url);           // full page navigation to Deriv; they send the client straight back here
@@ -6717,10 +6737,11 @@ async function handleOAuthCallback(){
   state.oauth = { clientId: rec.cid, scopes: rec.scopes, expiresInSec: Math.round(ex.expMs / 1000) };
   const acct = await authorizeWithToken(ex.token, "", "oauth", false, false, null);
   if (acct){
-    oauthPinned("Signed in as " + acct.loginid + " (" + (acct.isVirtual ? "DEMO" : "REAL") + "). This session ends by itself after about an hour and the page will ask the client to log in again.", "good");
+    /* No login id in the UI (Round 38 rule) and no paragraph — the session simply opens. */
+    oauthPinned("Signed in on the " + (acct.isVirtual ? "DEMO" : "REAL") + " account. The session ends by itself after about an hour.", "good");
     showTab("dashboard");
   } else {
-    oauthPinned("Signed in, but no trading account was chosen. Press AUTHORIZE and pick the demo or real account.", "");
+    oauthPinned("Signed in, but Deriv returned no trading account for this sign-in.", "");
     openAuth();
   }
   return true;
