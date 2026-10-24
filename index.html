@@ -67,6 +67,10 @@ header{position:sticky;top:0;z-index:60;background:rgba(8,12,18,.86);backdrop-fi
 @keyframes logoSpin{to{transform:rotate(360deg)}}
 @keyframes logoPulse{0%,100%{transform:scale(.86);opacity:.9}50%{transform:scale(1.06);opacity:1}}
 .logo .thin{font-weight:300;color:var(--muted);letter-spacing:.18em}
+/* Waving hand in the header brand — greets the trader, then rests. */
+.logo .wave{display:inline-block;font-size:19px;line-height:1;transform-origin:65% 78%;animation:handWave 2.6s ease-in-out infinite}
+@keyframes handWave{0%,55%,100%{transform:rotate(0)}8%,28%{transform:rotate(18deg)}18%,38%{transform:rotate(-12deg)}48%{transform:rotate(6deg)}}
+@media (prefers-reduced-motion:reduce){.logo .wave{animation:none}}
 .hsep{flex:1}
 .conn{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}
 .dot{width:9px;height:9px;border-radius:50%;background:#666}
@@ -88,12 +92,14 @@ header{position:sticky;top:0;z-index:60;background:rgba(8,12,18,.86);backdrop-fi
 .badge.live{background:var(--green-soft);color:var(--green);border:1px solid rgba(0,192,118,.4)}
 .badge.demo{background:rgba(77,159,255,.12);color:var(--blue);border:1px solid rgba(77,159,255,.4)}
 .acct .bal{font-family:var(--mono);font-size:13px;color:var(--text)}
-.acctsw{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line2);border-radius:999px;padding:2px}
-.acctsw button{border:none;background:transparent;color:var(--dim);font:800 10px var(--font);letter-spacing:.1em;padding:4px 11px;border-radius:999px;cursor:pointer;transition:all .15s}
-.acctsw button:hover:not(:disabled){color:var(--text)}
-.acctsw button.on-demo{background:rgba(77,159,255,.2);color:var(--blue);box-shadow:inset 0 0 0 1px rgba(77,159,255,.55)}
-.acctsw button.on-real{background:rgba(0,192,118,.18);color:var(--green);box-shadow:inset 0 0 0 1px rgba(0,192,118,.55)}
-.acctsw button:disabled{opacity:.35;cursor:not-allowed}
+/* DEMO/REAL header dropdown — same shape as the Symbol/volatility selector, with a
+   one-letter badge: grey D for a demo account, green R for the real one. */
+.acctbadge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  width:23px;height:23px;border-radius:6px;font:800 12px var(--mono);line-height:1}
+.acctbadge.demo{background:rgba(140,150,165,.16);color:var(--dim);border:1px solid rgba(140,150,165,.45)}
+.acctbadge.real{background:rgba(0,192,118,.18);color:var(--green);border:1px solid rgba(0,192,118,.55)}
+#acctSelect{min-width:150px}
+.acct .hfield label{white-space:nowrap}
 /* ---------- tabs ---------- */
 nav.tabs{display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;border-bottom:1px solid var(--line2);background:rgba(14,20,29,.94);backdrop-filter:blur(12px);position:sticky;top:var(--hdrH,53px);z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 nav.tabs::-webkit-scrollbar{display:none}
@@ -370,6 +376,18 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 #acctPick .acctOpt:hover{border-color:var(--red)}
 #acctPick .acctOpt small{color:var(--dim)}
 .mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+/* per-client Deriv OAuth sign-in */
+.oauthhero{display:flex;flex-direction:column;gap:9px;margin:12px 0 4px}
+.urichip{display:flex;align-items:stretch;gap:6px;margin-top:5px}
+.urichip code{flex:1;min-width:0;background:rgba(0,0,0,.4);border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font:600 11px var(--mono);color:var(--green);word-break:break-all;line-height:1.35}
+.btn-xs{padding:6px 10px;font-size:10.5px;letter-spacing:.08em}
+.adv{margin-top:14px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:2px 11px}
+.adv summary{cursor:pointer;font:700 11px var(--mono);letter-spacing:.06em;color:var(--muted);padding:8px 0;text-transform:uppercase}
+.adv summary:hover{color:var(--text)}
+.adv[open]{padding-bottom:10px}
+#oauthStatus{min-height:0}
+#oauthStatus.bad{border-color:rgba(255,68,79,.55);color:#ff8a91}
+#oauthStatus.good{border-color:rgba(37,255,154,.45);color:var(--green)}
 #toasts{position:fixed;right:16px;top:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:340px}
 .toast{background:#101823;border:1px solid var(--line2);border-left:4px solid var(--blue);border-radius:8px;padding:10px 13px;font-size:12.5px;box-shadow:0 6px 22px rgba(0,0,0,.5);animation:tin .25s ease}
 .toast.success{border-left-color:var(--green)}
@@ -420,6 +438,33 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 .aiohud .rd b{color:var(--syn-green);letter-spacing:.06em}
 .aiohud .rd b.dn{color:#ffb066}
 @media(max-width:640px){.aiohud{grid-template-columns:1fr}}
+/* --- the robot-face popup: any TRADE AI NOW press lifts the AI's face over the page --- */
+#aiScanPop{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-start;justify-content:center;padding:14px;
+  overflow:auto;background:rgba(3,7,12,.82);backdrop-filter:blur(4px)}
+#aiScanPop.on{display:flex}
+.sppanel{position:relative;margin:auto;width:min(700px,100%);display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:16px 16px 13px;border-radius:16px;background:rgba(3,14,9,.94);border:2px solid rgba(37,255,154,.55);
+  box-shadow:0 0 44px rgba(37,255,154,.3),0 20px 60px rgba(0,0,0,.6)}
+.sppanel::after{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(37,255,154,.06) 0 1px,transparent 1px 4px);mix-blend-mode:screen}
+.spkick{font:800 10px var(--mono);letter-spacing:.24em;color:rgba(37,255,154,.8)}
+/* The face IS the point of this popup, so it takes most of the screen: capped by the panel width and by
+   the viewport height (its box is 1 : .72), so it never pushes CLOSE off a short window. */
+.sppanel .robotface{width:min(620px,97%,70vh)}
+.sppanel .robotface .mouth{transform:translateX(-50%) scale(1.75);transform-origin:50% 100%}
+.sppanel .robotface .faceTag{font-size:17px}
+#aiScanPop .saybox{font-size:16px;max-width:640px;min-height:24px}
+.spreads{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:3px 16px;width:100%;max-width:460px}
+.spread{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font:700 11px var(--mono);
+  letter-spacing:.08em;color:#7fdcb4;padding:2px 0;border-bottom:1px dashed rgba(37,255,154,.16)}
+.spread b{color:var(--syn-green);text-align:right}
+.spfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;max-width:460px;flex-wrap:wrap}
+.spfoot .hint{font:600 10px var(--mono);letter-spacing:.06em;color:var(--muted);flex:1;min-width:170px}
+/* A short window keeps the face as tall as it can and drops the labels around it, never the face itself. */
+@media (max-height:800px){.spkick{display:none}}
+@media (max-height:700px){.sppanel .robotface{width:min(620px,97%,60vh)}}
+@media (max-height:560px){.sppanel .robotface{width:min(620px,97%,54vh)} .spreads{display:none}}
+@media (max-height:460px){.spfoot .hint{display:none}}
 .robotface{position:relative;width:min(320px,86%);aspect-ratio:1/.72;border-radius:12px;overflow:hidden;border:2px solid rgba(37,255,154,.6);box-shadow:0 0 30px rgba(37,255,154,.3),inset 0 0 20px rgba(37,255,154,.1)}
 .robotface img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(1.1) contrast(1.15) saturate(1.2)}
 .robotface .beam{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--syn-green),transparent);box-shadow:0 0 26px 6px rgba(37,255,154,.6);animation:beamy 2.2s linear infinite}
@@ -450,7 +495,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 
 <header>
   <div class="hrow">
-    <div class="logo"><span class="ailogo"><span class="ring"></span><span class="core"></span></span>DERIV<span class="thin">TERMINAL</span></div>
+    <div class="logo"><span class="ailogo"><span class="ring"></span><span class="core"></span></span>Welcome <span class="thin">trader</span><span class="wave" aria-hidden="true">👋</span></div>
     <div class="hsep"></div>
     <div class="hfield">
       <label>Symbol</label>
@@ -459,9 +504,10 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
     <div class="hprice"><span id="hdrPrice">—</span><span id="hdrDelta"></span></div>
     <div class="conn"><span class="dot connecting" id="connDot"></span><span id="connText">connecting…</span></div>
     <div class="acct" id="acctChip">
-      <div class="acctsw" id="acctSw" title="Switch the trading session between your demo and real account">
-        <button type="button" id="swDemo">DEMO</button>
-        <button type="button" id="swReal">REAL</button>
+      <span class="acctbadge demo" id="acctBadge" title="Demo account">D</span>
+      <div class="hfield">
+        <label>Account</label>
+        <select id="acctSelect" title="Switch the trading session between your demo and real accounts"></select>
       </div>
       <span class="bal" id="acctBal"></span>
     </div>
@@ -582,7 +628,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="note" id="eoVerdict"></div>
       <div class="botrun">
         <button class="btn btn-green btn-big" id="b10_toggle">START</button>
-        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, paints the digits like the dashboard (green 8.5–11.5%, red ≥11.5%) and checks your six rules in the gate list further down the card. It trades the market OPPOSITE the hottest digit — that hottest digit on the other market is the entry point — and buys one EVEN/ODD contract only when all six rules agree; any closed gate means it holds. It never parks while hunting: only 3 consecutive wins merely banks the run and a fresh one starts on the same market by itself 6s later — but take profit and stop loss are measured on the whole session since START and stop the bot for good (popup + voice unchanged). STOP or a market switch cancels a queued restart.</span>
+        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, paints the digits like the dashboard (green 8.5–11.5%, red ≥11.5%) and checks your six rules in the gate list further down the card. It trades the market OPPOSITE the hottest digit — that hottest digit on the other market is the entry point — and buys one EVEN/ODD contract only when all six rules agree; any closed gate means it holds. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press. The stop-loss level and 3 wins in a row no longer halt the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
       </div>
       <div class="cfg">
         <label>Stake<input type="number" id="b10_stake" value="1.00" min="0.35" step="0.05" title="Base stake — multiplied by ×2.1 after each loss up to the recovery-step limit"></label>
@@ -599,8 +645,8 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <label>Opposite lead min<input type="number" id="b10_compete" value="0.2" min="0" max="5" step="0.1" title="Rule 4: on the opposite market the entry digit must lead the next digit by at least this much — two digits fighting head-to-head there veto the trade"></label>
         <label>Green reversal cap %<input type="number" id="b10_gcap" value="13" min="0" max="30" step="0.5" title="Rule 5: no trade while the green bar reads above this percent (reversal risk)"></label>
         <label>Green gap veto %<input type="number" id="b10_gapveto" value="1.5" min="0" max="10" step="0.1" title="Rule 6: no trade while green bar and second green bar are this far apart or more — the cursor will not be attracted to both"></label>
-        <label>Take profit<input type="number" id="b10_tp" value="5" min="0" step="0.5" title="Stops the bot FOR GOOD once the session P/L — every run since you pressed START, the Net P/L on this card — reaches +this (0 = off). An auto-restart after a win streak does not reset it"></label>
-        <label>Stop loss<input type="number" id="b10_sl" value="10" min="0" step="0.5" title="Stops the bot FOR GOOD once the session P/L — every run since you pressed START — falls to −this (0 = off). An auto-restart after a win streak does not reset it"></label>
+        <label>Take profit<input type="number" id="b10_tp" value="5" min="0" step="0.5" title="The ONE limit that stops this bot (0 = off). When the session P/L — every run since you pressed START, the Net P/L on this card — reaches +this, the bot stops for good with the green win popup and the amount spoken. Nothing resumes it automatically: a new run needs a fresh START press"></label>
+        <label>Stop loss<input type="number" id="b10_sl" value="10" min="0" step="0.5" title="Announcement level only on this bot (0 = silent): when the session P/L falls to −this the AI says the amount once and the bot KEEPS TRADING with the ladder still climbing. It does not stop the bot — press STOP yourself to protect the balance"></label>
       </div>
       <div class="stats">
         <div class="stat"><div class="k">Trades</div><div class="v" id="b10_trades">0</div></div>
@@ -616,7 +662,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
-      <div class="note"><b>Strategy (your sheet, six of the eight rules):</b> trade the market opposite the hottest digit; the green bar must sit on the traded market between 11% and 12.5%; 3 to 4 digits must read 10.2% or more; no two digits on the opposite market may share a percentage; no two digits may compete head-to-head on the opposite market; no trade above a 13% green bar or with the two greens 1.5% apart. Entry point = the digit with the highest percentage on the opposite market.<br><b>What was cut:</b> the <i>green bar + second green bar both on the traded market, 0.2–0.4% apart</i> rule and the <i>red bars on the traded market only, at 8.6% or above, second red losing momentum</i> rule. Measured on 20,000 random 100-tick windows they opened <b>0%</b> and <b>0.1%</b> of the time — the traded market is by definition the one <i>opposite</i> the hottest digit, and the hottest digit is the likeliest green or red, so both rules fought the bot's own definition and Bot 10 never traded.<br><b>Now:</b> the six-rule stack opens on <b>7.6%</b> of 906 rolling 100-tick windows of <b>real 1HZ100V ticks</b> (7.9% on 5,000 random windows — the eight-rule stack opened on 0 of 20,000), and in the last live all-market scan <b>1 of 13 markets</b> cleared all six. So the bot does reach entry. Note rule 5 (the 13% green reversal cap) can never fire on the dashboard's own colours — a bar above 11.5% is painted red, not green — it is kept only because your sheet names it.<br><b>Honesty:</b> this is a timing filter, not an edge. EVEN/ODD pays ×1.82 here ⇒ 54.95% of the window must land on the bought side, and nothing in the digit shares measured on this terminal (7,208 rolling 100-tick windows, 8 markets) makes that favourable. The stack is still strict: most seconds it holds, which limits how much it trades — not how much it wins.<br><b>Never idle — but the target ends it:</b> take profit and stop loss are measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card), not on a single run, so nothing can reset your target. Hit either one and the bot <b>stops for good</b> — popup, voice and result card as usual — and waits for a new START press. Only the <b>3-consecutive-wins</b> rule merely banks that run: a fresh run starts by itself on the same market 6s later, keeping the session P/L (so the target stays in reach) and resetting the ladder step and win streak. It keeps doing that until you press <b>STOP</b>, hit TP/SL, or switch market — a market switch (the header dropdown or TRADE AI NOW) cancels a queued restart and needs a new START press.</div>
+      <div class="note"><b>Strategy (your sheet, six of the eight rules):</b> trade the market opposite the hottest digit; the green bar must sit on the traded market between 11% and 12.5%; 3 to 4 digits must read 10.2% or more; no two digits on the opposite market may share a percentage; no two digits may compete head-to-head on the opposite market; no trade above a 13% green bar or with the two greens 1.5% apart. Entry point = the digit with the highest percentage on the opposite market.<br><b>What was cut:</b> the <i>green bar + second green bar both on the traded market, 0.2–0.4% apart</i> rule and the <i>red bars on the traded market only, at 8.6% or above, second red losing momentum</i> rule. Measured on 20,000 random 100-tick windows they opened <b>0%</b> and <b>0.1%</b> of the time — the traded market is by definition the one <i>opposite</i> the hottest digit, and the hottest digit is the likeliest green or red, so both rules fought the bot's own definition and Bot 10 never traded.<br><b>Now:</b> the six-rule stack opens on <b>7.6%</b> of 906 rolling 100-tick windows of <b>real 1HZ100V ticks</b> (7.9% on 5,000 random windows — the eight-rule stack opened on 0 of 20,000), and in the last live all-market scan <b>1 of 13 markets</b> cleared all six. So the bot does reach entry. Note rule 5 (the 13% green reversal cap) can never fire on the dashboard's own colours — a bar above 11.5% is painted red, not green — it is kept only because your sheet names it.<br><b>Honesty:</b> this is a timing filter, not an edge. EVEN/ODD pays ×1.82 here ⇒ 54.95% of the window must land on the bought side, and nothing in the digit shares measured on this terminal (7,208 rolling 100-tick windows, 8 markets) makes that favourable. The stack is still strict: most seconds it holds, which limits how much it trades — not how much it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> and the <b>3-consecutive-wins</b> bank are announcements only — the AI says the number once and the bot keeps buying on the same market, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
     </div>
   </div>
 </section>
@@ -1216,7 +1262,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 </section>
 
 <footer>
-  Data &amp; execution via the official Deriv API (api.derivws.com) — public WebSocket for market data; new-style pat_ tokens use a REST-issued one-time session for trading. Digit percentages are real live tick data, not simulated.
+  Data &amp; execution via the official Deriv API (api.derivws.com) — public WebSocket for market data. Clients sign in through Deriv's own login page (OAuth 2.0 authorization code + PKCE): this site never sees a password or a token, the grant lives only in that browser tab, and it expires by itself after about an hour. For a single personal account the advanced panel still accepts a new-style pat_ token through a REST-issued one-time session. Digit percentages are real live tick data, not simulated.
   <b>Risk warning:</b> trading binary options and volatility indices involves substantial risk of loss; martingale/recovery staking can lose the full ladder in a losing streak. Signals are statistical heuristics, not guarantees. This tool is for personal use — never share your API token.
 </footer>
 </div>
@@ -1224,25 +1270,45 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 <!-- ============ AUTH MODAL ============ -->
 <div class="modal hidden" id="authModal">
   <div class="mcard">
-    <h2>Authorize with your Deriv account</h2>
+    <h2>Log in to your Deriv account</h2>
     <div class="steps">
-      <span>1. Go to <b>developers.deriv.com</b> → <b>Get started</b> and create an app — it gives you an <b>App ID</b> (the name can be anything, e.g. "My terminal").</span>
-      <span>2. On your app page, create an <b>API token</b> with the <b>Read</b> + <b>Trade</b> scopes. New tokens start with <b>pat_</b> — this is the format the new Deriv API uses (it looks like a long path-like string, that's normal).</span>
-      <span>3. Enter the <b>App ID</b> and paste the token below. If your account has both a live and a virtual (demo) balance you'll pick which one to use.</span>
-      <span>4. Older tokens from <b>app.deriv.com → Settings → API token</b> don't need an App ID and still work — just paste them and press Authorize.</span>
+      <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → <b>Get started</b> → your app) and put its <b>App ID / Client ID</b> below. That number identifies your app only — it is not a secret and it grants no access by itself.</span>
+      <span>2. Add the <b>Redirect URI</b> shown below to that app, character for character — Deriv refuses a mismatch, including a missing trailing slash or a different host.</span>
+      <span>3. Press <b>LOG IN WITH DERIV</b>. Deriv opens its own sign-in page and asks the client to approve the scopes listed. This site never sees or stores anyone's password, and no token is typed in here.</span>
+      <span>4. The token Deriv returns is short-lived (about an hour) and is kept in this browser tab only — not on any server and not in long-term storage. When it lapses, the page asks the client to sign in again.</span>
     </div>
     <div class="mrow">
-      <label>Deriv App ID<input type="text" id="appIdInput" placeholder="e.g. 12345 (needed for pat_ tokens)" autocomplete="off" inputmode="numeric"></label>
+      <label>Deriv OAuth Client ID (App ID)<input type="text" id="oauthClientId" placeholder="e.g. 12345" autocomplete="off" inputmode="numeric" spellcheck="false"></label>
     </div>
     <div class="mrow">
-      <label>API token<input type="password" id="tokenInput" placeholder="pat_… (new) or the classic token" autocomplete="off"></label>
-      <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="rememberChk" checked> Remember token in this browser (localStorage)</label>
+      <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade account_manage" autocomplete="off" spellcheck="false"></label>
     </div>
+    <div class="mrow">
+      <label>Redirect URI to register on your Deriv app
+        <div class="urichip"><code id="oauthRedirect">—</code><button class="btn btn-ghost btn-xs" id="oauthCopyBtn" type="button">COPY</button></div>
+      </label>
+    </div>
+    <div class="note" id="oauthStatus"></div>
     <div id="acctPick" class="hidden"></div>
-    <div class="note">New-format tokens (pat_…) are exchanged for a one-time Deriv session over api.derivws.com REST and the socket then connects to the session URL Deriv returns — that URL contains your temporary session credential, so it changes on every connect. Classic tokens connect directly over WebSocket. Either way your token goes only to Deriv's official endpoints (api.derivws.com) and is never sent anywhere else.</div>
+    <div class="oauthhero">
+      <button class="btn btn-red" id="oauthLoginBtn">LOG IN WITH DERIV</button>
+    </div>
+    <details class="adv">
+      <summary>Advanced — paste an API token instead (single personal account)</summary>
+      <div class="note" style="margin-top:0">This older path uses one token that belongs to one Deriv account — every person using the site would trade on <b>that</b> account. Use the sign-in above for clients. New-format tokens (pat_…) are exchanged for a one-time Deriv session over api.derivws.com REST, and the socket then connects to the session URL Deriv returns — that URL contains your temporary session credential, so it changes on every connect. Classic tokens connect directly over WebSocket. Either way your token goes only to Deriv's official endpoints (api.derivws.com) and is never sent anywhere else.</div>
+      <div class="mrow">
+        <label>Deriv App ID<input type="text" id="appIdInput" placeholder="e.g. 12345 (needed for pat_ tokens)" autocomplete="off" inputmode="numeric"></label>
+      </div>
+      <div class="mrow">
+        <label>API token<input type="password" id="tokenInput" placeholder="pat_… (new) or the classic token" autocomplete="off"></label>
+        <label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="rememberChk" checked> Remember token in this browser (localStorage)</label>
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-ghost" id="authConnect">Authorize token</button>
+      </div>
+    </details>
     <div class="mfoot">
       <button class="btn btn-ghost" id="authClose">Cancel</button>
-      <button class="btn btn-red" id="authConnect">Authorize</button>
     </div>
   </div>
 </div>
@@ -1281,6 +1347,29 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
     <div class="rfoot">
       <button class="rghost" id="resultClose">Close Result</button>
       <button class="btn btn-green" id="resultResume">Resume AI Trading</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ROBOT-FACE SCAN POPUP — lifted over the page by any TRADE AI NOW press ============ -->
+<div id="aiScanPop">
+  <div class="sppanel">
+    <div class="spkick" id="spKick">AI CORE · READING EVERY VOLATILITY MARKET</div>
+    <div class="robotface">
+      <img src="sync-scanner.jpg" alt="AI core" onerror="this.style.display='none'">
+      <div class="beam"></div>
+      <div class="mouth"></div>
+      <span class="faceTag">MAILO'S VISION</span>
+    </div>
+    <div class="saybox" id="spSay">Analysing the best market for you…</div>
+    <div class="spreads">
+      <div class="spread"><span>DESK</span><b id="spDesk">—</b></div>
+      <div class="spread"><span>MARKETS READ</span><b id="spCount">0</b></div>
+      <div class="spread"><span>LEADER</span><b id="spLead">—</b></div>
+    </div>
+    <div class="spfoot">
+      <span class="hint">Closing this does not stop the AI — the full read stays on the desk.</span>
+      <button class="synbtn" id="spClose">CLOSE</button>
     </div>
   </div>
 </div>
@@ -2997,11 +3086,22 @@ function cfg2(){
    Every bot stops itself after this many CONSECUTIVE winning trades and shows the win popup,
    whether or not the take-profit target was reached. 0 = rule off. */
 function winStreakStop(){ return clampInt($("#winStreak").value, 0, 20, 3); }
-function limitsText(c){
+function limitsText(c, stops){
   const cur = (state.account && state.account.currency) || "USD";
   const n = winStreakStop();
-  return "take profit " + (c.tp > 0 ? "+" + fmt(c.tp) + " " + cur : "off") + " · stop loss " + (c.sl > 0 ? "−" + fmt(c.sl) + " " + cur : "off") +
-    " (measured from this START)" + (n > 0 ? " · and stops after " + n + " consecutive wins with the win popup, target or not" : "") + ".";
+  const tpTxt = "take profit " + (c.tp > 0 ? "+" + fmt(c.tp) + " " + cur : "off") + " · stop loss " + (c.sl > 0 ? "−" + fmt(c.sl) + " " + cur : "off");
+  /* `stops` may be true (every limit halts the bot), false (none do) or the list of kinds that
+     still may — Bot 10 passes ["tp"] so only the target ends its session. */
+  if (Array.isArray(stops)){
+    const may = k => stops.indexOf(k) >= 0;
+    return tpTxt + " (measured on the session since this START) · " +
+      (may("tp") ? "take profit ENDS the session for good with the win popup and nothing resumes it automatically" : "take profit never stops this bot") +
+      ", " + (may("sl") ? "stop loss stops it" : "stop loss is an ANNOUNCEMENT ONLY — the bot keeps trading and the ladder keeps climbing") +
+      ", and " + (may("streak") ? "it stops after " + n + " consecutive wins" : "not even " + (n || 3) + " consecutive wins stop it") +
+      ". STOP, a market switch or a logout are the other ways out.";
+  }
+  if (stops === false) return tpTxt + " (measured on the session since this START) — on this bot they are ANNOUNCEMENT LEVELS ONLY: it never stops itself, not even after " + (n || 3) + " wins in a row. Only STOP, a market switch or a logout ends it.";
+  return tpTxt + " (measured from this START)" + (n > 0 ? " · and stops after " + n + " consecutive wins with the win popup, target or not" : "") + ".";
 }
 function cfg3(){
   return {
@@ -3049,7 +3149,8 @@ async function waitGap(ms){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.stats = { trades: 0, wins: 0, losses: 0, pl: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0; }
+    this.stats = { trades: 0, wins: 0, losses: 0, pl: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
+    this.tpSaid = false; this.slSaid = false; }
   countStreak(res){ if (res && res.virtual) return; this.winStreak = res.won ? this.winStreak + 1 : 0; }
   async start(opts){
     if (this.running) return;
@@ -3084,9 +3185,43 @@ class BaseBot {
      the whole session since START so its auto-restarts cannot reset the user's target. */
   limitPl(){ return this.runPl(); }
   limitWord(){ return "run P/L"; }
+  /* A bot may refuse to stop ITSELF on some of its limits. Bot 10 does (user rules of 2026-10-23:
+     first "never stop it, let it trade", then "the pop up after achieving isn't available in even
+     odd strategy and never resume trading after TP executed") — so it keeps the take-profit stop
+     WITH the result popup and nothing restarts it, while the stop loss and the win-streak bank no
+     longer halt it at all. stopKinds() is the list of limits that may still stop this bot;
+     anything it left out is announced once by limitMilestones() and the run carries on. */
+  stopsOnLimits(){ return true; }
+  stopKinds(){ return this.stopsOnLimits() ? ["tp", "sl", "streak"] : []; }
+  stopsOnKind(k){ return this.stopKinds().indexOf(k) >= 0; }
+  limitMilestones(){
+    const c = this.cfg(), pl = this.limitPl();
+    const ccy = (state.account && state.account.currency) || "USD";
+    if (c.tp > 0 && this.stopsOnKind("tp") === false){
+      if (pl >= c.tp && !this.tpSaid){
+        this.tpSaid = true;
+        toast(this.name + ": +" + fmt(pl) + " — target passed, still trading", "success", 8000);
+        const line = "Trade completed. Take profit reached. Plus " + fmt(Math.abs(pl)) + " " + ccy + ". Continuing to trade.";
+        speak(line, { interrupt: true, sticky: true, rate: 0.85, pitch: 1.05, force: true });
+        limitFanfare(true);
+        this.sys("Take profit level +" + fmt(c.tp) + " passed at " + fmtS(pl) + " — NOT stopping (you asked for a non-stop run)");
+      } else if (pl < c.tp) this.tpSaid = false;
+    }
+    if (c.sl > 0 && this.stopsOnKind("sl") === false){
+      if (pl <= -c.sl && !this.slSaid){
+        this.slSaid = true;
+        toast(this.name + ": " + fmtS(pl) + " — stop-loss level passed, still trading", "warn", 8000);
+        const line = "Trade completed. Stop loss level reached. Minus " + fmt(Math.abs(pl)) + " " + ccy + ". Continuing to trade.";
+        speak(line, { interrupt: true, sticky: true, rate: 0.85, pitch: 0.95, force: true });
+        limitFanfare(false);
+        this.sys("Stop-loss level −" + fmt(c.sl) + " passed at " + fmtS(pl) + " — NOT stopping; the ladder keeps climbing. Press STOP to protect the balance.");
+      } else if (pl > -c.sl) this.slSaid = false;
+    }
+    return false;
+  }
   checkLimits(){
     const c = this.cfg(), pl = this.limitPl();
-    if (c.tp > 0 && pl >= c.tp){
+    if (c.tp > 0 && pl >= c.tp && this.stopsOnKind("tp")){
       this.stop("take profit reached (" + fmtS(pl) + ")", { limit: true, kind: "tp" });
       toast(this.name + ": take profit reached " + fmtS(pl), "success", 8000);
       // the AI stays silent except here — read the result + amount out loud, as clear as Web Speech allows
@@ -3097,7 +3232,7 @@ class BaseBot {
       showResultModal(this, "tp", pl);
       return true;
     }
-    if (c.sl > 0 && pl <= -c.sl){
+    if (c.sl > 0 && pl <= -c.sl && this.stopsOnKind("sl")){
       this.stop("stop loss reached (" + fmtS(pl) + ")", { limit: true, kind: "sl" });
       toast(this.name + ": stop loss reached " + fmtS(pl), "error", 8000);
       const ccy2 = (state.account && state.account.currency) || "USD";
@@ -3108,7 +3243,7 @@ class BaseBot {
       return true;
     }
     const N = winStreakStop();
-    if (N > 0 && this.winStreak >= N){
+    if (N > 0 && this.winStreak >= N && this.stopsOnKind("streak")){
       const up = pl >= 0, ccy3 = (state.account && state.account.currency) || "USD";
       this.stop(N + " consecutive wins — run banked at " + fmtS(pl), { limit: true, kind: "streak" });
       toast(this.name + ": " + N + " wins in a row — stopped with the run at " + fmtS(pl), "success", 8000);
@@ -3118,6 +3253,8 @@ class BaseBot {
       showResultModal(this, "streak", pl);
       return true;
     }
+    /* nothing that may stop this bot was crossed — say the number once for whatever it sailed past */
+    if (!this.stopsOnLimits()) return this.limitMilestones();
     return false;
   }
   stop(reason, opts){
@@ -3139,7 +3276,7 @@ class BaseBot {
         const plan = this.planNext();
         if (!plan){ renderBot(this); await waitGap(); continue; }   // waiting for the entry condition — re-checked on the 1s heartbeat
         const lim = this.cfg();
-        if (lim.sl > 0 && this.limitPl() - plan.stake < -lim.sl - 1e-9){
+        if (this.stopsOnKind("sl") && lim.sl > 0 && this.limitPl() - plan.stake < -lim.sl - 1e-9){
           this.stop("next stake " + fmt(plan.stake) + " would breach stop loss " + fmt(lim.sl), { limit: true, kind: "sl" });
           toast(this.name + " stopped: next stake would breach your stop loss", "warn", 8000);
           break;
@@ -4838,10 +4975,14 @@ function cfg10(){
     sl: Math.max(0, +$("#b10_sl").value || 0)
   };
 }
-/* Bot 10 must never sit idle (user rule, 2026-10-19) — but hitting the target ends it (user rule, 2026-10-20):
-   TP and SL are measured on the SESSION total since START and stop the bot for good, while the
-   N-consecutive-wins stop only banks that run and queues a fresh one on the SAME market a few seconds later.
-   Only the STOP button or a market switch (changeSymbol → stopAllBots) cancels a queued restart. */
+/* Bot 10 must never sit idle (user rule, 2026-10-19), must not be stopped by anything except its
+   target (user rule, 2026-10-23 "never stop it, let it trade") and must still show the win card
+   when the target is achieved and never restart after it (same day: "the pop up after achieving
+   isn't available in even odd strategy and never resume trading after TP executed"). So its
+   stopKinds() is ONLY "tp": hitting take profit stops the session for good with the green result
+   popup + voice and no queued auto-restart — a new run needs a fresh START press — while the
+   stop-loss level and the N-consecutive-wins bank merely get spoken about once and the bot keeps
+   buying on the same market. STOP, a market switch (changeSymbol → stopAllBots) or a logout end it. */
 const EO_RESTART_MS = 6000;
 class EoStratBot extends BaseBot {
   constructor(){ super("b10", "Even/Odd Strategy Bot", "Bot 10 · Even/Odd Strategy");
@@ -4850,9 +4991,15 @@ class EoStratBot extends BaseBot {
   analysis(){ return eoAnalyze(cfg10().win); }
   limitPl(){ return round2(this.stats.pl - (this.sessionPl || 0)); }   // the Net P/L the card shows — restarts do not reset the target
   limitWord(){ return "session P/L"; }
+  stopsOnLimits(){ return false; }                                     // only stopKinds() may halt it
+  stopKinds(){ return ["tp"]; }                                        // TP ends the session; SL and win streaks do not
   onStart(){ this.play = this.analysis(); this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0; }
   onStop(){ this.lossStreak = 0; }
   afterLimitStop(reason, kind){
+    /* TP is the only kind stopKinds() allows this bot, so it returns here and NO auto-restart is
+       ever queued after a take profit — the session is over until the user presses START again.
+       The win-streak bank below stays in the file (unreachable now) so the 2026-10-20 behaviour
+       is one stopKinds() edit away if the user asks for it back. */
     if (kind === "tp" || kind === "sl"){
       this.sys((kind === "tp" ? "Target reached" : "Stop loss reached") + " — the session is over, press START to run it again");
       renderBot(this);
@@ -4940,7 +5087,7 @@ class EoStratBot extends BaseBot {
       "<br><b>Martingale:</b> ×" + fmt(c.mult) + " after each loss, up to " + c.steps + " recovery steps (then resets to base). Worst-case exposure ≈ " + fmt(round2(total)) + " before the step limit or stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + ") cuts it off. At the ×" + fmt(SYN_PAY_EO) + " EVEN/ODD quote, ×" + fmt(c.mult) + " wins back only the first loss outright — deeper runs rely on the cut-off.<br>" +
       "<b>Honesty:</b> these gates are a timing filter written from your sheet, not a measured edge. EVEN/ODD pays <b>×" + fmt(SYN_PAY_EO) + "</b> on this terminal ⇒ <b>" + fmt(SYN_BE_EO,2) +
       "%</b> of the window must land on the bought side, and no digit-share pattern measured here (7,208 rolling 100-tick windows across 8 markets) turns that negative expectancy positive. On <b>906 rolling 100-tick windows of real ticks</b> the six-rule stack opened all six on <b>7.6%</b> — roughly one read in thirteen reaches entry, the rest hold — so it does trade now; that number limits how much it trades, not how much it wins.<div class='warnstrip' style='margin:10px 0 0'> This places <b>real trades</b> on account <b>" +
-      ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") + ").</div><br><b>Session limits:</b> " + limitsText(c) + " — take profit and stop loss are measured on the <b>session P/L since you pressed START</b> (" + fmtS(this.limitPl()) + " now), so an auto-restart cannot reset your target: hitting either one pops the result, speaks the amount and <b>stops the bot for good</b> until you press START again. Only <b>" + (winStreakStop() || 3) + " consecutive wins</b> just banks that run and starts a fresh one on " + state.symbol + " " + Math.round(EO_RESTART_MS / 1000) + "s later, so it never sits idle while hunting. <b>STOP</b> or a market switch (the dropdown or TRADE AI NOW) cancels a queued restart — a new market needs a new START press.</div>";
+      ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") + ").</div><br><b>Session limits:</b> " + limitsText(c, this.stopKinds()) + " The session P/L stands at <b>" + fmtS(this.limitPl()) + "</b> right now.</div>";
   }
 }
 const bot7 = new MatchesBot();
@@ -5091,7 +5238,7 @@ async function runSyncAI(){
   if (!state.account){ toast("Connect your Deriv account first — click AUTHORIZE", "warn"); openAuth(); return; }
   if (!(state.account.scopes || []).includes("trade")){ toast("Your token lacks the Trade scope — create a token with Read + Trade", "error"); return; }
   if (!state.symbolsLoaded || !scanSymbols().length){ toast("The market list is still loading — try again in a second", "warn"); return; }
-  syncDesk.busy = true; syncShowDesk(true); renderSync();
+  syncDesk.busy = true; syncShowDesk(true); renderSync(); scanPopOpen("sync");
   const idle = $("#syncScanIdle"); if (idle) idle.style.display = "none";
   $("#syncScan").classList.add("on");
   $("#syncVerdict").textContent = "";
@@ -5204,6 +5351,68 @@ async function runSyncAI(){
     syncDesk.busy = false;
     renderSync();
   }
+}
+
+/* ================= the robot-face scan popup =================
+   Every TRADE AI NOW press lifts the AI's face over the whole page, wherever the client is standing, so
+   they watch it read instead of hunting for the desk. It is a VIEW of the scan, never a controller: it
+   mirrors the desk's own speech and its live market bars, steps aside by itself a moment after the read
+   finishes, and closing it touches no feed, no signal and no bot. */
+const SCAN_POP = {
+  aio:  { desk: "ALL IN ONE · AI MARKET PICKER", busy: () => aio.busy,      say: "#aioSay",  bars: "#aioBars" },
+  sync: { desk: "AI SYNC DESK · BOTS 8 + 9",     busy: () => syncDesk.busy, say: "#syncSay", bars: "#syncBars" },
+  eo:   { desk: "EVEN ODD STRATEGY · BOT 10",    busy: () => eoScan.busy,   say: "#eoSay",   bars: "#eoBars" },
+};
+const scanPop = { src: null, timer: null, doneAt: 0, t0: 0 };
+function scanPopRender(){
+  const def = scanPop.src ? SCAN_POP[scanPop.src] : null;
+  if (!def) return;
+  const srcSay = $(def.say), popSay = $("#spSay");
+  if (srcSay && popSay){ const t = srcSay.textContent.trim(); if (t) popSay.textContent = t; }
+  const d = $("#spDesk"); if (d) d.textContent = def.desk;
+  const box = $(def.bars);
+  const rows = box ? Array.from(box.querySelectorAll(".barrrow")) : [];
+  const read = rows.filter(r => {
+    const pc = r.querySelector(".pc");
+    return pc && pc.textContent.trim() && pc.textContent.trim() !== "—";
+  }).length;
+  const cEl = $("#spCount"); if (cEl) cEl.textContent = rows.length ? read + " / " + rows.length : String(read);
+  const best = rows.find(r => r.classList.contains("best"));
+  const lEl = $("#spLead");
+  if (lEl) lEl.textContent = best ? ((best.querySelector(".nm") || {}).textContent || "—").trim() : "ranking…";
+}
+function scanPopClose(){
+  scanPop.src = null; scanPop.doneAt = 0;
+  if (scanPop.timer){ clearInterval(scanPop.timer); scanPop.timer = null; }
+  const p = $("#aiScanPop"); if (p) p.classList.remove("on");
+}
+/* Which bot a desk's TRADE AI NOW press runs — decides whether the read ended in live contracts. */
+function scanPopTrader(src){
+  const b = src === "aio" ? bot5 : src === "sync" ? bot8 : src === "eo" ? bot10 : null;
+  return !!(b && b.running);
+}
+function scanPopOpen(src){
+  const def = SCAN_POP[src]; if (!def) return;
+  scanPopClose();
+  scanPop.src = src; scanPop.doneAt = 0; scanPop.t0 = Date.now();
+  const p = $("#aiScanPop"); if (!p) return;
+  const kick = $("#spKick"); if (kick) kick.textContent = "AI CORE · READING EVERY VOLATILITY MARKET";
+  const ps = $("#spSay"); if (ps) ps.textContent = "Analysing the best market for you…";
+  p.classList.add("on");
+  scanPopRender();
+  scanPop.timer = setInterval(() => {
+    if (!scanPop.src) return;
+    scanPopRender();
+    if (def.busy()){ scanPop.doneAt = 0; return; }
+    if (!scanPop.doneAt) scanPop.doneAt = Date.now();
+    /* hold the verdict for a beat, then step aside — and never outlive a stalled scan */
+    if (Date.now() - scanPop.doneAt > 2600 || Date.now() - scanPop.t0 > 120000){
+      const trading = scanPopTrader(scanPop.src);
+      scanPopClose();
+      /* the read is over and its bot is live: land the client on the Activity Log and watch the trades */
+      if (trading){ showTab("activity"); toast("AI is trading — following the contracts on the Activity Log", "success"); }
+    }
+  }, 180);
 }
 
 /* ================= ALL IN ONE — TRADE AI NOW =================
@@ -5332,7 +5541,7 @@ async function runAllInOneAI(){
   if (!state.account){ toast("Connect your Deriv account first — click AUTHORIZE", "warn"); openAuth(); return; }
   if (!(state.account.scopes || []).includes("trade")){ toast("Your token lacks the Trade scope — create a token with Read + Trade", "error"); return; }
   if (!state.symbolsLoaded || !scanSymbols().length){ toast("The market list is still loading — try again in a second", "warn"); return; }
-  aio.busy = true; renderAio();
+  aio.busy = true; renderAio(); scanPopOpen("aio");
   const idle = $("#aioIdle"); if (idle) idle.style.display = "none";
   const scanBox = $("#aioScan"); if (scanBox) scanBox.classList.add("on");
   const verdict = $("#aioVerdict"); if (verdict) verdict.textContent = "";
@@ -5457,6 +5666,7 @@ async function runEoTradeAI(){
   if (!(state.account.scopes || []).includes("trade")){ toast("Your token lacks the Trade scope — create a token with Read + Trade", "error"); return; }
   if (!state.symbolsLoaded || !scanSymbols().length){ toast("The market list is still loading — try again in a second", "warn"); return; }
   eoScan.busy = true;
+  scanPopOpen("eo");
   const btn = $("#eoTradeBtn"), status = $("#eoScanStatus"), verdict = $("#eoVerdict");
   if (btn){ btn.disabled = true; btn.textContent = "SCANNING…"; }
   if (status) status.textContent = "Reading every volatility market over the last " + cfg10().win + " ticks…";
@@ -5617,7 +5827,8 @@ function showResultModal(bot, kind, pl){
   $("#resultStake").textContent = fmt(num((e && e.stake) || (lastRes && lastRes.stake) || bot.cfg().stake)) + " " + cur;
   $("#resultBal").textContent = fmt((state.account && state.account.balance) || 0) + " " + cur;
   $("#resultConf").textContent = "Contract #" + ((e && e.id) || "—") + " · settled by Deriv";
-  $("#resultResume").textContent = bot.restartAt ? "▶ START THE NEW RUN NOW" : "Resume AI Trading";
+  $("#resultResume").textContent = bot.restartAt ? "▶ START THE NEW RUN NOW"
+    : (kind === "tp" && bot.stopKinds().length < 3) ? "▶ START A NEW SESSION (TP ENDED THIS ONE)" : "Resume AI Trading";
   $("#resultModal").classList.remove("hidden");
 }
 function hideResultModal(){ $("#resultModal").classList.add("hidden"); }
@@ -5634,7 +5845,8 @@ function renderBot(b){
   const tplEl = $("#t" + tn + "_pl"); if (tplEl){ tplEl.textContent = fmtS(b.stats.pl); tplEl.className = "tpl " + (b.stats.pl >= 0 ? "up" : "down"); }
   const ttrEl = $("#t" + tn + "_tr"); if (ttrEl) ttrEl.textContent = b.stats.trades;
   const lc = b.cfg();
-  const limTxt = (b.running || b.restartAt) ? " · " + b.limitWord() + " " + fmtS(b.limitPl()) + (lc.tp > 0 ? " / TP +" + fmt(lc.tp) : "") + (lc.sl > 0 ? " / SL −" + fmt(lc.sl) : "") : "";
+  const limTxt = (b.running || b.restartAt) ? " · " + b.limitWord() + " " + fmtS(b.limitPl()) + (lc.tp > 0 ? " / TP +" + fmt(lc.tp) : "") + (lc.sl > 0 ? " / SL −" + fmt(lc.sl) : "") +
+    (b.stopsOnLimits() ? "" : " · ONLY TP ENDS IT") : "";
   $("#" + p + "_sub").textContent = b.subText() + limTxt + (b.virtualLeft > 0 ? " · VIRTUAL " + b.virtualLeft + " left" : "") + (b.busy ? " · trade in progress…" : "");
   $("#" + p + "_trades").textContent = b.stats.trades;
   $("#" + p + "_wins").textContent = b.stats.wins;
@@ -5866,8 +6078,8 @@ function renderBot(b){
     while (s <= (c.maxstake || Infinity) && steps <= c.steps + 1 && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
     $("#b10_expo").innerHTML = "<b>Martingale ladder:</b> ×" + fmt(c.mult) + " after each loss, up to " + c.steps + " recovery steps (then resets). Worst-case exposure ≈ " + fmt(round2(total)) + " " + cur +
       " before the step limit or stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + ") cuts it off. At ×" + fmt(SYN_PAY_EO) + " EVEN/ODD, ×" + fmt(c.mult) + " wins back only the first loss outright." +
-      (c.sl > 0 ? " Stop loss −" + fmt(c.sl) + " " + cur + " is armed." : " <b style='color:var(--red)'>No stop loss is set.</b>") +
-      " <b>Never idle — but the target ends it:</b> take profit and stop loss are checked against the <b>session P/L since you pressed START</b> (" + fmtS(b.limitPl()) + " " + cur + " right now), so a restart cannot reset them — hitting either one stops the bot for good. Only " + (winStreakStop() || 3) + " consecutive wins merely banks the run: it pops the card, speaks the amount and starts a <b>fresh run on " + state.symbol + " automatically " + Math.round(EO_RESTART_MS / 1000) + "s later</b>, keeping the session P/L. <b>STOP</b> or a market switch cancels that queued restart — after a market switch press START again." +
+      (c.sl > 0 ? " Stop loss −" + fmt(c.sl) + " " + cur + " is an announcement level on this bot, not a stop — only take profit ends the run." : " <b style='color:var(--red)'>No stop loss is set.</b>") +
+      " <b>Only the target stops it:</b> take profit is measured on the <b>session P/L since you pressed START</b> (" + fmtS(b.limitPl()) + " " + cur + " right now) and ends the session for good — green win popup, amount spoken, and <b>nothing resumes it</b>: a new run needs a fresh START press. The stop-loss level and " + (winStreakStop() || 3) + " consecutive wins no longer halt the bot; it says the number once and keeps buying, so the ladder can climb past −" + fmt(c.sl) + " " + cur + ". <b>STOP</b>, a market switch or a logout are the other ways out." +
       "<div class='warnstrip' style='margin-top:8px'>⚠ Each accepted cycle places a real order on account <b>" +
       ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") +
       "). Martingale amplifies losses quickly; keep the base stake small.</div>";
@@ -6044,6 +6256,11 @@ function drawPriceChart(){
 function openAuth(){
   const ai = $("#appIdInput");
   if (ai && !ai.value) ai.value = store.get("dt_app_id") || "";
+  const cid = $("#oauthClientId");
+  if (cid && !cid.value) cid.value = store.get("dt_client_id") || "";
+  const sc = $("#oauthScope");
+  if (sc && !sc.value) sc.value = store.get("dt_oauth_scope") || OAUTH_DEFAULT_SCOPE;
+  oauthRefreshUi();
   $("#authModal").classList.remove("hidden");
 }
 function closeAuth(){
@@ -6118,7 +6335,21 @@ function normalizeAccounts(json){
   })).filter(a => a.id);
 }
 async function fetchOtpUrl(accountId, token, appId){
-  const json = await derivRest("/accounts/" + encodeURIComponent(accountId) + "/otp", { method: "POST", token, appId });
+  /* The documented call is POST /accounts/{id}/otp; older SDK builds answer on GET, so a
+     rejected method is retried once instead of failing the sign-in. */
+  const path = "/accounts/" + encodeURIComponent(accountId) + "/otp";
+  const opts = { method: "POST", token };
+  if (appId) opts.appId = appId;
+  let json;
+  try {
+    json = await derivRest(path, opts);
+  } catch(e){
+    if (e && /HTTP(404|405|501)/.test(e.code || "")){
+      const get = { token };
+      if (appId) get.appId = appId;
+      json = await derivRest(path, get);
+    } else throw e;
+  }
   const d = json && (json.data !== undefined ? json.data : json);
   const url = d && (d.url || d.otp_url || d.websocket_url);
   if (!url) throw new Error("Deriv did not return a session URL for this account");
@@ -6139,64 +6370,333 @@ function pickAccount(accounts){
     }));
   });
 }
-async function authorizePat(token, appId, silent, remember, preferredAcct){
-  if (!appId){
+/* Shared "token → Deriv session" path for both credential styles:
+   mode "pat"   — a pasted personal token; needs the Deriv-App-ID header, and with
+                  remember=true it is kept in localStorage so the tab reloads signed in.
+   mode "oauth" — an access token the client just granted through Deriv's own sign-in page;
+                  no App ID header, never written to localStorage, and the expiry is watched
+                  so a lapsed session asks the client to log in again instead of failing trades. */
+async function authorizeWithToken(token, appId, mode, silent, remember, preferredAcct){
+  if (mode === "pat" && !appId){
     const e = new Error("App ID is required for pat_ tokens — create an app on developers.deriv.com; Deriv rejects PAT requests without the Deriv-App-ID header.");
     e.code = "NoAppID"; throw e;
   }
-  const accounts = normalizeAccounts(await derivRest("/accounts", { token, appId }));
+  const isOAuth = mode === "oauth";
+  const accounts = normalizeAccounts(await derivRest("/accounts", isOAuth ? { token } : { token, appId }));
   state.acctList = accounts;
-  if (!accounts.length) throw new Error("This token has no accessible accounts — make sure it was created with Read + Trade scopes");
+  if (!accounts.length) throw new Error(isOAuth
+    ? "Deriv granted the sign-in but no account is reachable — check the scopes your app requests include trade"
+    : "This token has no accessible accounts — make sure it was created with Read + Trade scopes");
   let acct = accounts.find(a => a.id === preferredAcct) || (accounts.length === 1 ? accounts[0] : null);
   if (!acct && silent) return null;                    // can't choose silently — the user can authorize manually
   if (!acct) acct = await pickAccount(accounts);
   if (!acct){ const e = new Error("no account selected"); e.code = "Cancelled"; throw e; }
-  const provider = () => fetchOtpUrl(acct.id, token, appId);
+  const provider = () => fetchOtpUrl(acct.id, token, isOAuth ? "" : appId);
   state.authBusy = true;
   try {
     await api.connectAuth(provider);
   } catch(e){
     api.otpProvider = null;                            // auth failed — bring the public feed back
     api.connect().catch(() => {});
+    if (isOAuth && e && /HTTP(401|403)/.test(e.code || "")){
+      if (state.authMode === "oauth"){
+        oauthExpired("Deriv refused the sign-in session");           // this tab was already trading on it — shut the run down
+      } else {
+        /* Someone tried a new client sign-in on a tab that still holds another session.
+           Drop only the dead token; the working session and its bots stay exactly as they were. */
+        oauthClear();
+        oauthPinned("Deriv refused that sign-in token — press LOG IN WITH DERIV to start again.", "bad");
+      }
+    }
     throw e;
   } finally { state.authBusy = false; }
-  state.authMode = "pat";
+  state.authMode = mode;
   state.token = token;
   state.account = {
     loginid: acct.id, currency: acct.currency || "USD", balance: 0,
     isVirtual: acct.isVirtual,
-    scopes: (acct.scopes && acct.scopes.length) ? acct.scopes : ["read", "trade"],
+    scopes: (acct.scopes && acct.scopes.length) ? acct.scopes
+      : (isOAuth ? oauthScopes().split(/[\s,+]+/).filter(Boolean) : ["read", "trade"]),
     fullname: ""
   };
-  store.set("dt_app_id", appId);                       // app id is not secret — keep it for the next time
-  if (remember){ store.set("dt_token", token); store.set("dt_acct", acct.id); }
-  else { store.del("dt_token"); store.del("dt_acct"); }
+  if (isOAuth){
+    /* An OAuth client must not leave a personal token behind for the next person at this browser. */
+    store.del("dt_token"); store.del("dt_acct");
+    oauthSave({ acct: acct.id });
+    oauthWatchExpiry();
+  } else {
+    store.set("dt_app_id", appId);                     // app id is not secret — keep it for the next time
+    if (remember){ store.set("dt_token", token); store.set("dt_acct", acct.id); }
+    else { store.del("dt_token"); store.del("dt_acct"); }
+  }
   resubscribeBalance();
   renderAccount(); renderSignalCard();
   if (!silent){
-    toast("Authorized: " + acct.id + " (" + (acct.isVirtual ? "DEMO" : "LIVE") + ") — Deriv session opened", "success");
+    toast((isOAuth ? "Signed in: " : "Authorized: ") + acct.id + " (" + (acct.isVirtual ? "DEMO" : "LIVE") + ") — Deriv session opened", "success");
+    if (isOAuth && state.account.scopes.indexOf("trade") < 0)
+      toast("This sign-in did not include the trade scope — buying is blocked until the client approves it", "warn", 9000);
   }
   return state.account;
 }
-/* DEMO/REAL header switch: re-authorize the same PAT against the other account type */
-function switchAccountType(wantVirtual){
-  if (!state.account || state.authMode !== "pat" || state.authBusy) return;
-  const target = (state.acctList || []).find(a => a.isVirtual === wantVirtual && a.id !== state.account.loginid);
-  if (!target){
-    toast("This token has no " + (wantVirtual ? "demo" : "real") + " account — create one on Deriv or use a token with access to it", "warn", 8000);
-    return;
-  }
+async function authorizePat(token, appId, silent, remember, preferredAcct){
+  return authorizeWithToken(token, appId, "pat", silent, remember, preferredAcct);
+}
+/* DEMO/REAL header switch: re-run the session against another account the credential can
+   reach — works for both a pasted PAT and a per-client OAuth sign-in. The header dropdown
+   offers whatever /accounts returned; the login id itself is never shown (Round 38 rule). */
+function switchAccountTo(target){
+  if (!state.account || (state.authMode !== "pat" && state.authMode !== "oauth") || state.authBusy) return;
+  if (!target || target.id === state.account.loginid) return;
+  const isOAuth = state.authMode === "oauth";
   stopAllBots("switching account");
   if (signal.active && signal.active.state === "pending") expireSignal("skipped (account switch)");
-  toast("Switching to the " + (wantVirtual ? "DEMO" : "REAL") + " account…", "info");
-  const appId = store.get("dt_app_id") || api.appId;
-  authorizePat(state.token, appId, true, true, target.id).then(() => {
+  toast("Switching to the " + (target.isVirtual ? "DEMO" : "REAL") + " account…", "info");
+  const appId = isOAuth ? "" : (store.get("dt_app_id") || api.appId);
+  authorizeWithToken(state.token, appId, state.authMode, true, true, target.id).then(() => {
     renderBots();
     toast("Now trading on the " + (state.account.isVirtual ? "DEMO" : "REAL") + " account", "success");
   }).catch(e => {
     toast("Account switch failed: " + e.message, "error", 8000);
     renderAccount();
   });
+}
+
+/* ================= auth (per-client Deriv OAuth 2.0 — authorization code + PKCE) =================
+   Instead of one shared API token pasted into the page, each visitor is sent to Deriv's own
+   sign-in + consent screen (auth.deriv.com), approves the scopes your registered app requests,
+   and comes back with a one-time authorization code. This tab exchanges that code for a
+   short-lived access token (no client secret — PKCE is what makes that safe in a browser) and
+   feeds it into the same REST → one-time-session → WebSocket pipeline the PAT path already uses.
+   Rules this module keeps: the token goes only to auth.deriv.com and api.derivws.com, it is held
+   in sessionStorage (this tab, gone when the tab closes), it is never written to localStorage,
+   never logged, and never shown in a toast. The client's password is never entered here.
+   Contract: https://developers.deriv.com/docs/intro/oauth/                              */
+const OAUTH_AUTHORIZE_URL = "https://auth.deriv.com/oauth2/auth";
+const OAUTH_TOKEN_URL     = "https://auth.deriv.com/oauth2/token";
+const OAUTH_DEFAULT_SCOPE = "trade account_manage";
+const OAUTH_KEY       = "dt_oauth";        /* sessionStorage { t, exp, cid, rid, acct } */
+const OAUTH_STATE_KEY = "dt_oauth_state";  /* sessionStorage { v, verifier, cid, rid, scopes, at } */
+let oauthTimer = null, oauthWarned = false;
+/* A sign-in result the client must still be able to read after Deriv bounced back to the page.
+   Without this the generic status refresh at the end of init() overwrites "state check failed"
+   or "Signed in as DOE…", which is exactly when the message matters most. */
+let oauthNote = null;
+
+function oauthClientId(){
+  const el = $("#oauthClientId");
+  return (el && el.value.trim()) || store.get("dt_client_id") || "";
+}
+function oauthScopes(){
+  const el = $("#oauthScope");
+  return ((el && el.value.trim()) || store.get("dt_oauth_scope") || OAUTH_DEFAULT_SCOPE).replace(/\s+/g, " ").trim();
+}
+/* Deriv compares the redirect URI character for character, so the value sent at authorize time
+   and at exchange time must be identical: origin + pathname, never the ?code=... it arrives with. */
+function oauthRedirectUri(){ return location.origin + location.pathname; }
+function b64url(bytes){
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function randomUrlSafe(n){
+  const a = new Uint8Array(n);
+  crypto.getRandomValues(a);
+  return b64url(a);
+}
+async function sha256b64url(text){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return b64url(new Uint8Array(buf));
+}
+/* What has to be true before a browser sign-in can work at all — reported to the user instead of
+   failing silently on a file:// copy or a browser without crypto.subtle. */
+function oauthEnvProblem(){
+  if (!/^https?:$/.test(location.protocol))
+    return "Deriv OAuth cannot run from this copy — a file:// page is not a registered redirect address. Open the published site (https://www.dolarprintpro.site) to sign a client in.";
+  if (!window.crypto || !crypto.subtle || !crypto.getRandomValues)
+    return "This browser cannot build the PKCE challenge (WebCrypto is unavailable on this page) — it needs a secure https address and an up-to-date browser.";
+  try { sessionStorage.setItem("dt_oauth_probe", "1"); sessionStorage.removeItem("dt_oauth_probe"); }
+  catch(e){ return "This browser blocks session storage for the site, so the sign-in state cannot survive the round trip to Deriv — allow storage for this address."; }
+  return "";
+}
+function oauthSetStatus(msg, kind){
+  const el = $("#oauthStatus");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.classList.toggle("bad", kind === "bad");
+  el.classList.toggle("good", kind === "good");
+}
+function oauthPinned(msg, kind){ oauthNote = { msg: msg, kind: kind }; oauthSetStatus(msg, kind); }
+function oauthRefreshUi(){
+  const r = $("#oauthRedirect");
+  if (r) r.textContent = oauthRedirectUri();
+  if (oauthNote){ oauthSetStatus(oauthNote.msg, oauthNote.kind); return; }
+  const problem = oauthEnvProblem();
+  const btn = $("#oauthLoginBtn");
+  if (problem){
+    if (btn) btn.disabled = true;
+    oauthSetStatus(problem, "bad");
+    return;
+  }
+  if (btn) btn.disabled = false;
+  if (!oauthClientId()){
+    oauthSetStatus("Step 1: put the App ID / Client ID of your registered Deriv OAuth app above. Step 2: register this Redirect URI on that same app, exactly as shown.", "");
+    return;
+  }
+  oauthSetStatus("Ready. Deriv will show its own login page and ask this client to approve: " + oauthScopes() + ". No password and no token is typed into this site.", "good");
+}
+function oauthSave(patch){
+  try {
+    let cur = {};
+    try { cur = JSON.parse(sessionStorage.getItem(OAUTH_KEY) || "{}") || {}; } catch(e){}
+    const s = Object.assign({}, cur, patch || {});
+    sessionStorage.setItem(OAUTH_KEY, JSON.stringify(s));
+  } catch(e){}
+}
+function oauthLoad(){
+  try { return JSON.parse(sessionStorage.getItem(OAUTH_KEY) || "null"); } catch(e){ return null; }
+}
+function oauthClear(){
+  try { sessionStorage.removeItem(OAUTH_KEY); sessionStorage.removeItem(OAUTH_STATE_KEY); } catch(e){}
+  if (oauthTimer){ clearInterval(oauthTimer); oauthTimer = null; }
+  oauthWarned = false;
+}
+function oauthRemainingMs(){
+  const s = oauthLoad();
+  return (s && s.exp) ? s.exp - Date.now() : 0;
+}
+async function startOAuthLogin(){
+  oauthNote = null;                       // the client is acting again — drop any carried-over result
+  const problem = oauthEnvProblem();
+  if (problem){ oauthSetStatus(problem, "bad"); toast("Sign-in unavailable: " + problem, "warn", 9000); return; }
+  const cid = oauthClientId();
+  if (!cid){
+    oauthSetStatus("Enter your Deriv OAuth Client ID (App ID) first — it is on your app page at developers.deriv.com.", "bad");
+    try { $("#oauthClientId").focus(); } catch(e){}
+    return;
+  }
+  const scopes = oauthScopes(), rid = oauthRedirectUri();
+  store.set("dt_client_id", cid);
+  store.set("dt_oauth_scope", scopes);
+  const btn = $("#oauthLoginBtn");
+  if (btn){ btn.disabled = true; btn.textContent = "Opening Deriv sign-in…"; }
+  try {
+    const verifier = randomUrlSafe(32) + randomUrlSafe(32);   // 86 chars — inside the 43–128 PKCE window
+    const challenge = await sha256b64url(verifier);
+    const st = randomUrlSafe(16);
+    sessionStorage.setItem(OAUTH_STATE_KEY, JSON.stringify({ v: st, verifier, cid, rid, scopes, at: Date.now() }));
+    const url = OAUTH_AUTHORIZE_URL
+      + "?response_type=code"
+      + "&client_id=" + encodeURIComponent(cid)
+      + "&redirect_uri=" + encodeURIComponent(rid)
+      + "&scope=" + encodeURIComponent(scopes)
+      + "&state=" + encodeURIComponent(st)
+      + "&code_challenge=" + encodeURIComponent(challenge)
+      + "&code_challenge_method=S256";
+    oauthSetStatus("Waiting for Deriv's sign-in page…", "");
+    setTimeout(() => { if (btn){ btn.disabled = false; btn.textContent = "LOG IN WITH DERIV"; } }, 1500);
+    location.assign(url);           // full page navigation to Deriv; they send the client straight back here
+  } catch(e){
+    if (btn){ btn.disabled = false; btn.textContent = "LOG IN WITH DERIV"; }
+    oauthSetStatus("Could not start the sign-in: " + (e && e.message ? e.message : e), "bad");
+    toast("Sign-in could not start: " + (e && e.message ? e.message : e), "error", 9000);
+  }
+}
+async function oauthExchange(code, rec){
+  const form = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: rec.cid,
+    code: code,
+    code_verifier: rec.verifier,
+    redirect_uri: rec.rid
+  });
+  let res;
+  try {
+    res = await fetch(OAUTH_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      body: form.toString()
+    });
+  } catch(e){
+    throw Object.assign(new Error("this browser could not reach auth.deriv.com (network or a CORS refusal)"), { code: "TokenNetwork" });
+  }
+  let raw = "";
+  try { raw = await res.text(); } catch(e){}
+  let json = null;
+  try { json = JSON.parse(raw); } catch(e){}
+  if (!res.ok){
+    const d = json && (json.error_description || json.message || (json.error && (json.error.message || json.error)));
+    throw Object.assign(new Error(d || ("HTTP " + res.status + (raw ? " — " + raw.slice(0, 180) : ""))), { code: "HTTP" + res.status });
+  }
+  const box = json && json.data !== undefined ? json.data : json;
+  const t = box && (box.access_token || box.token);
+  if (!t) throw Object.assign(new Error("Deriv answered but returned no access_token"), { code: "NoToken" });
+  const secs = Math.max(60, num(box.expires_in) || 3600);
+  return { token: t, expMs: secs * 1000 };
+}
+/* Runs on every load: if Deriv just bounced the client back here with a code, finish the sign-in. */
+async function handleOAuthCallback(){
+  const q = new URLSearchParams(location.search);
+  const err = q.get("error"), code = q.get("code"), st = q.get("state");
+  if (!err && !code && !q.get("error_description")) return false;
+  const clean = location.origin + location.pathname;
+  let rec = null;
+  try { rec = JSON.parse(sessionStorage.getItem(OAUTH_STATE_KEY) || "null"); } catch(e){}
+  history.replaceState(null, "", clean);     // burn the one-shot code out of the address bar first
+  if (err){
+    const why = q.get("error_description") || err;
+    oauthPinned("Deriv refused the sign-in: " + why, "bad");
+    toast("Deriv refused the sign-in: " + why + (err === "invalid_request" || /redirect/.test(why) ? " — check the Redirect URI and Client ID registered on your app" : ""), "error", 9000);
+    return false;
+  }
+  if (!code){ oauthPinned("Sign-in returned without a code — start it again.", "bad"); return false; }
+  if (!rec || !rec.v || rec.v !== st){
+    /* state is the CSRF guard: no match means this response did not belong to this tab. */
+    oauthClear();
+    oauthPinned("This sign-in response did not belong to this browser tab (state check failed). Press LOG IN WITH DERIV again.", "bad");
+    toast("Deriv sign-in incomplete: the request state did not match this tab — sign in again", "error", 9000);
+    return false;
+  }
+  try { sessionStorage.removeItem(OAUTH_STATE_KEY); } catch(e){}
+  oauthSetStatus("Exchanging the Deriv code for a session…", "");
+  const ex = await oauthExchange(code, rec);
+  oauthSave({ t: ex.token, exp: Date.now() + ex.expMs - 60000, cid: rec.cid, rid: rec.rid });
+  state.oauth = { clientId: rec.cid, scopes: rec.scopes, expiresInSec: Math.round(ex.expMs / 1000) };
+  const acct = await authorizeWithToken(ex.token, "", "oauth", false, false, null);
+  if (acct){
+    oauthPinned("Signed in as " + acct.loginid + " (" + (acct.isVirtual ? "DEMO" : "REAL") + "). This session ends by itself after about an hour and the page will ask the client to log in again.", "good");
+    showTab("dashboard");
+  } else {
+    oauthPinned("Signed in, but no trading account was chosen. Press AUTHORIZE and pick the demo or real account.", "");
+    openAuth();
+  }
+  return true;
+}
+function oauthWatchExpiry(){
+  if (oauthTimer) clearInterval(oauthTimer);
+  oauthWarned = false;
+  oauthTimer = setInterval(() => {
+    if (state.authMode !== "oauth"){ if (oauthTimer){ clearInterval(oauthTimer); oauthTimer = null; } return; }
+    const left = oauthRemainingMs();
+    if (left <= 0){ oauthExpired(); return; }
+    if (left < 120000 && !oauthWarned){
+      oauthWarned = true;
+      toast("Deriv sign-in expires in under 2 minutes — log in again to keep the bots running", "warn", 9000);
+    }
+  }, 30000);
+}
+function oauthExpired(reason){
+  if (state.authMode !== "oauth") return;
+  stopAllBots("Deriv sign-in expired");
+  if (signal.active && signal.active.state === "pending") expireSignal("skipped (sign-in expired)");
+  oauthClear();
+  store.del("dt_token"); store.del("dt_acct");
+  state.token = ""; state.account = null; state.authMode = null; state.oauth = null;
+  api.otpProvider = null;
+  renderAccount(); renderSignalCard(); renderBots();
+  api.reconnect().catch(() => {});
+  const msg = reason || "Deriv sign-in expired — press LOG IN WITH DERIV to continue";
+  toast(msg, "error", 9000);
+  oauthPinned(msg + " The bots are stopped until a client signs in again.", "bad");
 }
 
 /* Read the authoritative balance with a one-off request and apply it. On the current
@@ -6244,13 +6744,15 @@ async function logout(){
   stopAllBots("logged out");
   if (signal.active && signal.active.state === "pending") expireSignal("skipped (logged out)");
   if (state.balancePollId){ clearInterval(state.balancePollId); state.balancePollId = null; }
-  if (state.authMode === "pat"){
+  if (state.authMode === "pat" || state.authMode === "oauth"){
     // New API: there is no logout message — just drop the session and go back to the public feed.
+    const wasOAuth = state.authMode === "oauth";
     state.token = ""; state.account = null; state.authMode = null;
     store.del("dt_token"); store.del("dt_acct");
+    if (wasOAuth){ oauthClear(); state.oauth = null; }   // the tab forgets the granted token immediately
     api.otpProvider = null;
     renderAccount(); renderSignalCard(); renderBots();
-    toast("Logged out", "info");
+    toast(wasOAuth ? "Signed out — the Deriv session token was cleared from this tab" : "Logged out", "info");
     api.reconnect().catch(() => {});
     return;
   }
@@ -6262,18 +6764,50 @@ async function logout(){
 function renderAccount(){
   const a = state.account;
   $("#acctChip").classList.toggle("on", !!a);
-  $("#authBtn").textContent = a ? "LOGOUT" : "AUTHORIZE";
-  const swD = $("#swDemo"), swR = $("#swReal");
-  const list = state.acctList || [];
-  const hasD = list.some(x => x.isVirtual), hasR = list.some(x => !x.isVirtual);
-  if (swD && swR){
-    swD.className = (a && a.isVirtual) ? "on-demo" : "";
-    swR.className = (a && !a.isVirtual) ? "on-real" : "";
-    swD.disabled = !a || !hasD || !!state.authBusy;
-    swR.disabled = !a || !hasR || !!state.authBusy;
-  }
+  $("#authBtn").textContent = a ? "LOGOUT" : "LOGIN";
+  renderAcctSelect();
   if (a) $("#acctBal").textContent = fmt(a.balance) + " " + a.currency;
   syncHdrOffset();
+}
+/* The header's DEMO/REAL menu. Options carry only the account type and its currency — never the
+   login id — and the value is the index into acctOptions, so the id does not sit in the markup
+   either. acctOptions is what the change listener resolves back to a real account. */
+let acctOptions = [];
+function renderAcctSelect(){
+  const sel = $("#acctSelect"), badge = $("#acctBadge");
+  const a = state.account;
+  const list = (state.acctList && state.acctList.length) ? state.acctList.slice()
+    : (a ? [{ id: a.loginid, currency: a.currency, isVirtual: a.isVirtual }] : []);
+  acctOptions = list;
+  if (badge){
+    const real = !!(a && !a.isVirtual);
+    badge.textContent = real ? "R" : "D";
+    badge.className = "acctbadge " + (real ? "real" : "demo");
+    badge.title = real ? "Real money account" : "Demo account";
+  }
+  if (!sel) return;
+  const key = x => (x.isVirtual ? "DEMO" : "REAL") + "|" + (x.currency || "");
+  const total = {}, seen = {};
+  list.forEach(x => { const k = key(x); total[k] = (total[k] || 0) + 1; });
+  const cur = list.findIndex(x => a && x.id === a.loginid);
+  sel.innerHTML = "";
+  list.forEach((x, i) => {
+    const k = key(x);
+    seen[k] = (seen[k] || 0) + 1;
+    const o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = (x.isVirtual ? "DEMO" : "REAL") + (x.currency ? " · " + x.currency : "")
+      + (total[k] > 1 ? " " + seen[k] : "");
+    sel.appendChild(o);
+  });
+  if (cur >= 0) sel.value = String(cur);
+  const switchable = !!a && list.length > 1
+    && (state.authMode === "pat" || state.authMode === "oauth") && !state.authBusy;
+  sel.disabled = !switchable;
+  sel.title = !a ? "Sign in to choose an account"
+    : list.length < 2 ? "This sign-in reaches one account — there is nothing else to switch to"
+    : switchable ? "Switch the trading session between your demo and real accounts"
+    : "Session is busy — wait for the current switch to finish";
 }
 /* the tab bar sticks directly under the header, whose height changes as it wraps —
    keep the sticky offset in sync so the tabs never slide out of view */
@@ -6327,13 +6861,19 @@ function closeConfirm(val){
 api.onConnect = async () => {
   setConn("live");
   const tok = store.get("dt_token");
-  if (tok && !state.account && !state.authBusy && !api.otpProvider){
-    if (tok.startsWith("pat_")){
+  const sess = oauthLoad();
+  if (!state.account && !state.authBusy && !api.otpProvider){
+    if (sess && sess.t && Date.now() < (sess.exp || 0)){
+      /* A per-client OAuth session lives in this tab only — restore it silently while it is valid. */
+      authorizeWithToken(sess.t, "", "oauth", true, false, sess.acct || null).catch(() => {});
+    } else if (sess && sess.t){
+      oauthClear();                                   // lapsed token: force a fresh sign-in, never trade on it
+    } else if (tok && tok.startsWith("pat_")){
       const appId = store.get("dt_app_id") || "";
       const acct = store.get("dt_acct") || null;
       if (appId) authorizePat(tok, appId, true, true, acct).catch(() => {});
-    } else {
-      try { await doAuthorize(tok, true, true); } catch(e){ store.del("dt_token"); }
+    } else if (tok){
+      doAuthorize(tok, true, true).catch(() => store.del("dt_token"));
     }
   }
   if (state.account) resubscribeBalance();
@@ -6450,11 +6990,48 @@ function init(){
   $("#symbolSelect").addEventListener("change", e => changeSymbol(e.target.value));
   // auth
   $("#authBtn").addEventListener("click", () => { if (state.account) logout(); else openAuth(); });
-  $("#swDemo").addEventListener("click", () => switchAccountType(true));
-  $("#swReal").addEventListener("click", () => switchAccountType(false));
+  $("#acctSelect").addEventListener("change", e => {
+    const t = acctOptions[+e.target.value];
+    if (t && state.account && t.id !== state.account.loginid) switchAccountTo(t);
+    renderAcctSelect();               // snap the menu back to the session that is actually live
+  });
   window.addEventListener("resize", syncHdrOffset);
   $("#authClose").addEventListener("click", closeAuth);
   $("#authModal").addEventListener("click", e => { if (e.target === $("#authModal")) closeAuth(); });
+  // per-client Deriv OAuth sign-in
+  $("#oauthLoginBtn").addEventListener("click", () => startOAuthLogin());
+  $("#oauthCopyBtn").addEventListener("click", () => {
+    const uri = oauthRedirectUri();
+    const told = () => toast("Redirect URI copied — paste it into your Deriv OAuth app settings", "success");
+    /* Never window.prompt() here: a blocking dialog freezes the page. Fall back to selecting the
+       URI already shown in the modal, so the client can still take it with one keystroke. */
+    const manual = () => {
+      const el = $("#oauthRedirect");
+      try {
+        const rng = document.createRange(); rng.selectNodeContents(el);
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rng);
+      } catch(e){}
+      toast("Press Ctrl+C to copy the highlighted Redirect URI", "warn");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(uri).then(told).catch(manual);
+      return;
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = uri; ta.style.position = "fixed"; ta.style.top = "-1000px"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      if (ok) told(); else manual();
+    } catch(e){ manual(); }
+  });
+  [["oauthClientId", "dt_client_id"], ["oauthScope", "dt_oauth_scope"]].forEach(p => {
+    const el = $("#" + p[0]);
+    if (!el) return;
+    el.addEventListener("input", () => { oauthNote = null; store.set(p[1], el.value.trim()); oauthRefreshUi(); });
+  });
+  oauthRefreshUi();
   $("#authConnect").addEventListener("click", async () => {
     const token = $("#tokenInput").value.trim();
     const appId = $("#appIdInput").value.trim();
@@ -6597,9 +7174,27 @@ function init(){
     toast("Trade history cleared — " + (open ? "open contracts dropped from the log" : "log is empty"), "success", 6000);
   });
   renderBots(); renderAiStats(); renderSignalHistory(); renderActivity(); renderSummary(); renderAccount(); renderSignalCard();
-  window.DT = { state, api, bots: BOTS, signal, scan, activity };
+  /* The robot-face popup only ever lowers the curtain — CLOSE, the backdrop and Esc all leave the scan,
+     the feeds and every bot exactly as they are. */
+  const spCloseBtn = $("#spClose"), spPop = $("#aiScanPop");
+  if (spCloseBtn) spCloseBtn.addEventListener("click", scanPopClose);
+  if (spPop) spPop.addEventListener("click", e => { if (e.target === spPop) scanPopClose(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && scanPop.src) scanPopClose(); });
+  window.DT = { state, api, bots: BOTS, signal, scan, activity,
+    auth: { start: startOAuthLogin, callback: handleOAuthCallback, session: oauthLoad, clear: oauthClear,
+            redirect: oauthRedirectUri, env: oauthEnvProblem, refresh: oauthRefreshUi, expire: oauthExpired,
+            authorize: authorizeWithToken },
+    scanPop: { open: scanPopOpen, close: scanPopClose, render: scanPopRender, state: scanPop, defs: SCAN_POP } };
   setConn("connecting");
   api.connect().catch(() => toast("Could not reach Deriv — will keep retrying", "error"));
+  /* If Deriv just redirected a client back here with an authorization code, finish that sign-in.
+     Awaiting nothing here: a failure must never stop the rest of the page from working. */
+  handleOAuthCallback().catch(e => {
+    const msg = (e && e.code ? e.code + " — " : "") + (e && e.message ? e.message : String(e));
+    oauthPinned("Sign-in did not complete: " + msg, "bad");
+    toast("Sign-in did not complete: " + msg, "error", 9000);
+    openAuth();
+  });
 }
 document.addEventListener("DOMContentLoaded", init);
 </script>
