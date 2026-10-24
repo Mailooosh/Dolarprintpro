@@ -1295,7 +1295,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
         <label>Deriv OAuth Client ID (App ID)<input type="text" id="oauthClientId" placeholder="already baked into this build" autocomplete="off" inputmode="numeric" spellcheck="false"></label>
       </div>
       <div class="mrow">
-        <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade account_manage" autocomplete="off" spellcheck="false"></label>
+        <label>Scopes each client is asked to grant<input type="text" id="oauthScope" placeholder="trade" autocomplete="off" spellcheck="false"></label>
       </div>
       <div class="mrow">
         <label>Redirect URI to register on your Deriv app
@@ -6271,7 +6271,7 @@ function openAuth(){
      baked into this build — never a stale value from a visitor's first attempt.                  */
   if (cid && !cid.value) cid.value = store.get("dt_client_id_owner") || OAUTH_CLIENT_ID || store.get("dt_client_id") || "";
   const sc = $("#oauthScope");
-  if (sc && !sc.value) sc.value = store.get("dt_oauth_scope") || OAUTH_DEFAULT_SCOPE;
+  if (sc && !sc.value) sc.value = store.get("dt_oauth_scope_owner") || OAUTH_DEFAULT_SCOPE;
   oauthRefreshUi();
   $("#authModal").classList.remove("hidden");
 }
@@ -6485,15 +6485,21 @@ function switchAccountTo(target){
    Contract: https://developers.deriv.com/docs/intro/oauth/                              */
 const OAUTH_AUTHORIZE_URL = "https://auth.deriv.com/oauth2/auth";
 const OAUTH_TOKEN_URL     = "https://auth.deriv.com/oauth2/token";
-const OAUTH_DEFAULT_SCOPE = "trade account_manage";
-/* The owner's registered Deriv OAuth application ("Dollarprinter V2"), baked in so a client never
+const OAUTH_DEFAULT_SCOPE = "trade";
+/* The registered Deriv OAuth application this build signs clients into, baked in so a client never
    types anything: they press one button, sign in on Deriv's own page and tap Allow access.
    A client_id is PUBLIC by design — it travels in the browser address sent to Deriv and grants
    nothing on its own; the secret half is the redirect-URL list on the app plus the user's login.
-   Deriv answers an unknown id with `invalid_client`, and an id whose app does not list this page's
-   address answers with `redirect_uri does not match` — both land on a Deriv error page, not here.
-   Override in the modal's Owner settings to run the site against a different app.               */
-const OAUTH_CLIENT_ID = "34iyncRMY1FxE4TWisRR1";
+   MEASURED against auth.deriv.com on 2026-10-24 (probe each app by hand before changing these):
+     · its registered redirect URL is  https://www.dolarprintpro.site/callback   — the bare site
+       root is NOT registered, so sending origin+pathname earns `redirect_uri does not match` and
+       Deriv bounces the client onto home.deriv.com/dashboard/error ("We couldn't find that page");
+     · its ONLY allowed scope is `trade` — asking for account_manage, read, admin, history or feed
+       earns `invalid_scope` and the same bounce, which is why OAUTH_DEFAULT_SCOPE is just "trade";
+     · an unknown id answers `invalid_client`, a valid one with a bad scope answers `invalid_scope`.
+   Both rules are why OAUTH_REDIRECT_PATH below is a fixed path, not the current pathname.          */
+const OAUTH_CLIENT_ID   = "34iyncRMY1FxE4TWisRR1";
+const OAUTH_REDIRECT_PATH = "/callback";
 const OAUTH_KEY       = "dt_oauth";        /* sessionStorage { t, exp, cid, rid, acct } */
 const OAUTH_STATE_KEY = "dt_oauth_state";  /* sessionStorage { v, verifier, cid, rid, scopes, at } */
 let oauthTimer = null, oauthWarned = false;
@@ -6513,11 +6519,18 @@ function oauthClientId(){
 }
 function oauthScopes(){
   const el = $("#oauthScope");
-  return ((el && el.value.trim()) || store.get("dt_oauth_scope") || OAUTH_DEFAULT_SCOPE).replace(/\s+/g, " ").trim();
+  /* Same rule as the client id: an explicit owner override wins, otherwise this build's default —
+     a remembered "trade account_manage" from an earlier build would earn invalid_scope and bounce
+     every client onto Deriv's error page.                                                        */
+  const v = (el && el.value.trim()) || store.get("dt_oauth_scope_owner") || OAUTH_DEFAULT_SCOPE || store.get("dt_oauth_scope") || "";
+  return v.replace(/\s+/g, " ").trim();
 }
-/* Deriv compares the redirect URI character for character, so the value sent at authorize time
-   and at exchange time must be identical: origin + pathname, never the ?code=... it arrives with. */
-function oauthRedirectUri(){ return location.origin + location.pathname; }
+/* Deriv compares the redirect URI character for character, so the value sent at authorize time and
+   at exchange time must be identical — and it must be the address actually registered on the app,
+   which is this origin + /callback, NOT the page the client happens to be looking at. Vercel is
+   told (vercel.json) to serve the same single file at /callback, and handleOAuthCallback rewrites
+   the address bar back to / once the code is spent.                                              */
+function oauthRedirectUri(){ return location.origin + OAUTH_REDIRECT_PATH; }
 function b64url(bytes){
   let s = "";
   for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
@@ -6663,7 +6676,9 @@ async function handleOAuthCallback(){
   const q = new URLSearchParams(location.search);
   const err = q.get("error"), code = q.get("code"), st = q.get("state");
   if (!err && !code && !q.get("error_description")) return false;
-  const clean = location.origin + location.pathname;
+  /* Burn the one-shot code out of the address bar, and come home from /callback to the site root
+     so a refresh reloads the terminal rather than replaying a spent code.                        */
+  const clean = location.origin + location.pathname.replace(/\/callback\/?$/, "/");
   let rec = null;
   try { rec = JSON.parse(sessionStorage.getItem(OAUTH_STATE_KEY) || "null"); } catch(e){}
   history.replaceState(null, "", clean);     // burn the one-shot code out of the address bar first
@@ -7056,14 +7071,16 @@ function init(){
     if (!el) return;
     el.addEventListener("input", () => { oauthNote = null; store.set(p[1], el.value.trim()); oauthRefreshUi(); });
   });
-  /* A client id typed into Owner settings is remembered as an explicit override and survives a
-     reload; re-typing the baked id clears the override so the build's own app takes over again.
-     Ordinary clients never reach this field — they just press the button.                        */
-  const cidEl = $("#oauthClientId");
-  if (cidEl) cidEl.addEventListener("input", () => {
-    const v = cidEl.value.trim();
-    if (v && v !== OAUTH_CLIENT_ID) store.set("dt_client_id_owner", v);
-    else store.set("dt_client_id_owner", "");
+  /* A value typed into Owner settings is remembered as an explicit override and survives a reload;
+     re-typing this build's own default clears the override so the build takes over again. Ordinary
+     clients never reach these fields — they just press the button.                               */
+  [["oauthClientId", "dt_client_id_owner", OAUTH_CLIENT_ID], ["oauthScope", "dt_oauth_scope_owner", OAUTH_DEFAULT_SCOPE]].forEach(p => {
+    const el = $("#" + p[0]);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      const v = el.value.trim();
+      store.set(p[1], v && v !== p[2] ? v : "");
+    });
   });
   oauthRefreshUi();
   $("#authConnect").addEventListener("click", async () => {
