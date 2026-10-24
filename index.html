@@ -672,7 +672,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="note" id="eoVerdict"></div>
       <div class="botrun">
         <button class="btn btn-green btn-big" id="b10_toggle">START</button>
-        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, paints the digits like the dashboard (green 8.5–11.5%, red ≥11.5%) and checks your six rules in the gate list further down the card. It trades the market OPPOSITE the hottest digit — that hottest digit on the other market is the entry point — and buys one EVEN/ODD contract only when all six rules agree; any closed gate means it holds. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press. The stop-loss level and 3 wins in a row no longer halt the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
+        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, paints the digits like the dashboard (green 8.5–11.5%, red ≥11.5%) and checks your six rules in the gate list further down the card. <b>It picks one side and stays on it:</b> the parity of the FIRST entry — EVEN or ODD — locks for the whole session, so it never flips from odd to even mid-run. That first entry is the market OPPOSITE the hottest digit (that hottest digit on the other market is the entry point), and it buys one EVEN/ODD contract only when all six rules agree; any closed gate means it holds. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press and then chooses a new side from scratch. The stop-loss level and 3 wins in a row no longer halt the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
       </div>
       <div class="cfg">
         <label>Stake<input type="number" id="b10_stake" value="1.00" min="0.35" step="0.05" title="Base stake — multiplied by ×2.1 after each loss up to the recovery-step limit"></label>
@@ -706,7 +706,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
-      <div class="note"><b>Strategy (your sheet, six of the eight rules):</b> trade the market opposite the hottest digit; the green bar must sit on the traded market between 11% and 12.5%; 3 to 4 digits must read 10.2% or more; no two digits on the opposite market may share a percentage; no two digits may compete head-to-head on the opposite market; no trade above a 13% green bar or with the two greens 1.5% apart. Entry point = the digit with the highest percentage on the opposite market.<br><b>What was cut:</b> the <i>green bar + second green bar both on the traded market, 0.2–0.4% apart</i> rule and the <i>red bars on the traded market only, at 8.6% or above, second red losing momentum</i> rule. Measured on 20,000 random 100-tick windows they opened <b>0%</b> and <b>0.1%</b> of the time — the traded market is by definition the one <i>opposite</i> the hottest digit, and the hottest digit is the likeliest green or red, so both rules fought the bot's own definition and Bot 10 never traded.<br><b>Now:</b> the six-rule stack opens on <b>7.6%</b> of 906 rolling 100-tick windows of <b>real 1HZ100V ticks</b> (7.9% on 5,000 random windows — the eight-rule stack opened on 0 of 20,000), and in the last live all-market scan <b>1 of 13 markets</b> cleared all six. So the bot does reach entry. Note rule 5 (the 13% green reversal cap) can never fire on the dashboard's own colours — a bar above 11.5% is painted red, not green — it is kept only because your sheet names it.<br><b>Honesty:</b> this is a timing filter, not an edge. EVEN/ODD pays ×1.82 here ⇒ 54.95% of the window must land on the bought side, and nothing in the digit shares measured on this terminal (7,208 rolling 100-tick windows, 8 markets) makes that favourable. The stack is still strict: most seconds it holds, which limits how much it trades — not how much it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> and the <b>3-consecutive-wins</b> bank are announcements only — the AI says the number once and the bot keeps buying on the same market, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
+      <div class="note"><b>Strategy (your sheet, six of the eight rules):</b> trade the market opposite the hottest digit — <b>but only ONE market per session</b> (see below); the green bar must sit on the traded market between 11% and 12.5%; 3 to 4 digits must read 10.2% or more; no two digits on the opposite market may share a percentage; no two digits may compete head-to-head on the opposite market; no trade above a 13% green bar or with the two greens 1.5% apart. Entry point = the digit with the highest percentage on the opposite market.<br><b>One market until TP (your rule of 24 Oct):</b> the parity of the <b>first entry</b> — EVEN or ODD — is LOCKED for the rest of the session. The bot no longer flips sides when the hottest digit moves: every later second it re-scores the six gates for that SAME parity, and if the green bar has migrated to the other side it simply <b>holds</b> instead of switching. It keeps buying only that one market until it hits its target; a fresh START (or the new session after TP) picks a new market from scratch. The cost of the lock is frequency — fewer entries per hour.<br><b>What was cut:</b> the <i>green bar + second green bar both on the traded market, 0.2–0.4% apart</i> rule and the <i>red bars on the traded market only, at 8.6% or above, second red losing momentum</i> rule. Measured on 20,000 random 100-tick windows they opened <b>0%</b> and <b>0.1%</b> of the time — the traded market is by definition the one <i>opposite</i> the hottest digit, and the hottest digit is the likeliest green or red, so both rules fought the bot's own definition and Bot 10 never traded.<br><b>Now:</b> the six-rule stack opens on <b>7.6%</b> of 906 rolling 100-tick windows of <b>real 1HZ100V ticks</b> (7.9% on 5,000 random windows — the eight-rule stack opened on 0 of 20,000), and in the last live all-market scan <b>1 of 13 markets</b> cleared all six. So the bot does reach entry. Note rule 5 (the 13% green reversal cap) can never fire on the dashboard's own colours — a bar above 11.5% is painted red, not green — it is kept only because your sheet names it.<br><b>Honesty:</b> this is a timing filter, not an edge. EVEN/ODD pays ×1.82 here ⇒ 54.95% of the window must land on the bought side, and nothing in the digit shares measured on this terminal (7,208 rolling 100-tick windows, 8 markets) makes that favourable. The stack is still strict: most seconds it holds, which limits how much it trades — not how much it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> and the <b>3-consecutive-wins</b> bank are announcements only — the AI says the number once and the bot keeps buying on the same market, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
     </div>
   </div>
 </section>
@@ -4991,19 +4991,30 @@ const bot6 = new Under7Bot();
    RED (hot) bar = share >= 11.5, BLUE (cold) = <= 8.5 (see the .dbar classes).
    Traded market = the parity OPPOSITE the hottest digit — the entry-point digit ("the digit having
    the highest percentage on the opposite market") therefore always lives on the market we do NOT buy.
+   SINCE ROUND 68 the parity is CHOSEN ONCE: the side of the first entry the session takes becomes
+   lockSide and every later read is scored for that same parity until TP ends the session (user rule:
+   "it trades odd odd then even, i want the bot to trade one market it gets first until it hit TP").
+   The entry-point digit is then the hottest digit on the parity we do not buy, which is no longer
+   necessarily the overall hottest digit — eoAnalyze returns both (hotD and entryD).
    Every rule is a veto with its own reason and every threshold is an input on the card, so the sheet
    can be loosened without touching code. None of these gates is a measured edge: they only decide
    WHEN the bot is allowed to buy a plain EVEN/ODD contract. */
 const EO_MID_LO = 8.5, EO_MID_HI = 11.5;                 // the dashboard's green band, exactly as painted
-function eoAnalyze(win){
+function eoAnalyze(win, lockSide){
   const h = digitHeatOf(state.digits, win);
   if (!h) return null;
   const p = h.pcts, c = cfg10();
   const rank = [0,1,2,3,4,5,6,7,8,9].sort((a,b) => p[b] - p[a] || b - a);
   const hotD = rank[0];
-  const side = hotD % 2 === 0 ? "ODD" : "EVEN";          // trade the market opposite the hottest digit
+  /* Round 68: Bot 10 locks the parity of its FIRST entry and trades nothing else until TP.
+     lockSide is that parity; with no lock the traded market is still the one OPPOSITE the hottest
+     digit. The entry point is then simply the hottest digit on the market we do NOT buy — which is
+     the same digit as hotD while unlocked, and stops being it once the hottest digit migrates. */
+  const locked = lockSide === "EVEN" || lockSide === "ODD";
+  const side = locked ? lockSide : (hotD % 2 === 0 ? "ODD" : "EVEN");
   const opp  = side === "EVEN" ? "ODD" : "EVEN";
   const inSide = d => (side === "EVEN") === (d % 2 === 0);
+  const entryD = rank.find(d => !inSide(d));
   const greens = rank.filter(d => p[d] > EO_MID_LO && p[d] < EO_MID_HI);
   const oppD   = rank.filter(d => !inSide(d));
   const g0 = greens[0], g1 = greens[1];
@@ -5038,7 +5049,7 @@ function eoAnalyze(win){
     gap === null || gap < c.gapveto,
     gap === null ? "one green bar" : "greens " + fmt(gap,1) + "% apart",
     "GREEN GAP " + fmt(gap,1) + "% ≥ " + fmt(c.gapveto,1) + "%");
-  return { n: h.n, p, rank, hotD, side, opp, greens, gates,
+  return { n: h.n, p, rank, hotD, entryD, locked, side, opp, greens, gates,
     ok: gates.every(g => g.ok), reasons: gates.filter(g => !g.ok).map(g => g.why) };
 }
 function cfg10(){
@@ -5072,14 +5083,15 @@ function cfg10(){
 const EO_RESTART_MS = 6000;
 class EoStratBot extends BaseBot {
   constructor(){ super("b10", "Even/Odd Strategy Bot", "Bot 10 · Even/Odd Strategy");
-    this.play = null; this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0; }
+    this.play = null; this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0;
+    this.lockSide = null; }          // the parity of this session's FIRST entry — nothing else is bought
   cfg(){ return cfg10(); }
-  analysis(){ return eoAnalyze(cfg10().win); }
+  analysis(){ return eoAnalyze(cfg10().win, this.lockSide); }
   limitPl(){ return round2(this.stats.pl - (this.sessionPl || 0)); }   // the Net P/L the card shows — restarts do not reset the target
   limitWord(){ return "session P/L"; }
   stopsOnLimits(){ return false; }                                     // only stopKinds() may halt it
   stopKinds(){ return ["tp"]; }                                        // TP ends the session; SL and win streaks do not
-  onStart(){ this.play = this.analysis(); this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0; }
+  onStart(){ this.lockSide = null; this.play = this.analysis(); this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0; }
   onStop(){ this.lossStreak = 0; }
   afterLimitStop(reason, kind){
     /* TP is the only kind stopKinds() allows this bot, so it returns here and NO auto-restart is
@@ -5122,6 +5134,15 @@ class EoStratBot extends BaseBot {
     }
     this.lastWhy = "";
     if (this.lossStreak >= c.steps) this.lossStreak = 0;
+    /* The first entry of the session decides the parity for the WHOLE session (user rule, round 68).
+       From here on analysis() is re-scored with that lock, so the six gates keep protecting the run
+       but they protect the SAME market — a read whose green bar sits on the other parity now holds
+       instead of flipping the bot to the opposite side. */
+    if (!this.lockSide){
+      this.lockSide = a.side;
+      this.sys("Locked on " + a.side + " — this session buys only " + a.side + " on " + state.symbol + " until it hits its target");
+      toast(this.name + ": locked on " + a.side + " for the rest of this session", "info", 6000);
+    }
     const stake = this.stakeFor(this.lossStreak);
     return { type: "DIGIT" + a.side, barrier: null, stake, duration: c.dur,
       source: this.source, symbol: state.symbol, label: a.side };
@@ -5148,7 +5169,7 @@ class EoStratBot extends BaseBot {
     if (!a) return { label: "WAITING · NO TICKS YET", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
     if (!a.ok) return { label: "WAITING · " + a.reasons.length + " GATE" + (a.reasons.length === 1 ? "" : "S") + " CLOSED", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
     const st = this.stakeFor(this.lossStreak);
-    return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + "/" + c.steps + " · " : "") + "BUYS " + a.side + " · ENTRY DIGIT " + a.hotD + " ON " + a.opp + " · " + state.symbol, cls: "mode-main", stake: st };
+    return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + "/" + c.steps + " · " : "") + "BUYS " + a.side + (a.locked ? " (LOCKED)" : "") + " · ENTRY DIGIT " + a.entryD + " ON " + a.opp + " · " + state.symbol, cls: "mode-main", stake: st };
   }
   subText(){
     const c = cfg10(), a = this.play || this.analysis();
@@ -5158,8 +5179,12 @@ class EoStratBot extends BaseBot {
     if (!a) return "EVEN ODD STRATEGY · waiting for " + c.win + " ticks" + tail;
     const pass = a.gates.filter(g => g.ok).length;
     const st = this.stakeFor(this.lossStreak);
-    return "EVEN ODD STRATEGY · trades the market OPPOSITE the hottest digit (" + a.hotD + " at " + fmt(a.p[a.hotD],1) +
-      "% on " + a.opp + ") with one " + a.side + " contract at " + fmt(st) + (this.lossStreak ? " (step " + this.lossStreak + "/" + c.steps + ", ×" + fmt(c.mult) + ")" : "") + " · " + pass + "/" + a.gates.length + " gates open" +
+    /* entryD is the hottest digit on the market we do NOT buy — the same digit as hotD until the
+       session locks a parity, after which the overall hottest digit may sit on our own side. */
+    const lead = a.locked
+      ? "LOCKED TO " + a.side + " since its first entry — buys only " + a.side + " until TP (entry digit " + a.entryD + " at " + fmt(a.p[a.entryD],1) + "% on " + a.opp + ")"
+      : "trades the market OPPOSITE the hottest digit (" + a.entryD + " at " + fmt(a.p[a.entryD],1) + "% on " + a.opp + ")";
+    return "EVEN ODD STRATEGY · " + lead + " with one " + a.side + " contract at " + fmt(st) + (this.lossStreak ? " (step " + this.lossStreak + "/" + c.steps + ", ×" + fmt(c.mult) + ")" : "") + " · " + pass + "/" + a.gates.length + " gates open" +
       (a.ok ? " — ENTRY CLEAR" : " — holding: " + a.reasons[0]) + tail;
   }
   describe(){
@@ -5169,7 +5194,7 @@ class EoStratBot extends BaseBot {
     let s = c.stake, total = 0, steps = 0;
     while (s <= (c.maxstake || Infinity) && steps <= c.steps + 1 && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
     return "<div class='note' style='margin:0'><b>Play:</b> once a second it reads the last <b>" + c.win +
-      " ticks</b> of " + state.symbol + ", paints the digits exactly like the dashboard (green bar = 8.5–11.5%, red bar = ≥11.5%) and checks your " + (a ? a.gates.length : 6) + " rules. The traded market is the one <b>OPPOSITE the hottest digit</b> — that hottest digit on the other market is the ENTRY POINT the strategy names — and when all " + (a ? a.gates.length : 6) + " rules agree it buys <b>one " + "DIGITEVEN/DIGITODD" + " contract</b> at " + fmt(c.stake) + " for " + c.dur + " tick" + (c.dur > 1 ? "s" : "") + ". Any closed gate means it holds and re-reads next second; nothing is bought on a partial pass.<br><b>Cut from your sheet:</b> the 'second green bar on the traded market 0.2–0.4% apart' and 'all red bars on the traded market, second red losing momentum' rules — measured on 20,000 random 100-tick windows they opened 0% and 0.1% of the time, because the traded market is by definition the one without the hottest digit. They blocked every trade, so the stack is six rules." + rows +
+      " ticks</b> of " + state.symbol + ", paints the digits exactly like the dashboard (green bar = 8.5–11.5%, red bar = ≥11.5%) and checks your " + (a ? a.gates.length : 6) + " rules. Its FIRST traded market is the one <b>OPPOSITE the hottest digit</b> — that hottest digit on the other market is the ENTRY POINT the strategy names — and once the session is locked (below), when all " + (a ? a.gates.length : 6) + " rules agree it buys <b>one " + "DIGITEVEN/DIGITODD" + " contract</b> at " + fmt(c.stake) + " for " + c.dur + " tick" + (c.dur > 1 ? "s" : "") + ". Any closed gate means it holds and re-reads next second; nothing is bought on a partial pass.<br><b>ONE MARKET PER SESSION:</b> the parity of the <b>first entry</b> is locked for the rest of the session" + (this.lockSide ? " — this run is locked on <b>" + this.lockSide + "</b>" : "") + ", so every later read is scored for that SAME market and the bot never flips to the other side because the hottest digit moved. It keeps buying only " + (this.lockSide || "the market it first gets") + " until it hits its target; a new session after TP (or a fresh START after STOP) picks a new market from scratch. The price of the lock is frequency: a read whose green bar sits on the other parity now holds instead of switching sides.<br><b>Cut from your sheet:</b> the 'second green bar on the traded market 0.2–0.4% apart' and 'all red bars on the traded market, second red losing momentum' rules — measured on 20,000 random 100-tick windows they opened 0% and 0.1% of the time, because the traded market is by definition the one without the hottest digit. They blocked every trade, so the stack is six rules." + rows +
       "<br><b>Martingale:</b> ×" + fmt(c.mult) + " after each loss, up to " + c.steps + " recovery steps (then resets to base). Worst-case exposure ≈ " + fmt(round2(total)) + " before the step limit or stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + ") cuts it off. At the ×" + fmt(SYN_PAY_EO) + " EVEN/ODD quote, ×" + fmt(c.mult) + " wins back only the first loss outright — deeper runs rely on the cut-off.<br>" +
       "<b>Honesty:</b> these gates are a timing filter written from your sheet, not a measured edge. EVEN/ODD pays <b>×" + fmt(SYN_PAY_EO) + "</b> on this terminal ⇒ <b>" + fmt(SYN_BE_EO,2) +
       "%</b> of the window must land on the bought side, and no digit-share pattern measured here (7,208 rolling 100-tick windows across 8 markets) turns that negative expectancy positive. On <b>906 rolling 100-tick windows of real ticks</b> the six-rule stack opened all six on <b>7.6%</b> — roughly one read in thirteen reaches entry, the rest hold — so it does trade now; that number limits how much it trades, not how much it wins.<div class='warnstrip' style='margin:10px 0 0'> This places <b>real trades</b> on account <b>" +
@@ -5817,7 +5842,7 @@ async function runEoTradeAI(){
     if (status) status.textContent = "Best: " + symLabel(best.sym) + " — " + best.gatesOpen + "/6 gates open, EV " + fmtS(best.ev);
     if (verdict) verdict.innerHTML = head1 +
       "<br>The AI takes <b>" + symLabel(best.sym) + "</b>: " + best.gatesOpen + "/6 gates open, EV " + fmtS(best.ev) + " per 1.00." +
-      "<br><b>Entry point:</b> digit <b>" + best.hotD + "</b> at " + fmt(best.pctHot, 1) + "% on <b>" + best.opp + "</b> → trades <b>" + best.side + "</b> on " + symLabel(best.sym) + "." +
+      "<br><b>Entry point:</b> digit <b>" + best.entryD + "</b> at " + fmt(best.pctHot, 1) + "% on <b>" + best.opp + "</b> → the first entry is <b>" + best.side + "</b> on " + symLabel(best.sym) + ", and that market <b>locks for the whole session</b> until it hits TP." +
       "<br>A won digit competition over " + best.n + " ticks is still a <b>small sample</b> — the leaders move as new ticks arrive, and this does not turn a " + fmtS(best.ev) + "-per-1.00 structure into a proven edge.";
     bot10.sys("AI scan done — " + rows.length + " markets · " + cleared.length + " with all 6 gates open · chose " + symLabel(best.sym) + " · " + best.gatesOpen + "/6 gates · EV " + fmtS(best.ev));
     speak("Analysing every volatility market for the Even Odd Strategy. Done. The best setup is on " + symLabel(best.sym) + ": all six rules agree. Trading now.", { force: true, interrupt: true });
@@ -5848,9 +5873,9 @@ function eoSurvey(win){
     state.digits = save;
     if (!a) continue;
     const pass = a.gates.filter(g => g.ok).length;
-    rows.push({ sym, n: a.n, pcts: a.p, hotD: a.hotD, side: a.side, opp: a.opp,
+    rows.push({ sym, n: a.n, pcts: a.p, hotD: a.hotD, entryD: a.entryD, side: a.side, opp: a.opp,
       gatesOpen: pass, ok: a.ok, reasons: a.reasons, ev: a.ok ? round2(SYN_PAY_EO * (pass / a.gates.length) - 1) : -1,
-      pctHot: a.p[a.hotD], label: a.side });
+      pctHot: a.p[a.entryD], label: a.side });
   }
   return rows;
 }
@@ -6151,9 +6176,14 @@ function renderBot(b){
       if (entry) entry.innerHTML = "Waiting for " + c.win + " ticks on " + state.symbol + " — nothing counted, nothing bought.";
       if (gatesEl) gatesEl.innerHTML = "";
     } else {
-      if (entry) entry.innerHTML = "<b>Entry point:</b> digit <b>" + a.hotD + "</b> holds the highest share (" +
-        fmt(a.p[a.hotD], 1) + "%) on <b>" + a.opp + "</b> — so the bot trades <b>" + a.side + "</b> on " + state.symbol +
-        " over the last " + a.n + " ticks. " + (a.ok
+      if (entry) entry.innerHTML = "<b>Entry point:</b> " +
+        (a.locked
+          ? "<b style='color:var(--green)'>LOCKED TO " + a.side + "</b> since this session's first entry — it buys only " + a.side +
+            " on " + state.symbol + " until it hits TP. The greenest digit outside that parity is <b>" + a.entryD + "</b> (" +
+            fmt(a.p[a.entryD], 1) + "% on " + a.opp + ") over the last " + a.n + " ticks."
+          : "digit <b>" + a.entryD + "</b> holds the highest share (" + fmt(a.p[a.entryD], 1) +
+            "%) on <b>" + a.opp + "</b> — so the first entry trades <b>" + a.side + "</b> on " + state.symbol +
+            " over the last " + a.n + " ticks, and that market then locks.") + " " + (a.ok
           ? "<b style='color:var(--green)'>ALL " + a.gates.length + " RULES AGREE — one " + a.side + " contract at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
           : "<b style='color:var(--red)'>HOLDING — " + a.reasons.length + " rule" + (a.reasons.length === 1 ? "" : "s") + " closed.</b>");
       if (gatesEl) gatesEl.innerHTML = a.gates.map(g =>
