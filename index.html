@@ -6844,7 +6844,7 @@ function renderAccount(){
   if (a) $("#acctBal").textContent = fmt(a.balance) + " " + a.currency;
   syncHdrOffset();
 }
-/* The header's DEMO/REAL menu. Options carry only the account type and its currency — never the
+/* The header's DEMO/REAL menu. Options carry the account type only — no currency, never the
    login id — and the value is the index into acctOptions, so the id does not sit in the markup
    either. acctOptions is what the change listener resolves back to a real account. */
 let acctOptions = [];
@@ -6861,7 +6861,10 @@ function renderAcctSelect(){
     badge.title = real ? "Real money account" : "Demo account";
   }
   if (!sel) return;
-  const key = x => (x.isVirtual ? "DEMO" : "REAL") + "|" + (x.currency || "");
+  /* Round 66: the currency is no longer printed in the menu — a client asked for "DEMO", not
+     "DEMO · USD". The label keys on the account TYPE alone, so if an account list ever holds two
+     demos the ordinal still tells them apart ("DEMO 1", "DEMO 2") with no currency shown. */
+  const key = x => (x.isVirtual ? "DEMO" : "REAL");
   const total = {}, seen = {};
   list.forEach(x => { const k = key(x); total[k] = (total[k] || 0) + 1; });
   const cur = list.findIndex(x => a && x.id === a.loginid);
@@ -6871,8 +6874,7 @@ function renderAcctSelect(){
     seen[k] = (seen[k] || 0) + 1;
     const o = document.createElement("option");
     o.value = String(i);
-    o.textContent = (x.isVirtual ? "DEMO" : "REAL") + (x.currency ? " · " + x.currency : "")
-      + (total[k] > 1 ? " " + seen[k] : "");
+    o.textContent = k + (total[k] > 1 ? " " + seen[k] : "");
     sel.appendChild(o);
   });
   if (cur >= 0) sel.value = String(cur);
