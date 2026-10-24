@@ -231,6 +231,39 @@ input[type=checkbox]{width:auto;accent-color:var(--green)}
 .dcol .cnt{font-size:10px;color:var(--dim);font-family:var(--mono)}
 #distBase{position:absolute;left:0;right:0;border-top:1px dashed var(--dim);opacity:.65}
 #distBase span{position:absolute;right:2px;top:-15px;font-size:9.5px;color:var(--dim)}
+/* Round 67: the DBot-style digit discs above the bars — digit + its share inside one filled
+   circle, coloured by RANK (green = most frequent, red = least, amber = second least) and the
+   live tick's digit filled blue with a pointer above it. The bars below stay untouched.
+   GRID, not flex: flex-wrap let the last short row grow its discs bigger than the first, so the
+   circles came out two different sizes. Below 760px they split into two even rows of five. */
+#distCircles{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:9px;padding-top:13px;margin-top:2px}
+@media(max-width:760px){#distCircles{grid-template-columns:repeat(5,minmax(0,1fr));gap:20px 9px}}
+.dcirc{position:relative;width:100%;max-width:84px;aspect-ratio:1/1;justify-self:center;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);
+  color:var(--text);transition:background .3s ease,border-color .3s,color .3s,box-shadow .3s ease}
+.dcirc b{font:800 clamp(15px,1.6vw,22px)/1 var(--mono)}
+.dcirc span{font:700 clamp(9px,1vw,12px)/1 var(--mono);opacity:.72}
+.dcirc.most{background:linear-gradient(160deg,#00d68a,#00a066);border-color:#00e699;color:#04150f;box-shadow:0 0 14px rgba(0,192,118,.32)}
+.dcirc.least{background:linear-gradient(160deg,#ff6a72,#cf2b36);border-color:#ff7d84;color:#200406;box-shadow:0 0 14px rgba(255,68,79,.3)}
+.dcirc.low{background:linear-gradient(160deg,#ffb648,#d98d0f);border-color:#ffc069;color:#1c1201;box-shadow:0 0 12px rgba(240,169,46,.26)}
+.dcirc.cur{background:linear-gradient(160deg,#7cb8ff,#2f79d8);border-color:#b9dbff;color:#03111f}
+.dcirc.cur::after{content:"";position:absolute;left:50%;top:-11px;transform:translateX(-50%);width:0;height:0;
+  border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid var(--blue)}
+/* the current digit loses its rank FILL to the blue, so keep the rank as a ring */
+.dcirc.cur.rank-most{box-shadow:0 0 0 3px rgba(0,214,138,.85),0 0 16px rgba(0,192,118,.4)}
+.dcirc.cur.rank-least{box-shadow:0 0 0 3px rgba(255,106,114,.85),0 0 16px rgba(255,68,79,.4)}
+.dcirc.cur.rank-low{box-shadow:0 0 0 3px rgba(255,182,72,.85),0 0 16px rgba(240,169,46,.35)}
+.dclabel{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;font:600 10px var(--mono);
+  letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.dclabel i{font-style:normal}
+.dotc{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);margin:0 4px 0 10px;vertical-align:middle}
+.dotc:first-child{margin-left:0}
+.dotc.cur{background:var(--blue);border-color:#b9dbff}
+.dotc.most{background:var(--green);border-color:#00e699}
+.dotc.least{background:var(--red);border-color:#ff7d84}
+.dotc.low{background:var(--amber);border-color:#ffc069}
+.dcchip{padding:3px 8px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);
+  font:700 10.5px var(--mono);letter-spacing:.02em;text-transform:none}
 .covs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cov{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
 .cov .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
@@ -586,6 +619,11 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       </span>
       <span class="r" id="distMeta"></span>
     </h3>
+    <div id="distCircles"></div>
+    <div class="dclabel">
+      <span><i class="dotc cur"></i>current digit<i class="dotc most"></i>most frequent<i class="dotc least"></i>least<i class="dotc low"></i>2nd least</span>
+      <span class="dcchip" id="distCircChip">0/0</span>
+    </div>
     <div id="distBars"><div id="distBase"><span>10% expected</span></div></div>
   </div>
 
@@ -1785,6 +1823,23 @@ function renderDistribution(){
     bar.className = "dbar " + (pcts[i] >= 11.5 ? "hot" : pcts[i] <= 8.5 ? "cold" : "mid");
     $("#dpct_" + i).textContent = fmt(pcts[i], 1) + "%";
     $("#dcnt_" + i).textContent = "n=" + counts[i];
+  }
+  /* the discs: rank colours + the live digit, exactly the read the bars give, in one glance */
+  const chip = $("#distCircChip");
+  if (chip) chip.textContent = arr.length + "/" + state.winSel;
+  if (!arr.length) return;
+  /* order by share, ties broken by digit, so "most"/"least" always name one circle */
+  const rank = pcts.map((p, i) => i).sort((x, y) => pcts[y] - pcts[x] || x - y);
+  const most = rank[0], least = rank[9], low = rank[8];
+  const cur = state.digits[state.digits.length - 1];
+  for (let i = 0; i < 10; i++){
+    const el = $("#dcc_" + i); if (!el) continue;
+    const role = i === most ? "most" : i === least ? "least" : i === low ? "low" : "";
+    const isCur = i === cur;
+    el.className = "dcirc" + (isCur ? " cur" + (role ? " rank-" + role : "") : role ? " " + role : "");
+    $("#dccpct_" + i).textContent = fmt(pcts[i], 1) + "%";
+    el.title = "Digit " + i + " — " + counts[i] + " of " + arr.length + " ticks (" + fmt(pcts[i], 1) + "%, expected 10%)" +
+      (isCur ? " · the current digit" : "") + (i === most ? " · most frequent" : i === least ? " · least frequent" : "");
   }
 }
 function renderCoverage(){
@@ -6976,14 +7031,21 @@ api.onDisconnect = () => {
 };
 
 function buildDist(){
-  const wrap = $("#distBars");
+  const wrap = $("#distCircles");
+  for (let i = 0; i < 10; i++){
+    const c = document.createElement("div");
+    c.className = "dcirc"; c.id = "dcc_" + i;
+    c.innerHTML = "<b>" + i + "</b><span id='dccpct_" + i + "'>—</span>";
+    wrap.appendChild(c);
+  }
+  const bars = $("#distBars");
   for (let i = 0; i < 10; i++){
     const col = document.createElement("div");
     col.className = "dcol";
     col.innerHTML = "<span class='pct' id='dpct_" + i + "'>—</span>" +
       "<div class='dbarwrap'><div class='dbar' id='dbar_" + i + "' style='height:2%'></div></div>" +
       "<span class='dg'>" + i + "</span><span class='cnt' id='dcnt_" + i + "'>n=0</span>";
-    wrap.appendChild(col);
+    bars.appendChild(col);
   }
 }
 const COMPS = [["mom", "Momentum (20t)"], ["trend", "Trend strength (LinReg + R²)"], ["ema", "EMA 5/20 cross"], ["streak", "Directional streak"], ["rsi", "RSI-14 (damped)"]];
