@@ -1294,7 +1294,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
     <div class="stat"><div class="k">Session P/L</div><div class="v" id="sumPl">0.00</div></div>
     <div class="stat"><div class="k">Bot 1 P/L</div><div class="v" id="sumB1">0.00</div></div>
     <div class="stat"><div class="k">Bot 2 P/L</div><div class="v" id="sumB2">0.00</div></div>
-    <div class="stat"><div class="k" style="align-self:center;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-ghost btn-mini" id="exportCsv">Export CSV</button><button class="btn btn-red btn-mini" id="resetHistory">Reset history</button></div></div>
+    <div class="stat"><div class="k" style="align-self:center;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-ghost btn-mini" id="exportCsv" title="Download the logged trades as a CSV file">Export CSV</button><button class="btn btn-ghost btn-mini" id="resetHistory" title="Clears the trade history, the session totals and the P/L curve (asks first)">Reset history</button><button class="btn btn-red btn-mini" id="stopAllLog" title="Stops every bot that is running or mid-order, wherever it was started from — the same halt as STOP ALL BOTS at the top, but here in the log next to the trades it just made. Bots already idle are left alone">STOP RUNNING BOTS</button></div></div>
   </div>
   <div class="panel" style="margin-bottom:14px">
     <h3>Session P/L curve <span class="r" id="plMeta">no settled trades yet</span></h3>
@@ -7373,6 +7373,28 @@ function init(){
     activity.length = 0;
     renderActivity(); renderSummary();
     toast("Trade history cleared — " + (open ? "open contracts dropped from the log" : "log is empty"), "success", 6000);
+  });
+  /* STOP RUNNING BOTS — the same halt as the header's STOP ALL, placed here next to Reset history so
+     the user can end a run while watching the trades it is making. Only bots that are actually RUNNING
+     can be stopped (BaseBot.stop returns early on an idle one), so the message reports the three real
+     states separately: halted runs, an order still in flight, and a queued auto-restart — which this
+     button also cancels, because pressing STOP should mean the bot does not come back by itself. */
+  $("#stopAllLog").addEventListener("click", () => {
+    const running = BOTS.filter(b => b.running);
+    const inFlight = BOTS.filter(b => !b.running && b.busy);
+    const queued = BOTS.filter(b => !b.running && b.restartTimer);
+    if (!running.length && !inFlight.length && !queued.length){ toast("No bot is running — nothing to stop", "info", 5000); return; }
+    if (running.length) stopAllBots("STOP RUNNING BOTS pressed in the Activity Log");
+    queued.forEach(b => { clearTimeout(b.restartTimer); b.restartTimer = null; b.restartAt = 0;
+      b.sys("Queued auto-restart cancelled — STOP pressed in the Activity Log"); renderBot(b); });
+    renderBots();
+    const parts = [];
+    if (running.length) parts.push("Stopped " + running.map(b => b.name).join(" + "));
+    if (inFlight.length) parts.push(inFlight.map(b => b.name).join(" + ") + " has an order in flight — it still settles on Deriv");
+    if (queued.length) parts.push(queued.length + " queued re-start cancelled");
+    const line = parts.join(" · ") + " — nothing more is bought";
+    toast(line, "warn", 9000);
+    speak(running.length || queued.length ? "Stopped. Nothing more is bought." : "An order is still in flight — it will settle on its own.", { force: true, interrupt: true });
   });
   renderBots(); renderAiStats(); renderSignalHistory(); renderActivity(); renderSummary(); renderAccount(); renderSignalCard();
   /* The robot-face popup only ever lowers the curtain — CLOSE, the backdrop and Esc all leave the scan,
