@@ -571,15 +571,24 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 <section class="tabpanel show" id="tab_dashboard">
   <div class="grid g2">
     <div class="panel">
-      <h3>Live tick stream <span class="r" id="distMeta2"></span></h3>
-      <div class="bigprice">
-        <span id="curPrice" class="mono">—</span>
-        <span id="curDelta" class="mono"></span>
-        <span id="tickCount"></span>
-      </div>
-      <canvas id="spark"></canvas>
-      <div class="strip" id="digitStrip"></div>
+    <h3>Digit distribution — last digit frequency
+      <span class="wbtns" id="winBtns">
+        <button class="wbtn" data-w="25">25</button>
+        <button class="wbtn" data-w="50">50</button>
+        <button class="wbtn active" data-w="100">100</button>
+        <button class="wbtn" data-w="250">250</button>
+        <button class="wbtn" data-w="500">500</button>
+        <button class="wbtn" data-w="1000">1000</button>
+      </span>
+      <span class="r" id="distMeta"></span>
+    </h3>
+    <div id="distCircles"></div>
+    <div class="dclabel">
+      <span><i class="dotc cur"></i>current digit<i class="dotc most"></i>most frequent<i class="dotc least"></i>least<i class="dotc low"></i>2nd least</span>
+      <span class="dcchip" id="distCircChip">0/0</span>
     </div>
+    <div id="distBars"><div id="distBase"><span>10% expected</span></div></div>
+  </div>
     <div class="panel">
       <h3>Strategy coverage (live %)</h3>
       <div class="covs">
@@ -608,23 +617,15 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
   </div>
 
   <div class="panel" style="margin-top:14px">
-    <h3>Digit distribution — last digit frequency
-      <span class="wbtns" id="winBtns">
-        <button class="wbtn" data-w="25">25</button>
-        <button class="wbtn" data-w="50">50</button>
-        <button class="wbtn active" data-w="100">100</button>
-        <button class="wbtn" data-w="250">250</button>
-        <button class="wbtn" data-w="500">500</button>
-        <button class="wbtn" data-w="1000">1000</button>
-      </span>
-      <span class="r" id="distMeta"></span>
-    </h3>
-    <div id="distCircles"></div>
-    <div class="dclabel">
-      <span><i class="dotc cur"></i>current digit<i class="dotc most"></i>most frequent<i class="dotc least"></i>least<i class="dotc low"></i>2nd least</span>
-      <span class="dcchip" id="distCircChip">0/0</span>
-    </div>
-    <div id="distBars"><div id="distBase"><span>10% expected</span></div></div>
+      <h3>Live tick stream <span class="r" id="distMeta2"></span></h3>
+      <div class="bigprice">
+        <span id="curPrice" class="mono">—</span>
+        <span id="curDelta" class="mono"></span>
+        <span id="tickCount"></span>
+      </div>
+      <canvas id="spark"></canvas>
+      <div class="strip" id="digitStrip"></div>
+      <div class="note">The newest Deriv tick of the selected market, its change from the previous tick, and the last digits as they arrive. The price sparkline is the same stream the Rise/Fall bot reads.</div>
   </div>
 
   <div class="grid g2" style="margin-top:14px">
@@ -747,9 +748,9 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       </div>
     </div>
     <div class="btile" id="tile_b3">
-      <div class="th"><span class="no">3</span> RISE / FALL AI</div>
+      <div class="th"><span class="no">3</span> RISE / FALL REVERSAL</div>
       <div class="tb">
-        <div class="trow"><span class="mode-badge mode-wait" id="t3_mode">WAITING · CONF —</span></div>
+        <div class="trow"><span class="mode-badge mode-wait" id="t3_mode">WAITING · NO PATTERN</span></div>
         <div class="trow"><span>Net P/L</span><span class="tpl up" id="t3_pl">0.00</span></div>
         <div class="trow"><span>Trades</span><span class="mono" id="t3_tr">0</span></div>
         <button class="loadbtn" id="t3_load">▶ LOAD</button>
@@ -848,15 +849,19 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
     </div>
 
     <div class="panel botcard blkstyle" id="card_b3">
-      <h3>BOT 3 · Rise/Fall AI <span class="mode"><span class="mode-badge mode-wait" id="b3_mode">WAITING · CONF —</span></span></h3>
+      <h3>BOT 3 · Rise/Fall <span class="mode"><span class="mode-badge mode-wait" id="b3_mode">WAITING · NO PATTERN</span></span></h3>
       <div class="botrun">
         <button class="btn btn-green btn-big" id="b3_toggle">START</button>
-        <span class="sub" id="b3_sub">Next: RISE/FALL · waiting for strong confidence</span>
+        <span class="sub" id="b3_sub">Next: RISE/FALL · waiting for 2 ticks in a row</span>
       </div>
       <div class="cfg">
         <label>Stake<input type="number" id="b3_stake" value="0.35" min="0.35" step="0.05"></label>
-        <label>Duration (ticks)<input type="number" id="b3_dur" value="5" min="1" max="10" step="1"></label>
-        <label>Min confidence %<input type="number" id="b3_minconf" value="70" min="55" max="95" step="1" title="Only trade when the AI ensemble confidence is at least this (signal-center scale)"></label>
+        <label>Duration (ticks)<input type="number" id="b3_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks. 1 (your rule of 25 Oct) means the VERY NEXT tick decides the trade — the price one tick later versus the price at entry"></label>
+        <label>Entry rule<select id="b3_entry" title="2 in a row → opposite: your reversal rule — after 2 consecutive falling ticks it buys RISE, after 2 consecutive rising ticks it buys FALL. AI ensemble: the old 5-model read (momentum, EMA cross, trend, streak, RSI) gated by Min confidence"><option value="rev" selected>2 in a row → opposite</option><option value="ai">AI ensemble (5 models)</option></select></label>
+        <label>Window (ticks)<input type="number" id="b3_win" value="100" min="10" max="500" step="10" title="The rise/fall count is read over the last 100 ticks (your rule of 25 Oct) — that is the window the card reports RISE% / FALL% from"></label>
+        <label>Pattern (ticks in a row)<input type="number" id="b3_pat" value="2" min="1" max="8" step="1" title="How many identical tick moves make an entry point. 2 = two falls in a row buys RISE, two rises in a row buys FALL"></label>
+        <label>Only at exactly that count<input type="checkbox" id="b3_exact" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="ON (default): it enters the moment the run is EXACTLY 2 and then waits while the trend keeps going, so one move never machine-guns the bot. OFF: it re-enters on every tick while the run is 2 or longer"></label>
+        <label>Min confidence %<input type="number" id="b3_minconf" value="70" min="55" max="95" step="1" title="AI-ensemble mode ONLY — the reversal rule has no confidence number, the pattern is the whole decision. Only trade when the AI ensemble confidence is at least this (signal-center scale)"></label>
         <label>Martingale ×<input type="number" id="b3_mult" value="2" min="1" step="0.1" title="Stake multiplier applied after each loss (1 = flat stakes, no martingale)"></label>
         <label>Stake cap<input type="number" id="b3_maxstake" value="10" min="1" step="1" title="Martingale stops climbing here and resets to the base stake"></label>
         <label>Take profit<input type="number" id="b3_tp" value="5" min="0" step="0.5" title="Stop the bot once run P/L reaches +this (0 = off — runs until you stop it)"></label>
@@ -874,7 +879,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b3_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Direction</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b3_recent"></tbody></table></div>
       <div class="note" id="b3_expo"></div>
-      <div class="note"><b>Strategy:</b> fully automatic Rise/Fall — no per-trade confirmation. Reads the same 5-model AI ensemble as the Signal Center (momentum, EMA cross, trend, streak, RSI) and buys <b>RISE (CALL)</b> or <b>FALL (PUT)</b> the moment confidence reaches your minimum. <b>Martingale:</b> after each loss the stake is multiplied by your × factor to recover the run; it resets to base after a win, or when it would exceed the stake cap (set × to 1 for flat stakes). The bot keeps trading until <b>you stop it</b> or it hits the <b>take profit / stop loss</b> you set (0 = that limit is off).</div>
+      <div class="note"><b>Strategy (your rule of 25 Oct):</b> fully automatic Rise/Fall — no per-trade confirmation. It reads the last <b>100 ticks</b> and enters on the <b>reversal</b>: <b>2 FALL ticks in a row → buy RISE</b>, <b>2 RISE ticks in a row → buy FALL</b>. When the two most recent moves disagree, or a move is flat, there is no entry point and it waits. Contracts run <b>1 tick</b> — the very next price is the exit. By default it enters only when the run is <b>exactly</b> the pattern count, so a long trend cannot machine-gun the stake ladder; untick "Only at exactly that count" to re-enter on every tick while the run lasts. Switch <b>Entry rule</b> back to <b>AI ensemble</b> for the old 5-model read (momentum, EMA cross, trend, streak, RSI) gated by <b>Min confidence</b> — that field does nothing in reversal mode.<br><b>Martingale:</b> after each loss the stake is multiplied by your × factor to recover the run; it resets to base after a win, or when it would exceed the stake cap (set × to 1 for flat stakes). The bot keeps trading until <b>you stop it</b> or it hits the <b>take profit / stop loss</b> you set (0 = that limit is off).<br><b style="color:var(--amber)">What this rule is not:</b> ticks are independent, so betting against a 2-tick run does not make the next tick more likely to reverse. Rise/Fall pays ≈<b>1.80×</b> ⇒ <b>55.56%</b> must win to break even, and a 1-tick contract is the closest thing to a coin flip the market offers. Reversal + martingale changes <i>when</i> it buys and <i>how much</i> — not the odds. Keep the base stake small.</div>
     </div>
 
     <div class="panel botcard" id="card_b4">
@@ -1189,7 +1194,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
       <button class="btn btn-green btn-big" id="loadBotBtn">LOAD BOT</button>
       <div class="lbmeta" id="loadBotStatus">Reading the live feeds…</div>
     </div>
-    <div class="note" style="margin-top:10px"><b>One press:</b> picks the strongest <b>Over 3 / Under 6</b> or <b>Rise/Fall</b> setup across every scanned market (the current market when the scanner is off), switches to that exact market, sets the matching bot's base stake to <b>1.00</b> and starts it immediately — the press <i>is</i> the confirmation, no extra dialog. <b style="color:var(--amber)">It places real trades on your authorized account (DEMO or LIVE).</b> Rise/Fall loads <b>Bot 3 · Rise/Fall AI</b>, which trades automatically with no per-trade confirmation — it runs until you stop it or its TP/SL hits. <b>Even/Odd is not loadable</b> — Bot 2 only trades the side the AI Signal Center provides. Stop anytime with STOP ALL BOTS or the bot's STOP.</div>
+    <div class="note" style="margin-top:10px"><b>One press:</b> picks the strongest <b>Over 3 / Under 6</b> or <b>Rise/Fall</b> setup across every scanned market (the current market when the scanner is off), switches to that exact market, sets the matching bot's base stake to <b>1.00</b> and starts it immediately — the press <i>is</i> the confirmation, no extra dialog. <b style="color:var(--amber)">It places real trades on your authorized account (DEMO or LIVE).</b> Rise/Fall loads <b>Bot 3 · Rise/Fall</b>, which enters on your <b>2-in-a-row reversal</b> — over the last 100 ticks, 2 FALLs in a row buys RISE and 2 RISEs in a row buys FALL, one-tick contracts — automatically, with no per-trade confirmation, until you stop it or its TP/SL hits. <b>Even/Odd is not loadable</b> — Bot 2 only trades the side the AI Signal Center provides. Stop anytime with STOP ALL BOTS or the bot's STOP.</div>
   </div>
 
   <div class="panel" style="margin-top:14px">
@@ -2715,7 +2720,7 @@ function pickLoadPlan(){
 function loadPlanTxt(plan){
   const scope = scan.on ? "scanning " + (scan.rows ? scan.rows.length : 0) + " markets" : "scanner off — current market only";
   if (plan.qualified){
-    const name = plan.bot === bot3 ? "Bot 3 · Rise/Fall AI" : "Bot 1 · Over3→Under6";
+    const name = plan.bot === bot3 ? "Bot 3 · Rise/Fall" : "Bot 1 · Over3→Under6";
     const base = plan.type === "O/U" ? 60 : 50;
     return "<b>" + name + "</b> → <b>" + plan.sym + "</b> · " + plan.side + " " + plan.type + " · " + fmt(plan.pct, 1) + "% (" + fmt(Math.abs(plan.edge), 1) + "pp beyond the " + base + "% baseline) · stake 1.00 · " + scope;
   }
@@ -3106,7 +3111,7 @@ try { if ("speechSynthesis" in window){ speechSynthesis.onvoiceschanged = () => 
 /* ================= settings persistence ================= */
 const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp","b1_sl",
   "b2_stake","b2_dur","b2_mult","b2_maxstake","b2_maxage","b2_tp","b2_sl",
-  "b3_stake","b3_dur","b3_minconf","b3_mult","b3_maxstake","b3_tp","b3_sl",
+  "b3_stake","b3_dur","b3_entry","b3_win","b3_pat","b3_exact","b3_minconf","b3_mult","b3_maxstake","b3_tp","b3_sl",
   "b4_stake","b4_dur","b4_mult","b4_maxstake","b4_tp","b4_sl","b4_rules","b4_sweepOn",
   "b5_stake","b5_mult","b5_steps","b5_maxstake","b5_dur","b5_win","b5_top","b5_sig","b5_rfmin","b5_tp","b5_sl",
   "b6_stake","b6_dur","b6_mult","b6_steps","b6_maxstake","b6_tp","b6_sl",
@@ -3137,6 +3142,14 @@ function loadSettings(){
   if (!store.get("dt_b5win_mig")){
     const w = $("#b5_win"); if (w) w.value = "100";
     store.set("dt_b5win_mig", "1");
+    saveSettings();
+  }
+  /* one-time migration: Bot 3 ran 5-tick Rise/Fall contracts for months. The user's rule of 25 Oct is
+     ONE tick, and a remembered 5 is that old default rather than a choice — so force it once, after
+     which whatever is on the card stays. */
+  if (!store.get("dt_b3dur_mig")){
+    const d = $("#b3_dur"); if (d && +d.value !== 1) d.value = "1";
+    store.set("dt_b3dur_mig", "1");
     saveSettings();
   }
 }
@@ -3191,9 +3204,14 @@ function limitsText(c, stops){
   return tpTxt + " (measured from this START)" + (n > 0 ? " · and stops after " + n + " consecutive wins with the win popup, target or not" : "") + ".";
 }
 function cfg3(){
+  const en = $("#b3_entry");
   return {
     stake: Math.max(0.35, +$("#b3_stake").value || 0.35),
-    dur: clampInt($("#b3_dur").value, 1, 10, 5),
+    dur: clampInt($("#b3_dur").value, 1, 10, 1),
+    entry: en && en.value === "ai" ? "ai" : "rev",   // "rev" = 2 in a row → opposite (the default)
+    win: clampInt($("#b3_win").value, 10, 500, 100),
+    pat: clampInt($("#b3_pat").value, 1, 8, 2),
+    exact: !$("#b3_exact") || !!$("#b3_exact").checked,
     minConf: clampInt($("#b3_minconf").value, 55, 95, 70),
     mult: Math.max(1, +$("#b3_mult").value || 1),
     maxStake: Math.max(1, +$("#b3_maxstake").value || 10),
@@ -4401,32 +4419,83 @@ class SignalEvenOddBot extends BaseBot {
     return "<div class='note' style='margin:0'><b>Strategy:</b> trades ONLY the side the AI Signal Center's digit heat provides — <b>DIGIT EVEN / DIGIT ODD</b> on " + state.symbol + ", " + c.dur + " tick(s), base stake " + fmt(c.stake) + ". <b>It never starts itself:</b> the first trade happens when you press RUN BOT on an EVEN/ODD signal — the START button on the tile/card does not start trading. After that it stays running and trades <b>every new EVEN/ODD signal</b> (one contract each, never the same signal twice, signals up to " + c.maxAge + "s old) until you press STOP or your limits are reached.<br><b>Staking:</b> " + (c.mult > 1 ? "martingale ×" + fmt(c.mult) + " per consecutive loss, cap " + fmt(c.maxStake) + ", reset on a win" : "flat stakes") + ".<br><b>Session limits:</b> " + limitsText(c) + "</div>";
   }
 }
+/* ================= Bot 3 · the reversal read (user rule of 25 Oct) =================
+   Counts the tick-to-tick price MOVES over the last `win` ticks (100 by default) and looks at the
+   run at the tail of that window: `pat` identical moves in a row IS the entry point, and the trade
+   is the OPPOSITE side — 2 FALL ticks in a row buys RISE (CALL), 2 RISE ticks in a row buys FALL
+   (PUT). A flat tick, a run shorter than the pattern, or (in "exactly" mode) a run that has already
+   passed the pattern all mean no entry: the bot waits. */
+function rfReversal(win, pat, exact){
+  const all = state.prices.map(p => p.q);
+  const n = Math.min(all.length, Math.max(2, +win || 100));
+  const pts = all.slice(-n);
+  const need = Math.max(1, pat | 0);
+  if (pts.length < 2 || pts.length < need + 1) return null;
+  let up = 0, dn = 0, flat = 0;
+  for (let i = 1; i < pts.length; i++){ const d = pts[i] - pts[i - 1]; if (d > 0) up++; else if (d < 0) dn++; else flat++; }
+  const moves = pts.length - 1;
+  const last = Math.sign(pts[pts.length - 1] - pts[pts.length - 2]);
+  let run = 0;
+  if (last !== 0){
+    run = 1;
+    for (let i = pts.length - 2; i >= 1; i--){ if (Math.sign(pts[i] - pts[i - 1]) !== last) break; run++; }
+  }
+  const runSide = last > 0 ? "RISE" : (last < 0 ? "FALL" : "FLAT");
+  const buyDir = last > 0 ? -1 : 1;              // the trade is the OPPOSITE of the run
+  const hit = last !== 0 && (exact ? run === need : run >= need);
+  return {
+    n: moves, up, dn, flat, upPct: up / moves * 100, dnPct: dn / moves * 100, window: n,
+    run, runSide, need, exact, hit, buyDir,
+    side: buyDir > 0 ? "RISE" : "FALL",
+    type: buyDir > 0 ? "CALL" : "PUT",
+    why: last === 0 ? "last tick was flat — there is no direction to reverse"
+      : run < need ? "only " + run + " " + runSide + " tick" + (run === 1 ? "" : "s") + " in a row — the entry point needs " + need
+      : (exact && run > need) ? "the run is already " + run + " deep — past the entry point at exactly " + need + ", waiting for it to break and reform"
+      : ""
+  };
+}
 class RiseFallBot extends BaseBot {
-  constructor(){ super("b3", "Rise/Fall AI Bot", "Bot 3 · Rise/Fall"); this.lastConf = null; this.lastDir = 0; this.lossStreak = 0; }
+  constructor(){ super("b3", "Rise/Fall Bot", "Bot 3 · Rise/Fall"); this.lastConf = null; this.lastDir = 0; this.lossStreak = 0; this.lastWhy = ""; }
   cfg(){ return cfg3(); }
   readEnsemble(){ return ensembleOf(state.prices.map(p => p.q), signal.cfg.sens); }
-  onStart(){ this.lossStreak = 0; }
+  rev(){ const c = cfg3(); return rfReversal(c.win, c.pat, c.exact); }
+  onStart(){ this.lossStreak = 0; this.lastWhy = ""; }
   stakeFor(c){ return round2(Math.max(c.stake, c.stake * Math.pow(c.mult, this.lossStreak))); }
   planNext(){
     const c = cfg3();
-    const e = this.readEnsemble();
-    if (!e) return null;                                  // not enough ticks yet — wait
-    this.lastConf = e.conf; this.lastDir = e.dir;
-    if (e.conf < c.minConf) return null;                  // confidence below your minimum — wait
+    let type;
+    if (c.entry === "rev"){
+      const r = this.rev();
+      if (!r) return null;                                        // not enough ticks for the pattern yet — wait
+      this.lastDir = r.buyDir; this.lastConf = null;
+      if (!r.hit){
+        if (r.why !== this.lastWhy){ this.lastWhy = r.why; this.sys("Holding — " + r.why); }
+        return null;                                              // no entry point — the run is not the pattern
+      }
+      this.lastWhy = "";
+      type = r.type;
+    } else {
+      const e = this.readEnsemble();
+      if (!e) return null;                                        // not enough ticks yet — wait
+      this.lastConf = e.conf; this.lastDir = e.dir;
+      if (e.conf < c.minConf) return null;                        // confidence below your minimum — wait
+      type = e.dir > 0 ? "CALL" : "PUT";
+    }
     let stake = this.stakeFor(c);
     if (stake > c.maxStake){
       this.sys("Martingale stake " + fmt(stake) + " exceeds cap " + fmt(c.maxStake) + " — streak reset to base stake");
       toast(this.name + ": stake cap hit, martingale reset", "warn");
       this.lossStreak = 0; stake = this.stakeFor(c);
     }
-    return { type: e.dir > 0 ? "CALL" : "PUT", stake, duration: c.dur, source: this.source };
+    return { type, stake, duration: c.dur, source: this.source };
   }
   onSettled(res){
     this.lastConf = null;
     if (res.won) this.lossStreak = 0; else this.lossStreak++;
   }
   liveView(){
-    // while running use the last plan read; while idle read the ensemble live so the badge is informative
+    const c = cfg3();
+    if (c.entry === "rev") return this.rev();                     // always read fresh — the pattern is 1 tick wide
     if (this.lastConf != null) return { conf: this.lastConf, dir: this.lastDir };
     const e = this.readEnsemble();
     return e ? { conf: e.conf, dir: e.dir } : null;
@@ -4436,7 +4505,13 @@ class RiseFallBot extends BaseBot {
     const s = this.stakeFor(c);
     const stake = s > c.maxStake ? c.stake : s;
     const v = this.liveView();
-    if (!v) return { label: "WAITING · CONF —", cls: "mode-wait", stake };
+    if (!v) return { label: "WAITING · NEED TICKS", cls: "mode-wait", stake };
+    if (c.entry === "rev"){
+      if (v.hit) return { label: (this.running ? "BUYING " : "READY ") + v.side + " · after " + v.run + "× " + v.runSide,
+        cls: v.buyDir > 0 ? "mode-rise" : "mode-fall", stake };
+      return { label: "WAITING · " + (v.runSide === "FLAT" ? "FLAT TICK" : v.run + "× " + v.runSide), cls: "mode-wait", stake };
+    }
+    if (v.conf == null) return { label: "WAITING · CONF —", cls: "mode-wait", stake };
     const ready = v.conf >= c.minConf;
     if (ready)
       return { label: (this.running ? (v.dir > 0 ? "TRADING RISE" : "TRADING FALL") : (v.dir > 0 ? "READY RISE" : "READY FALL")) + " · " + v.conf + "%", cls: v.dir > 0 ? "mode-rise" : "mode-fall", stake };
@@ -4445,13 +4520,24 @@ class RiseFallBot extends BaseBot {
   subText(){
     const c = cfg3();
     const v = this.liveView();
+    if (c.entry === "rev"){
+      if (!v) return "Waiting for ticks — the " + c.pat + "-in-a-row pattern needs at least " + (c.pat + 1) + " prices";
+      const stats = " · last " + v.n + " moves RISE " + fmt(v.upPct, 1) + "% / FALL " + fmt(v.dnPct, 1) + "% · " + c.dur +
+        " tick · next stake " + fmt(this.preview().stake) + (c.mult > 1 ? " · loss streak " + this.lossStreak : "");
+      if (v.hit) return (this.running ? "Entering: " : "Entry point: ") + "buy " + v.side + " (" + v.type + ") — " + v.run + "× " + v.runSide + " in a row" + stats;
+      return "No entry — " + (v.why || "no pattern yet") + stats;
+    }
     if (!v) return "Waiting for ticks — AI confidence builds from the last ~60 ticks";
     const lead = v.conf >= c.minConf ? (this.running ? "Entering: " : "Ready to enter: ") : "Waiting: ";
     return lead + (v.dir > 0 ? "RISE" : "FALL") + " · AI confidence " + v.conf + "% (min " + c.minConf + "%) · " + c.dur + " tick(s) · next stake " + fmt(this.preview().stake) + (c.mult > 1 ? " · loss streak " + this.lossStreak : "");
   }
   describe(){
     const c = cfg3();
-    return "<div class='note' style='margin:0'><b>Strategy:</b> automatic Rise/Fall on " + state.symbol + " — the 5-model AI ensemble (momentum, EMA cross, trend, streak, RSI) picks RISE (CALL) or FALL (PUT) and buys the moment confidence ≥ " + c.minConf + "%. Base stake " + fmt(c.stake) + ", " + c.dur + " tick(s)" + (c.mult > 1 ? ", martingale ×" + c.mult + " on consecutive losses (cap " + fmt(c.maxStake) + ")" : ", flat stakes") + ".<br><b>No per-trade confirmation</b> — it trades on its own until you stop it or a limit hits.<br><b>Session limits:</b> " + limitsText(c) + "</div>";
+    if (c.entry === "rev"){
+      const v = this.liveView();
+      return "<div class='note' style='margin:0'><b>Strategy (your rule of 25 Oct):</b> reversal Rise/Fall on " + state.symbol + " — the last <b>" + c.win + " ticks</b> are counted move by move, and the entry point is <b>" + c.pat + " identical ticks in a row</b>: " + c.pat + " FALLs buys <b>RISE (CALL)</b>, " + c.pat + " RISEs buys <b>FALL (PUT)</b>. " + (c.exact ? "It enters only when the run is <b>exactly " + c.pat + "</b> and then holds while the trend continues." : "It re-enters on every tick while the run is " + c.pat + " or longer.") + " Contracts last <b>" + c.dur + " tick(s)</b> — the next price is the exit" + (v ? "; right now the run is <b>" + v.run + "× " + v.runSide + "</b> out of " + v.n + " moves (RISE " + fmt(v.upPct, 1) + "% / FALL " + fmt(v.dnPct, 1) + "%), so " + (v.hit ? "<b style='color:var(--green)'>THIS IS AN ENTRY POINT — buy " + v.side + "</b>" : "<b>no entry, it waits</b>") : "; waiting for ticks") + ".<br>Base stake " + fmt(c.stake) + (c.mult > 1 ? ", martingale ×" + c.mult + " on consecutive losses (cap " + fmt(c.maxStake) + ")" : ", flat stakes") + ".<br><b>No per-trade confirmation</b> — it trades on its own until you stop it or a limit hits. <b style='color:var(--amber)'>Betting against a run does not change the odds:</b> ticks are independent and Rise/Fall pays ≈1.80× ⇒ 55.56% break-even, so this is a timing and staking rule, not an edge.<br><b>Session limits:</b> " + limitsText(c) + "</div>";
+    }
+    return "<div class='note' style='margin:0'><b>Strategy (AI-ensemble mode):</b> automatic Rise/Fall on " + state.symbol + " — the 5-model AI ensemble (momentum, EMA cross, trend, streak, RSI) picks RISE (CALL) or FALL (PUT) and buys the moment confidence ≥ " + c.minConf + "%. Base stake " + fmt(c.stake) + ", " + c.dur + " tick(s)" + (c.mult > 1 ? ", martingale ×" + c.mult + " on consecutive losses (cap " + fmt(c.maxStake) + ")" : ", flat stakes") + ".<br><b>No per-trade confirmation</b> — it trades on its own until you stop it or a limit hits.<br><b>Session limits:</b> " + limitsText(c) + "</div>";
   }
 }
 /* ================= Bot 4 · strategy command space ================= */
@@ -7274,7 +7360,7 @@ function init(){
   $("#b7_toggle").addEventListener("click", () => bot7.running ? bot7.stop() : bot7.start());
   BOTS.forEach(b => { BOT_BY_ID[b.id] = b; const lb = $("#t" + b.id.slice(1) + "_load"); if (lb) lb.addEventListener("click", () => setOpenBot(b.id)); });
   $("#stopAll").addEventListener("click", () => stopAllBots("manual stop"));
-  ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp","b1_sl","b2_stake","b2_dur","b2_mult","b2_maxstake","b2_maxage","b2_tp","b2_sl","b3_stake","b3_dur","b3_minconf","b3_mult","b3_maxstake","b3_tp","b3_sl","b4_stake","b4_dur","b4_mult","b4_maxstake","b4_tp","b4_sl","b5_stake","b5_mult","b5_steps","b5_maxstake","b5_dur","b5_win","b5_top","b5_sig","b5_rfmin","b5_tp","b5_sl","b6_stake","b6_dur","b6_mult","b6_steps","b6_maxstake","b6_tp","b6_sl",
+  ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp","b1_sl","b2_stake","b2_dur","b2_mult","b2_maxstake","b2_maxage","b2_tp","b2_sl","b3_stake","b3_dur","b3_entry","b3_win","b3_pat","b3_exact","b3_minconf","b3_mult","b3_maxstake","b3_tp","b3_sl","b4_stake","b4_dur","b4_mult","b4_maxstake","b4_tp","b4_sl","b5_stake","b5_mult","b5_steps","b5_maxstake","b5_dur","b5_win","b5_top","b5_sig","b5_rfmin","b5_tp","b5_sl","b6_stake","b6_dur","b6_mult","b6_steps","b6_maxstake","b6_tp","b6_sl",
    "b7_stake","b7_dur","b7_legs","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
@@ -7285,6 +7371,13 @@ function init(){
   $("#b10_every").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b10_every").checked
     ? "Bot 10 will buy EVERY TICK once it locks a market (the six rules still pick the first entry)"
     : "Bot 10 is back to gated entries — it buys only when all six rules agree", "info", 7000); });
+  /* Bot 3 entry-rule switch — the reversal read has no confidence number, so the card re-renders and says which mode is live */
+  $("#b3_entry").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b3_entry").value === "ai"
+    ? "Bot 3 is back on the 5-model AI ensemble — entries gated by Min confidence"
+    : "Bot 3 now enters on the REVERSAL — over the last " + cfg3().win + " ticks, 2 in a row buys the opposite side at " + cfg3().dur + " tick", "info", 7000); });
+  $("#b3_exact").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b3_exact").checked
+    ? "Bot 3 enters only when the run is EXACTLY the pattern count — it holds while a trend keeps going"
+    : "Bot 3 re-enters on EVERY tick while the run is the pattern count or longer — a long trend stacks the ladder fast", "info", 7000); });
   /* ---------- SYNCHRONIZATION desk ---------- */
   $("#syncEnter").addEventListener("click", () => { syncShowDesk(true); renderBot(bot8); renderBot(bot9); });
   $("#syncExit").addEventListener("click", () => syncShowDesk(false));
