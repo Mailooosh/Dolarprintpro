@@ -958,17 +958,18 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
       <h3>BOT 7 · Digit Matches <span class="mode"><span class="mode-badge mode-wait" id="b7_mode">WAITING · TICKS</span></span></h3>
       <div class="botrun">
         <button class="btn btn-green btn-big" id="b7_toggle">START</button>
-        <span class="sub" id="b7_sub">Next: DIGITMATCH on the top-ranked digits of the last 50 ticks (share + momentum) — by default 3 digits at once, and the run stops the moment any one of them hits</span>
+        <span class="sub" id="b7_sub">Next: DIGITMATCH on ONE digit at a time — the first accepted cycle names the digit (top of the last 50 ticks by share + momentum) and the run then hunts that same digit until it hits</span>
       </div>
       <div class="cfg">
         <label>Base stake<input type="number" id="b7_stake" value="0.50" min="0.35" step="0.05"></label>
         <label>Duration (ticks)<input type="number" id="b7_dur" value="1" min="1" max="10" step="1"></label>
-        <label>Digits per cycle<input type="number" id="b7_legs" value="3" min="1" max="4" step="1" title="How many of the top-ranked digits are bought AT ONCE as DIGITMATCH legs in one cycle. Each leg costs the per-leg stake, so 3 legs stake 3x per cycle; one hit returns ~6.66x a single leg, which means break-even coverage rises with the count (1 leg 15.02%, 2 legs 30.03%, 3 legs 45.05%). More legs = more hits, same expected value per unit staked — and the run stops on the first hit whatever the count"></label>
-        <label>Martingale ×<input type="number" id="b7_mult" value="1.50" min="1" max="3" step="0.05" title="Stake multiplier per missed CYCLE (1.00 = flat). A hit returns ~6.66x one leg but the cycle cost K legs, so the ladder only recovers a losing run when mult is at least 1 + K/(6.66-K) — about x1.43 at 2 digits and x1.82 at 3. At x1.50 with 3 legs a hit banks the cycle yet leaves the run below where it started"></label>
-        <label>Stake cap<input type="number" id="b7_maxstake" value="25" min="1" step="1" title="PER-LEG martingale stake never exceeds this; the ladder resets to base stake instead (a cycle of K legs then risks K x this)"></label>
+        <label>Digits per cycle<input type="number" id="b7_legs" value="1" min="1" max="4" step="1" title="DIGITMATCH legs bought at once in one cycle. Used ONLY while 'Hunt one locked digit' is unticked — while that box is ticked a cycle is always ONE contract on the locked digit. Each leg costs the per-leg stake, so K legs stake K x per cycle while one hit returns ~6.66x a single leg: break-even coverage rises with the count (1 leg 15.02%, 2 legs 30.03%, 3 legs 45.05%). More legs = more hits, same expected value per unit staked"></label>
+        <label>Hunt one locked digit<input type="checkbox" id="b7_lock" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="ONCE a cycle is accepted the bot locks the digit it traded and buys that SAME DIGITMATCH every cycle — one contract at a time, no re-picking — until it hits (a hit ends the run, your rule). The min/max hot-share band gates only that FIRST entry; after locking the hunt continues whatever the digit's share does. Untick to go back to re-ranking the window every cycle and buying the top 'Digits per cycle' digits at once"></label>
+        <label>Martingale ×<input type="number" id="b7_mult" value="1.50" min="1" max="3" step="0.05" title="Stake multiplier per missed CYCLE (1.00 = flat). A hit returns ~6.66x one leg but the cycle costs K legs, so the ladder only recovers a losing run when mult is at least 1 + K/(6.66-K) — about x1.18 at 1 digit (the locked hunt), x1.43 at 2 and x1.82 at 3. At x1.50 with 3 legs a hit banks its own cycle yet leaves the run below where it started"></label>
+        <label>Stake cap<input type="number" id="b7_maxstake" value="25" min="1" step="1" title="PER-LEG martingale stake never exceeds this; the ladder resets to base stake instead (a cycle of K legs then risks K x this — with the locked hunt at 1 leg it is a straight per-cycle cap)"></label>
         <label>Window (ticks)<input type="number" id="b7_win" value="50" min="20" max="200" step="5" title="How many recent ticks the digit shares and the last-half-vs-first-half momentum are measured over"></label>
-        <label>Min hot share %<input type="number" id="b7_minpct" value="15" min="10" max="60" step="0.5" title="The LEADER of the cycle (the top-ranked digit) must make up at least this share of the window before any leg is bought — 10% is a completely flat market and 15% is the single-leg break-even strike rate for the ~6.66x payout. A cold leader means no cycle at all; the extra legs are simply the next-ranked digits whatever their own shares"></label>
-        <label>Max hot share %<input type="number" id="b7_maxpct" value="22" min="16" max="60" step="0.5" title="Refuse the whole cycle when the leader is TOO hot. Measured over 10,000 real ticks: a hottest-of-50 digit repeats on the next tick only 9.3% of the time once its share reaches 22%, and 6.9% at 24% — an over-heated window is a streak running out, not a trend. Like the min, this gates the cycle through its leader"></label>
+        <label>Min hot share %<input type="number" id="b7_minpct" value="15" min="10" max="60" step="0.5" title="The LEADER of the window (top-ranked digit) must make up at least this share before a cycle is accepted — 10% is a completely flat market and 15% is the single-leg break-even strike rate for the ~6.66x payout. While 'Hunt one locked digit' is ticked this gate applies ONCE, to the entry that names the digit; after that the locked digit is bought every cycle whatever its share. Unticked, every cycle passes through it"></label>
+        <label>Max hot share %<input type="number" id="b7_maxpct" value="22" min="16" max="60" step="0.5" title="Refuse the cycle when the leader is TOO hot. Measured over 10,000 real ticks: a hottest-of-50 digit repeats on the next tick only 9.3% of the time once its share reaches 22%, and 6.9% at 24% — an over-heated window is a streak running out, not a trend. Like the min, this gates the FIRST entry while the hunt is locked, and every cycle when it is not"></label>
         <label>Take profit<input type="number" id="b7_tp" value="5" min="0" step="0.5" title="Stop the bot once run P/L reaches +this (0 = off)"></label>
         <label>Stop loss<input type="number" id="b7_sl" value="10" min="0" step="0.5" title="Stop the bot once run P/L falls to −this (0 = off)"></label>
       </div>
@@ -985,7 +986,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b7_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b7_recent"></tbody></table></div>
       <div class="note" id="b7_expo"></div>
-      <div class="note"><b>Strategy — cover the top-ranked digits, stop on the first hit:</b> every cycle the bot ranks all ten digits of the last <b>50 ticks</b> of the current market by <b>share <i>plus</i> momentum</b> (the last 25 ticks against the first 25, so a digit that is waking up outranks one fading — ties go to the more recently seen digit), then buys <b>DIGITMATCH on the top "Digits per cycle" digits at once</b> (default <b>3</b>). All legs are bought in the same second, so <b>they all ride the same exit tick</b>. <b style="color:var(--green)">Your rule is wired in: the first cycle that contains a hit ENDS THE RUN</b> and the popup reads <b>RUN BANKED ON THE FIRST HIT</b> — take profit and stop loss still take precedence, and STOP always works. The hot-share band now gates the <b>leader of each cycle</b> (not one locked digit): no legs are bought while the <b>ranked leader</b> sits under the <b>min hot share</b> (it can rank first on momentum while another digit still holds a taller raw share — a flat market hands every digit ~10%), and the cycle is refused when the leader is <b>over-heated</b> at or above the <b>max hot share</b> — across 10,000 real ticks a hottest-of-50 leader past 22% repeated on the next tick only <b>9.3%</b> of the time (6.9% past 24%), i.e. a streak running out rather than a trend. After a missed cycle every leg's stake is multiplied by the martingale factor until a hit lands or the <b>per-leg stake cap</b> forces a reset to base. <b>Measured payout:</b> a 1-tick match returns ≈<b>6.66×</b> the stake, so <b>K</b> legs stake <b>K</b> and need joint coverage of <b>K ÷ 6.66</b> — <b>15.02%</b> at 1 digit, <b>30.03%</b> at 2, <b>45.05%</b> at 3, <b>60.06%</b> at 4 — and recovery needs a multiplier of at least <b>1 + K ÷ (6.66 − K)</b> (≈×1.82 at 3 legs). <b style="color:var(--amber)">Read this honestly:</b> on this market's last 1,005 ticks (955 rolling windows) the top-3 set held <b>43.2%</b> of its own window but covered the next tick's digit only <b>31.3%</b> of the time against the <b>45.05%</b> it needs — and the same ≈<b>−30%</b> of everything staked came out at every leg count (1 digit 11.6% vs 15.02% needed, 2 digits 20.4% vs 30.03%, 4 digits 42.4% vs 60.06%). Ranking by momentum beat raw share by about one percentage point — inside the noise. <b>Covering more digits buys hits, not an edge:</b> you get a winning cycle far more often and a smaller win each time, and the run ends as soon as one lands. Keep the base stake small and the stop loss real.</div>
+      <div class="note"><b>Strategy — ONE contract per cycle on ONE locked digit (back to the way it was before the 3-at-once version):</b> the bot ranks all ten digits of the last <b>50 ticks</b> of the current market by <b>share <i>plus</i> momentum</b> (the last 25 ticks against the first 25, so a digit that is waking up outranks one fading — ties go to the more recently seen digit). The <b>first cycle that the hot-share band accepts</b> buys <b>one DIGITMATCH contract on that one digit</b>, and from then on <b style="color:var(--green)">the digit is LOCKED for the run</b>: every cycle buys that same digit and nothing else, one contract at a time, until it hits. A hit ends the run — <b>your rule: if one wins, stop</b> — and the popup reads <b>RUN BANKED ON THE FIRST HIT</b>; take profit and stop loss still take precedence, and STOP always works. <b>"Hunt one locked digit" is a switch on this card:</b> untick it to go back to re-ranking every cycle and buying the top <b>Digits per cycle</b> digits at once (2/3/4 legs, all bought in the same second so they ride the same exit tick). <b>The band gates the FIRST entry only</b> — no digit is locked while the ranked leader sits under the <b>min hot share</b> (it can rank first on momentum while another digit holds a taller raw share; a flat market hands every digit ~10%) and an over-heated leader at or above the <b>max hot share</b> is refused — across 10,000 real ticks a hottest-of-50 leader past 22% repeated on the next tick only <b>9.3%</b> of the time (6.9% past 24%), i.e. a streak running out rather than a trend. <b style="color:var(--amber)">The price of the lock:</b> once a digit is chosen the bot keeps buying it every cycle whatever its share does, so a cold locked digit is a slow steady bleed of <b>one</b> stake per cycle until the stake cap, the stop loss or your STOP key ends it. After a missed cycle that stake is multiplied by the martingale factor. <b>Measured payout:</b> a 1-tick match returns ≈<b>6.66×</b> the stake, so a single-digit cycle needs the locked digit to land <b>1 ÷ 6.66 = 15.02%</b> of exits to break even (≈1 in 6.7, the flat baseline for any digit is 10%) and a hit nets ≈5.66× the stake, which is why <b>×1.18</b> is enough to recover one missed cycle — you have ×<b>1.50</b>. With the box unticked and <b>K</b> legs, coverage has to reach <b>K ÷ 6.66</b> — <b>30.03%</b> at 2, <b>45.05%</b> at 3, <b>60.06%</b> at 4 — and recovery needs <b>1 + K ÷ (6.66 − K)</b> (≈×1.82 at 3 legs). <b style="color:var(--amber)">Read this honestly:</b> the odds of a 1-tick match do not change because one digit is being hunted — on this market's last 1,005 ticks the top-1 leader of a rolling 50-tick window held the next tick's digit only about <b>11.6%</b> of the time against the <b>15.02%</b> a single leg needs, and the same ≈<b>−30%</b> of everything staked came out at every leg count. This is a <b>timing and staking</b> rule, not an edge: locking one digit makes the run cheaper per cycle and the hits smaller in number, it does not make the digit more likely. Keep the base stake small and the stop loss real.</div>
     </div>
   </div>
   <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -3115,7 +3116,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b4_stake","b4_dur","b4_mult","b4_maxstake","b4_tp","b4_sl","b4_rules","b4_sweepOn",
   "b5_stake","b5_mult","b5_steps","b5_maxstake","b5_dur","b5_win","b5_top","b5_sig","b5_rfmin","b5_tp","b5_sl",
   "b6_stake","b6_dur","b6_mult","b6_steps","b6_maxstake","b6_tp","b6_sl",
-  "b7_stake","b7_dur","b7_legs","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
+  "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
   "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
   "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_gate","b9_tp","b9_sl",
   "b10_stake","b10_dur","b10_win","b10_every","b10_mult","b10_steps","b10_maxstake","b10_glo","b10_ghi","b10_attract","b10_amin","b10_amax","b10_compete","b10_gcap","b10_gapveto","b10_tp","b10_sl",
@@ -3150,6 +3151,14 @@ function loadSettings(){
   if (!store.get("dt_b3dur_mig")){
     const d = $("#b3_dur"); if (d && +d.value !== 1) d.value = "1";
     store.set("dt_b3dur_mig", "1");
+    saveSettings();
+  }
+  /* one-time migration: Bot 7 remembered 3 DIGITMATCH legs per cycle (the old default). The user's rule of
+     26 Oct is ONE trade at a time, so a remembered 3 is that default rather than a choice — force it once,
+     after which whatever is on the card stays. */
+  if (!store.get("dt_b7legs_mig")){
+    const L = $("#b7_legs"); if (L && +L.value !== 1) L.value = "1";
+    store.set("dt_b7legs_mig", "1");
     saveSettings();
   }
 }
@@ -3633,7 +3642,11 @@ function cfg7(){
   return {
     stake: Math.max(0.35, +$("#b7_stake").value || 0.5),
     dur: clampInt($("#b7_dur").value, 1, 10, 1),
-    legs: clampInt($("#b7_legs").value, 1, 4, 3),
+    legs: clampInt($("#b7_legs").value, 1, 4, 1),
+    /* Round 72: the user asked for ONE trade at a time again, so the hunt locks the digit of the first
+       accepted cycle and buys that single contract every cycle until it hits. Unticking the box restores
+       the multi-leg coverage behaviour (legs per cycle as configured). */
+    lock: !$("#b7_lock") || !!$("#b7_lock").checked,
     mult: Math.max(1, +$("#b7_mult").value || 1.5),
     maxStake: Math.max(1, +$("#b7_maxstake").value || 25),
     win: clampInt($("#b7_win").value, 20, 200, 50),
@@ -3643,27 +3656,41 @@ function cfg7(){
     sl: Math.max(0, +$("#b7_sl").value || 0)
   };
 }
-/* BOT 7 · Digit Matches (user rule, 2026-10-15; multi-digit prediction rule 2026-10-19).
-   Two earlier versions were replaced at the user's request: "it changes the predicted digit after every run"
-   (Round 49 fixed that by locking ONE digit) and then "hunting only 1 digit the whole time" was too rigid, so
-   a cycle now covers the TOP `legs` digits AT ONCE (#b7_legs, default 3) and — the user's own rule —
-   "if one wins the bot should stop": the first cycle containing a hit ENDS THE RUN.
+/* BOT 7 · Digit Matches (user rule, 2026-10-15; multi-digit prediction rule 2026-10-19; back to ONE trade
+   per cycle on ONE locked digit 2026-10-26, at the user's request: "bot 7 is taking 3 trade at a time,
+   please return it to the previous state").
+   Three behaviours, all reachable from the card:
+     · LOCKED HUNT (the default now, #b7_lock ticked) — the first cycle the hot-share band accepts buys ONE
+       DIGITMATCH on the top-ranked digit and that digit then LOCKS for the run: one contract every cycle,
+       no re-picking, until it hits. The band gates the FIRST entry only; after locking the share is
+       reported but never vetoes, which is what "hunt" means.
+     · MULTI-LEG COVERAGE (#b7_lock unticked, #b7_legs 2–4) — Round 50's behaviour: each cycle re-ranks the
+       window and buys the TOP `legs` digits AT ONCE, all bought before any settles so they share one exit
+       tick, and the band gates every cycle's leader.
+     · a plain single-leg re-pick is the locked hunt with the box unticked at #b7_legs = 1.
+   In every mode the user's own rule stands: "if one wins the bot should stop" — the first cycle containing
+   a hit ENDS THE RUN (bankOnHit).
    Ranking is a prediction, not just the tallest bar: window SHARE plus B7_MOM × momentum (the last half of the
-   window against its first half), ties settled by recency. The min/max hot-share band still gates the CYCLE via
-   the leader's share.
+   window against its first half), ties settled by recency.
    THE ECONOMICS THE COPY MUST KEEP HONEST: one leg pays ≈6.66× its stake, so K legs cost K stakes and a hit
    returns 6.66 ⇒ break-even COVERAGE is K/6.66 (15.02% at 1 leg, 30.03% at 2, 45.05% at 3). Covering more
    digits does NOT improve expected value per unit staked — each leg is still the same ≈(p×6.66 − 1) bet —
    it buys hit FREQUENCY. Because a hit only nets ≈(6.66 − K) per leg, the ×mult ladder needs mult ≥ 1 + K/(6.66 − K)
-   to recover a losing run (≈×1.82 at 3 legs, ×1.43 at 2), and since the first hit stops the run, take profit
+   to recover a losing run (≈×1.18 at 1 leg, ×1.82 at 3), and since the first hit stops the run, take profit
    can be left high or off. Over-heat still refuses a cycle: across 10,000 real ticks a hottest-of-50 leader
    already at ≥22% of its window repeated on the next tick only 9.3% of the time (6.9% past 24%). */
 class MatchesBot extends BaseBot {
   constructor(){ super("b7", "Digit Matches Bot", "Bot 7 · DigitMatch");
     this.lossStreak = 0; this.digits = []; this.cover = 0; this.hitFlag = false; this.hitDigits = []; this.exitDigit = "—";
-    this.note_ = ""; this.noteReps = 0; }
+    this.lockD = null; this.lockAt = 0; this.lockCyc = 0; this.note_ = ""; this.noteReps = 0; }
   cfg(){ return cfg7(); }
-  onStart(){ this.lossStreak = 0; this.digits = []; this.cover = 0; this.hitFlag = false; this.hitDigits = []; this.note_ = ""; }
+  onStart(){ this.lossStreak = 0; this.digits = []; this.cover = 0; this.hitFlag = false; this.hitDigits = [];
+    this.lockD = null; this.lockAt = 0; this.lockCyc = 0; this.note_ = ""; }   // a new run picks its digit fresh
+  lockLine(){   // "Locked on 7 · 3 cycles · lost 3 · exit 4"
+    if (this.lockD === null) return "";
+    return "Locked on " + this.lockD + " · " + this.lockCyc + " cycle" + (this.lockCyc === 1 ? "" : "s") +
+      " since locking" + (this.hitDigits.length ? " · HIT" : this.exitDigit !== "—" ? " · exit " + this.exitDigit : "");
+  }
   heat(){
     const c = cfg7();
     const arr = state.digits.slice(-c.win);
@@ -3689,9 +3716,18 @@ class MatchesBot extends BaseBot {
     const c = cfg7();
     const h = this.heat();
     if (!h) return { c, h: null, why: "ticks" };
+    /* The locked hunt (default since 26 Oct): the digit named by the first accepted entry is bought every
+       cycle as ONE contract, whatever its share now reads — the hot-share band gated the entry that CHOSE
+       it, it does not veto the hunt. Stays read-only safe: nothing here starts a trade. */
+    if (c.lock && this.lockD !== null){
+      const p = h.rank.find(x => x.d === this.lockD) || { d: this.lockD, pct: 0, mom: 0, score: 0 };
+      return { c, h, why: null, locked: true, picks: [p], cover: p.pct };
+    }
     if (h.top.pct < c.minPct) return { c, h, why: "cold" };
     if (h.top.pct >= c.maxPct) return { c, h, why: "hot" };
-    const picks = h.rank.slice(0, c.legs).filter(r => r.pct > 0);
+    /* While the hunt is switched on a cycle is ONE contract even on the entry that names the digit — the
+       "Digits per cycle" field only takes effect with the box unticked, so no tick ever buys 3 at a time. */
+    const picks = h.rank.slice(0, c.lock ? 1 : c.legs).filter(r => r.pct > 0);
     if (!picks.length) return { c, h, why: "cold" };
     return { c, h, why: null, picks, cover: picks.reduce((s, r) => s + r.pct, 0) };
   }
@@ -3717,9 +3753,17 @@ class MatchesBot extends BaseBot {
       this.lossStreak = 0; per = r.c.stake;
     }
     this.note_ = "";
+    /* The lock is set here and nowhere else: this line is reached only AFTER the band gates have passed, so
+       the digit is named by the first ACCEPTED entry, never by a refused read. */
+    if (r.c.lock && this.lockD === null){
+      this.lockD = r.picks[0].d; this.lockAt = Date.now(); this.lockCyc = 0;
+      this.sys("Locked on DIGITMATCH " + this.lockD + " — every cycle now buys that ONE digit until it hits (untick 'Hunt one locked digit' to re-pick each cycle)");
+      toast(this.name + ": hunting digit " + this.lockD + " — one contract per cycle until it hits", "info", 7000);
+    }
+    if (r.locked) this.lockCyc++;
     const plans = r.picks.map((p, i) => ({ type: "DIGITMATCH", barrier: p.d, stake: per, duration: r.c.dur,
       source: this.source, legNo: i + 1, legOf: r.picks.length }));
-    return { c: r.c, h: r.h, picks: r.picks, digits: r.picks.map(p => p.d), per, cover: r.cover,
+    return { c: r.c, h: r.h, picks: r.picks, digits: r.picks.map(p => p.d), per, cover: r.cover, locked: !!r.locked,
       outlay: round2(per * r.picks.length), plans };
   }
   /* multi-leg cycle: all legs are bought before any settles, so they ride the same exit tick */
@@ -3737,9 +3781,11 @@ class MatchesBot extends BaseBot {
       }
       const virt = this.virtualLeft > 0;
       this.busy = true; this.hitFlag = false; this.hitDigits = []; renderBot(this);
-      this.sys("Cycle " + cyc.digits.join(" · ") + " — " + cyc.plans.length + " DIGITMATCH leg" + (cyc.plans.length > 1 ? "s" : "") +
-        " at " + fmt(cyc.per) + " each = " + fmt(cyc.outlay) + " out · combined " + fmt(cyc.cover, 1) + "% of the window vs " +
-        b7BreakEven(cyc.plans.length) + " break-even");
+      this.sys((cyc.locked ? "Locked hunt · cycle on " + cyc.digits[0] : "Cycle " + cyc.digits.join(" · ")) +
+        " — " + cyc.plans.length + " DIGITMATCH leg" + (cyc.plans.length > 1 ? "s" : "") +
+        " at " + fmt(cyc.per) + " each = " + fmt(cyc.outlay) + " out · " +
+        (cyc.plans.length > 1 ? "combined " : "its window share ") + fmt(cyc.cover, 1) + "% vs " +
+        b7BreakEven(cyc.plans.length) + " break-even" + (cyc.locked ? " (hunt " + this.lockCyc + ")" : ""));
       try {
         const legs = virt ? await simulateLegs(cyc.plans) : await executeLegs(cyc.plans);
         this.failStreak = 0;
@@ -3752,10 +3798,12 @@ class MatchesBot extends BaseBot {
         this.runEquity.push(this.runPl());
         if (this.runEquity.length > 240) this.runEquity.shift();
         playCash();
-        if (this.hitFlag){ this.lossStreak = 0; this.sys("A leg HIT on " + this.hitDigits.join(" · ") + " — " + (virt ? "VIRTUAL, " : "") + "ladder back to base " + fmt(lim.stake) + " per leg"); }
+        if (this.hitFlag){ this.lossStreak = 0; this.sys("A leg HIT on " + this.hitDigits.join(" · ") + " — " + (virt ? "VIRTUAL, " : "") + "ladder back to base " + fmt(lim.stake) + (cyc.plans.length > 1 ? " per leg" : "") + (cyc.locked ? " and the lock on " + this.lockD + " is cleared with the run" : "")); }
         else {
           this.lossStreak++;
-          this.sys("All " + cyc.plans.length + " legs missed (exit " + this.exitDigit + ") — step " + this.lossStreak + ", next stake per leg " +
+          this.sys(cyc.plans.length === 1 ? "The leg missed (exit " + this.exitDigit + ") — step " + this.lossStreak + ", next stake " +
+            fmt(Math.min(this.stakeFor(this.cfg()), this.cfg().maxStake)) + (cyc.locked ? " — still hunting digit " + this.lockD : "")
+            : "All " + cyc.plans.length + " legs missed (exit " + this.exitDigit + ") — step " + this.lossStreak + ", next stake per leg " +
             fmt(Math.min(this.stakeFor(this.cfg()), this.cfg().maxStake)));
         }
         if (this.checkLimits()) break;                    // TP / SL take precedence over the first-hit bank
@@ -3804,10 +3852,22 @@ class MatchesBot extends BaseBot {
     if (!h) return "Building the window — " + state.symbol + " needs " + Math.max(20, Math.round(c.win * 0.6)) + " ticks before this bot can rank digits.";
     const list = h.rank.slice(0, Math.max(c.legs, 3)).map(p =>
       "<b>" + p.d + "</b> " + fmt(p.pct, 1) + "%" + (Math.abs(p.mom) >= 0.05 ? " (" + (p.mom > 0 ? "+" : "") + fmt(p.mom, 1) + " pts momentum)" : "")).join(" · ");
+    const nxt = fmt(Math.min(this.stakeFor(c), c.maxStake));
+    if (r.locked){
+      const p = r.picks[0], pos = h.rank.findIndex(x => x.d === p.d);
+      return "<b style='color:var(--green)'>LOCKED ON DIGIT " + p.d + "</b> — <b>ONE</b> DIGITMATCH contract every cycle until it hits (your rule of 26 Oct: no more 3 at a time)" +
+        " · it sits rank #" + (pos + 1) + " of the last " + h.n + " ticks at <b>" + fmt(p.pct, 1) + "%</b>" +
+        (Math.abs(p.mom) >= 0.05 ? " (" + (p.mom > 0 ? "+" : "") + fmt(p.mom, 1) + " pts momentum)" : "") +
+        " against the <b>" + b7BreakEven(1) + "</b> one leg needs to break even" +
+        " · " + this.lockCyc + " cycle" + (this.lockCyc === 1 ? "" : "s") + " since locking · missed " + this.lossStreak + " in a row · next stake <b>" + nxt + "</b>" +
+        (p.pct < c.minPct ? " <b style='color:var(--amber)'>(the share fell under the " + c.minPct + "% band — the hunt goes on regardless, that is what locking means; the band only gated the entry that named the digit)</b>" : "");
+    }
     if (r.why === "hot") return "<b style='color:var(--amber)'>No cycle — the leader " + h.top.d + " is over-heated at " + fmt(h.top.pct, 1) + "%</b>" +
-      " (a leader past " + fmt(c.maxPct, 1) + "% repeated on the next tick only 9.3% of the time, so the cycle is refused) · last " + h.n + " ticks: " + list;
+      " (a leader past " + fmt(c.maxPct, 1) + "% repeated on the next tick only 9.3% of the time, so the cycle is refused) · last " + h.n + " ticks: " + list +
+      (c.lock ? "<br>The <b>first accepted</b> entry is what names the digit the run then hunts — one contract per cycle." : "");
     if (r.why === "cold") return "<b style='color:var(--amber)'>No cycle — the leader " + h.top.d + " is only " + fmt(h.top.pct, 1) + "%</b>" +
-      " (needs ≥ " + c.minPct + "%; a flat market gives every digit ~10%) · last " + h.n + " ticks: " + list;
+      " (needs ≥ " + c.minPct + "%; a flat market gives every digit ~10%) · last " + h.n + " ticks: " + list +
+      (c.lock ? "<br>Nothing is locked yet, so nothing is bought: the digit is chosen by the first cycle that clears the band." : "");
     return "<b>COVERING " + r.picks.length + " DIGIT" + (r.picks.length > 1 ? "S" : "") + " AT ONCE:</b> " +
       r.picks.map(p => "<b>" + p.d + "</b> " + fmt(p.pct, 1) + "% (" + (p.mom > 0 ? "+" : "") + fmt(p.mom, 1) + " pts)").join(" · ") +
       " · combined <b>" + fmt(r.cover, 1) + "%</b> of the last " + h.n + " ticks vs <b>" + b7BreakEven(r.picks.length) +
@@ -3819,35 +3879,48 @@ class MatchesBot extends BaseBot {
     if (r.why === "ticks") return { label: "WAITING · TICKS", cls: "mode-wait", stake };
     if (r.why === "hot") return { label: "WAITING · OVER-HEAT", cls: "mode-wait", stake };
     if (r.why === "cold") return { label: "WAITING · HOT <" + r.c.minPct + "%", cls: "mode-wait", stake };
-    return { label: "COVERING " + r.picks.map(p => p.d).join(" · "), cls: "mode-main", stake };
+    if (r.locked) return { label: "LOCKED · MATCH " + r.picks[0].d, cls: "mode-main", stake };
+    return { label: (r.picks.length === 1 ? "MATCH " + r.picks[0].d : "COVERING " + r.picks.map(p => p.d).join(" · ")), cls: "mode-main", stake };
   }
   subText(){
     const r = this.read(), c = r.c;
     const per = Math.min(this.stakeFor(c), c.maxStake);
-    const k = r.why ? c.legs : r.picks.length;
-    const head = r.why
-      ? "Next: no leader inside the " + c.minPct + "–" + fmt(c.maxPct, 1) + "% band yet" + (r.h ? " (hottest " + r.h.top.d + " " + fmt(r.h.top.pct, 1) + "%)" : " (window building)")
+    const k = r.why ? (c.lock ? 1 : c.legs) : r.picks.length;
+    const head = r.locked
+      ? "Next: ONE DIGITMATCH " + r.picks[0].d + " — the locked digit, hunt cycle " + (this.lockCyc + 1)
+      : r.why
+      ? "Next: no leader inside the " + c.minPct + "–" + fmt(c.maxPct, 1) + "% band yet" + (r.h ? " (hottest " + r.h.top.d + " " + fmt(r.h.top.pct, 1) + "%)" : " (window building)") + (c.lock ? " — the first accepted entry names the ONE digit to hunt" : "")
       : "Cycle: " + r.picks.map(p => "MATCH " + p.d).join(" + ");
-    return head + " · " + fmt(per) + " per leg ×" + k + " = " + fmt(round2(per * k)) + " out · " + c.dur + " tick" + (c.dur > 1 ? "s" : "") +
-      (r.why ? "" : " · coverage " + fmt(r.cover, 1) + "% vs " + b7BreakEven(k)) +
+    return head + " · " + fmt(per) + (k > 1 ? " per leg ×" + k + " = " + fmt(round2(per * k)) + " out" : " out") + " · " + c.dur + " tick" + (c.dur > 1 ? "s" : "") +
+      (r.why ? "" : " · " + (k > 1 ? "coverage " : "its share ") + fmt(r.cover, 1) + "% vs " + b7BreakEven(k)) +
       " · missed cycles " + this.lossStreak + " · stops on the first hit";
   }
   describe(){
     const c = cfg7(); const r = this.read();
     const per = Math.min(this.stakeFor(c), c.maxStake);
-    const k = r.why ? c.legs : r.picks.length;
+    const k = r.locked ? 1 : r.why ? (c.lock ? 1 : c.legs) : r.picks.length;
     const half = r.h ? r.h.half : Math.round(c.win / 2);
-    return "<div class='note' style='margin:0'><b>More than one prediction per cycle:</b> " + (r.why
-      ? "nothing is covered this second — the leader has to sit inside the " + c.minPct + "–" + fmt(c.maxPct, 1) + "% band before a cycle fires"
-      : "<b style='color:var(--green)'>this cycle covers " + r.picks.map(p => p.d).join(" · ") + "</b> (combined " + fmt(r.cover, 1) + "% of the window)") +
-      ". It buys <b>" + k + " DIGITMATCH contract" + (k > 1 ? "s" : "") + " in the same cycle</b> — one per covered digit — and <b>stops the run the moment any one of them hits</b> (your rule: if one wins, stop).<br>" +
+    const modeHead = !c.lock
+      ? (r.why
+          ? "nothing is covered this second — the leader has to sit inside the " + c.minPct + "–" + fmt(c.maxPct, 1) + "% band before a cycle fires"
+          : "<b style='color:var(--green)'>this cycle covers " + r.picks.map(p => p.d).join(" · ") + "</b> (combined " + fmt(r.cover, 1) + "% of the window)")
+      : (this.lockD !== null
+          ? "<b style='color:var(--green)'>LOCKED ON DIGIT " + this.lockD + "</b> — <b>ONE</b> DIGITMATCH contract per cycle on that same digit, no re-picking and no extra legs, until it hits (" +
+            this.lockCyc + " cycle" + (this.lockCyc === 1 ? "" : "s") + " into the hunt, " + this.lossStreak + " missed in a row" + (this.exitDigit !== "—" ? ", last exit " + this.exitDigit : "") + ")"
+          : "the first cycle the band accepts names ONE digit, and the run then buys <b>only that digit, one contract per cycle</b> until it hits");
+    return "<div class='note' style='margin:0'><b>" + (c.lock ? "One digit, ONE contract per cycle (your rule of 26 Oct):" : "More than one prediction per cycle (the lock is unticked):") + "</b> " + modeHead +
+      ". It <b>stops the run the moment the digit hits</b> (your rule: if one wins, stop) — take profit and stop loss still take precedence, and STOP always works.<br>" +
       "<b>How digits are ranked:</b> share of the last " + c.win + " ticks of " + state.symbol + " <i>plus</i> " + fmt(B7_MOM, 2) +
       " × momentum (the last " + half + " ticks against the first " + half + ", in percentage points); ties go to the more recently seen digit. The band <b>" + c.minPct + "% to " + fmt(c.maxPct, 1) +
-      "%</b> gates the <b>leader of every cycle</b> — below it the market is a coin flip, at or above the top it is over-heated (across 10,000 real ticks such a leader repeated only 9.3% of the time, 6.9% past 24%).<br>" +
-      "<b>Cost per cycle:</b> " + fmt(per) + " × " + k + " leg" + (k > 1 ? "s" : "") + " = <b>" + fmt(round2(per * k)) + "</b> out, climbed by ×" + fmt(c.mult) +
-      " per missed cycle and capped at " + fmt(c.maxStake) + " per leg.<br><b>The honest maths:</b> a 1-tick match pays ≈6.66× its stake, so " + k + " covered digit" + (k > 1 ? "s" : "") +
-      " must jointly land <b>" + b7BreakEven(k) + "</b> of exits to break even — one hit returns 6.66 × " + fmt(per) + " against " + fmt(round2(per * k)) +
-      " staked. <b>Covering more digits buys frequency, not an edge:</b> expected value per 1.00 staked is the same on every leg, and a hit only nets ≈" +
+      "%</b> gates " + (c.lock ? "<b>the FIRST entry only</b> — the read that names the digit; once locked the hunt buys whatever its share does" : "<b>the leader of every cycle</b>") +
+      " — below it the market is a coin flip, at or above the top it is over-heated (across 10,000 real ticks such a leader repeated only 9.3% of the time, 6.9% past 24%).<br>" +
+      "<b>Cost per cycle:</b> " + (k > 1 ? fmt(per) + " × " + k + " legs = <b>" + fmt(round2(per * k)) + "</b> out" : "<b>" + fmt(per) + "</b> — one contract") +
+      ", climbed by ×" + fmt(c.mult) + " per missed cycle and capped at " + fmt(c.maxStake) + " per leg.<br><b>The honest maths:</b> a 1-tick match pays ≈6.66× its stake, so " +
+      (k > 1 ? k + " covered digit" + (k > 1 ? "s" : "") + " must jointly land <b>" + b7BreakEven(k) + "</b>"
+             : "the hunted digit alone must land <b>" + b7BreakEven(1) + "</b> of exits — about 1 in 6.7, against the ~10% a flat market hands every digit") +
+      " to break even — one hit returns 6.66 × " + fmt(per) + " against " + fmt(round2(per * k)) + " staked. <b>" +
+      (c.lock ? "Locking one digit makes each cycle cheaper and the hits fewer; it does not make the digit more likely"
+              : "Covering more digits buys frequency, not an edge") + ":</b> expected value per 1.00 staked is the same on every leg, and a hit only nets ≈" +
       fmt(round2(B7_PAY - k)) + "× the per-leg stake, so at ×" + fmt(c.mult) + " this ladder needs a multiplier of at least " + fmt(1 + k / (B7_PAY - k), 2) +
       " to recover a losing run. And because the first hit ends the run, take profit is rarely what stops this bot.<br><b>Session limits:</b> " + limitsText(c) + "</div>";
   }
@@ -6167,7 +6240,7 @@ function renderBot(b){
     const c = cfg7(), cur = (state.account && state.account.currency) || "USD";
     const hotEl = $("#b7_hot"); if (hotEl) hotEl.innerHTML = b.hotLine();
     if (c.mult > 1){
-      const k = c.legs, need = round2(1 + k / (B7_PAY - k));
+      const k = c.lock ? 1 : c.legs, need = round2(1 + k / (B7_PAY - k));
       let s = c.stake, total = 0, steps = 0;
       while (s <= c.maxStake && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
       $("#b7_expo").innerHTML = "<b>Worst-case martingale exposure ≈ " + fmt(round2(total * k)) + " " + cur + "</b> — " + steps +
@@ -6177,10 +6250,15 @@ function renderBot(b){
         " — which is why the ladder has to climb ×" + fmt(need) + " or better at " + k + " digit" + (k > 1 ? "s" : "") +
         " to recover a losing run (you have ×" + fmt(c.mult) +
         (c.mult < need ? " — a hit banks its own cycle but leaves the run BELOW where it started" : "") +
-        "). Coverage raises hit frequency, not the edge; a long cold streak is what actually hurts. Keep the stop loss on.";
+        "). " + (c.lock
+          ? "While hunting the ONE locked digit there is no rotation to wait for either: it buys that same digit EVERY cycle until it hits, so a cold market is a steady " + fmt(round2(c.stake)) + "-per-cycle bleed with no other brake but the cap, the stop loss and your STOP key. "
+          : "Coverage raises hit frequency, not the edge; ") +
+        "a long cold streak is what actually hurts. Keep the stop loss on";
     } else {
-      $("#b7_expo").innerHTML = "<b>Flat stakes (×1)</b> — no martingale; each cycle risks " + fmt(round2(c.stake * c.legs)) + " " + cur +
-        " across " + c.legs + " digit" + (c.legs > 1 ? "s" : "") + " (" + fmt(c.stake) + " per leg), and one hit returns ≈" + fmt(round2((B7_PAY - c.legs) * c.stake)) + ".";
+      const k = c.lock ? 1 : c.legs;
+      $("#b7_expo").innerHTML = "<b>Flat stakes (×1)</b> — no martingale; each cycle risks " + fmt(round2(c.stake * k)) + " " + cur +
+        " across " + k + " digit" + (k > 1 ? "s" : "") + (c.lock ? " (the locked one it hunts every cycle)" : " (" + fmt(c.stake) + " per leg)") +
+        ", and one hit returns ≈" + fmt(round2((B7_PAY - k) * c.stake)) + ".";
     }
   }
   if (p === "b8"){
@@ -7361,7 +7439,7 @@ function init(){
   BOTS.forEach(b => { BOT_BY_ID[b.id] = b; const lb = $("#t" + b.id.slice(1) + "_load"); if (lb) lb.addEventListener("click", () => setOpenBot(b.id)); });
   $("#stopAll").addEventListener("click", () => stopAllBots("manual stop"));
   ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp","b1_sl","b2_stake","b2_dur","b2_mult","b2_maxstake","b2_maxage","b2_tp","b2_sl","b3_stake","b3_dur","b3_entry","b3_win","b3_pat","b3_exact","b3_minconf","b3_mult","b3_maxstake","b3_tp","b3_sl","b4_stake","b4_dur","b4_mult","b4_maxstake","b4_tp","b4_sl","b5_stake","b5_mult","b5_steps","b5_maxstake","b5_dur","b5_win","b5_top","b5_sig","b5_rfmin","b5_tp","b5_sl","b6_stake","b6_dur","b6_mult","b6_steps","b6_maxstake","b6_tp","b6_sl",
-   "b7_stake","b7_dur","b7_legs","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
+   "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
    "b10_stake","b10_dur","b10_win","b10_every","b10_mult","b10_steps","b10_maxstake","b10_glo","b10_ghi","b10_attract","b10_amin","b10_amax","b10_compete","b10_gcap","b10_gapveto","b10_tp","b10_sl"]
@@ -7378,6 +7456,14 @@ function init(){
   $("#b3_exact").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b3_exact").checked
     ? "Bot 3 enters only when the run is EXACTLY the pattern count — it holds while a trend keeps going"
     : "Bot 3 re-enters on EVERY tick while the run is the pattern count or longer — a long trend stacks the ladder fast", "info", 7000); });
+  /* Bot 7's one-digit lock switch — unticking it releases any digit already locked so cycles re-rank at once */
+  $("#b7_lock").addEventListener("change", () => {
+    if (!$("#b7_lock").checked){ bot7.lockD = null; bot7.lockCyc = 0; }
+    renderBots(); saveSettings();
+    toast($("#b7_lock").checked
+      ? "Bot 7 hunts ONE locked digit again — one DIGITMATCH contract per cycle until it hits"
+      : "Bot 7 re-picks every cycle now, buying the top " + cfg7().legs + " DIGITMATCH leg" + (cfg7().legs > 1 ? "s" : "") + " at once", "info", 7000);
+  });
   /* ---------- SYNCHRONIZATION desk ---------- */
   $("#syncEnter").addEventListener("click", () => { syncShowDesk(true); renderBot(bot8); renderBot(bot9); });
   $("#syncExit").addEventListener("click", () => syncShowDesk(false));
