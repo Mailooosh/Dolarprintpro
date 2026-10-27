@@ -4,37 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DolarPrintPro</title>
+<!-- Round 75: Deriv typesets its apps in IBM Plex. If the fonts ever fail to load the app falls
+     straight back to the system stack below — nothing depends on the network for layout. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
+/* Round 75: Deriv's own design language. Their chrome blue is the accent for everything
+   interactive (tabs, buttons, headers, focus), while RED and GREEN stay reserved for money —
+   profit and loss — exactly like DBot's trade table. Surfaces are flat charcoal, not glass. */
 :root{
-  --bg:#070b11; --panel:#0e141d; --panel2:#131b27; --line:#1d2937; --line2:#2a3a4f;
-  --text:#dce6f2; --muted:#8093a9; --dim:#5a6b80;
+  --bg:#0f1117; --panel:#161a22; --panel2:#1c222c; --line:#242b36; --line2:#313a48;
+  --text:#e8eaed; --muted:#9aa4b2; --dim:#6b7686;
   --red:#ff444f; --red-soft:rgba(255,68,79,.13);
   --green:#00c076; --green-soft:rgba(0,192,118,.13);
   --amber:#f0a92e; --blue:#4d9fff;
-  --font:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
-  --mono:"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  /* --dv* = Deriv brand ramp (was the neon red chrome) */
+  --dv:#1275ff; --dv-hi:#3f92ff; --dv-lo:#0d5bd0; --dv-soft:rgba(18,117,255,.13);
+  --dv-line:rgba(18,117,255,.42); --dv-text:#eaf2ff;
+  --font:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono","Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.45;position:relative;overflow-x:hidden}
-/* ---------- animated aurora background ---------- */
+/* ---------- Deriv-style backdrop: flat charcoal with one faint brand-blue wash at the top.
+   Round 75 replaced the animated aurora + neon grid — Deriv's own surfaces are calm so the
+   numbers are the loudest thing on screen. ---------- */
 body::before{
-  content:"";position:fixed;inset:-20%;z-index:-2;pointer-events:none;
-  background:
-    radial-gradient(38% 42% at 18% 26%, rgba(77,159,255,.20), transparent 62%),
-    radial-gradient(34% 38% at 82% 20%, rgba(0,192,118,.16), transparent 60%),
-    radial-gradient(40% 44% at 68% 84%, rgba(255,68,79,.14), transparent 62%),
-    radial-gradient(30% 34% at 30% 78%, rgba(240,169,46,.10), transparent 60%);
-  filter:blur(10px);animation:auroraDrift 26s ease-in-out infinite alternate;
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:radial-gradient(120% 60% at 50% -10%, rgba(18,117,255,.10), transparent 70%);
 }
-body::after{
-  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;
-  background-image:linear-gradient(rgba(77,159,255,.05) 1px, transparent 1px),
-                   linear-gradient(90deg, rgba(77,159,255,.05) 1px, transparent 1px);
-  background-size:46px 46px;
-  -webkit-mask-image:radial-gradient(72% 68% at 50% 40%, #000 20%, transparent 88%);
-  mask-image:radial-gradient(72% 68% at 50% 40%, #000 20%, transparent 88%);
-}
+body::after{display:none}
 @keyframes auroraDrift{
   0%{transform:translate3d(0,0,0) scale(1)}
   50%{transform:translate3d(3%,-2%,0) scale(1.08)}
@@ -45,7 +46,7 @@ a{color:var(--blue)}
 .wrap{max-width:1600px;margin:0 auto;padding:14px 18px 40px;position:relative;z-index:1}
 h1,h2,h3{margin:0}
 /* ---------- header ---------- */
-header{position:sticky;top:0;z-index:60;background:rgba(8,12,18,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line2)}
+header{position:sticky;top:0;z-index:60;background:#12161d;border-bottom:1px solid var(--line)}
 .hrow{max-width:1600px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.06em;font-size:17px}
 .logo .sq{width:11px;height:11px;background:var(--red);border-radius:3px;display:inline-block;transform:translateY(1px)}
@@ -85,13 +86,15 @@ header{position:sticky;top:0;z-index:60;background:rgba(8,12,18,.86);backdrop-fi
 #hdrPrice{font-family:var(--mono);font-size:17px;font-weight:700}
 #hdrDelta{font-family:var(--mono);font-size:11px}
 .up{color:var(--green)} .down{color:var(--red)}
-.acct{display:none;align-items:center;gap:9px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:6px 12px}
+/* The account block, built the way Deriv shows it in their header: a rounded card, the account
+   type chip on the left, then the balance — the RESET DEMO button rides on the balance itself. */
+.acct{display:none;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--dv-line);border-radius:10px;padding:6px 12px}
 .acct.on{display:flex}
 .acct .lg{font-family:var(--mono);font-size:13px}
 .badge{font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 7px;border-radius:4px}
 .badge.live{background:var(--green-soft);color:var(--green);border:1px solid rgba(0,192,118,.4)}
 .badge.demo{background:rgba(77,159,255,.12);color:var(--blue);border:1px solid rgba(77,159,255,.4)}
-.acct .bal{font-family:var(--mono);font-size:13px;color:var(--text)}
+.acct .bal{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
 /* DEMO/REAL header dropdown — same shape as the Symbol/volatility selector, with a
    one-letter badge: grey D for a demo account, green R for the real one. */
 .acctbadge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
@@ -100,24 +103,24 @@ header{position:sticky;top:0;z-index:60;background:rgba(8,12,18,.86);backdrop-fi
 .acctbadge.real{background:rgba(0,192,118,.18);color:var(--green);border:1px solid rgba(0,192,118,.55)}
 #acctSelect{min-width:150px}
 .acct .hfield label{white-space:nowrap}
-/* ---------- tabs ---------- */
-nav.tabs{display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;border-bottom:1px solid var(--line2);background:rgba(14,20,29,.94);backdrop-filter:blur(12px);position:sticky;top:var(--hdrH,53px);z-index:50;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+/* ---------- tabs (Deriv's app nav: flat bar, sentence case, brand-blue active underline) ---------- */
+nav.tabs{display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;border-bottom:1px solid var(--line);background:#12161d;position:sticky;top:var(--hdrH,53px);z-index:50}
 nav.tabs::-webkit-scrollbar{display:none}
-.tabbtn{flex:0 0 auto;white-space:nowrap;padding:12px 20px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font:800 13px var(--font);cursor:pointer;letter-spacing:.09em;text-transform:uppercase;transition:color .15s,background .15s;border-radius:8px 8px 0 0}
-.tabbtn:hover{color:var(--text);background:rgba(77,159,255,.07)}
-.tabbtn.active{color:#fff;border-bottom-color:var(--red);background:linear-gradient(180deg,rgba(255,68,79,.14),transparent)}
+.tabbtn{flex:0 0 auto;white-space:nowrap;padding:11px 18px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font:600 13.5px var(--font);cursor:pointer;letter-spacing:.01em;text-transform:none;transition:color .15s,background .15s,border-color .15s;border-radius:0}
+.tabbtn:hover{color:var(--text);background:rgba(18,117,255,.08)}
+.tabbtn.active{color:var(--dv-hi);border-bottom-color:var(--dv);background:rgba(18,117,255,.10)}
 .tabpanel{display:none;padding-top:14px}
 .tabpanel.show{display:block}
-/* ---------- panels ---------- */
-.panel{background:linear-gradient(155deg, rgba(19,27,39,.86), rgba(14,20,29,.92));border:1px solid var(--line2);border-radius:16px;padding:15px 16px;backdrop-filter:blur(12px);box-shadow:0 8px 28px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.04);transition:border-color .25s, transform .25s, box-shadow .25s}
-.panel:hover{border-color:rgba(77,159,255,.34);box-shadow:0 12px 34px rgba(0,0,0,.42), 0 0 0 1px rgba(77,159,255,.08), inset 0 1px 0 rgba(255,255,255,.05)}
-.panel>h3{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* ---------- panels — Deriv cards: flat surface, hairline border, no glass or lift ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;position:relative}
+.panel:hover{border-color:var(--dv-line)}
+.panel>h3{font-size:13px;font-weight:600;letter-spacing:.01em;color:var(--text);text-transform:none;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .panel>h3 .r{margin-left:auto;font-size:11px;letter-spacing:0;color:var(--dim);font-weight:500;text-transform:none}
 .grid{display:grid;gap:14px}
 .g2{grid-template-columns:2fr 1fr}
 @media(max-width:980px){.g2{grid-template-columns:1fr}}
 /* ---------- bot desk: tiles grid + animated robot ---------- */
-.deskhead{display:flex;align-items:center;gap:16px;margin:2px 0 14px;padding:14px 18px;background:linear-gradient(120deg,rgba(143,16,20,.30),rgba(14,20,29,.62));border:1px solid var(--line2);border-radius:14px}
+.deskhead{display:flex;align-items:center;gap:16px;margin:2px 0 14px;padding:14px 18px;background:linear-gradient(120deg,rgba(18,117,255,.16),var(--panel));border:1px solid var(--line);border-radius:12px}
 .deskhead .dt{font-size:15px;font-weight:800;letter-spacing:.04em}
 .deskhead .ds{color:var(--muted);font-size:12px;margin-top:3px}
 .robot{position:relative;width:64px;height:70px;flex:0 0 auto;animation:robFloat 3.4s ease-in-out infinite}
@@ -127,7 +130,7 @@ nav.tabs::-webkit-scrollbar{display:none}
 .robot .eye{position:absolute;top:9px;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:eyeBlink 3.2s infinite}
 .robot .eye.l{left:12px}.robot .eye.r{right:12px}
 .robot .body{position:absolute;top:39px;left:14px;right:14px;height:22px;background:linear-gradient(160deg,#2a3a4f,#131b27);border:1px solid var(--line2);border-radius:7px}
-.robot .body::after{content:"";position:absolute;left:50%;top:6px;width:12px;height:10px;border-radius:3px;background:var(--red-soft);border:1px solid rgba(255,68,79,.5);transform:translateX(-50%);animation:coreGlow 2s ease-in-out infinite}
+.robot .body::after{content:"";position:absolute;left:50%;top:6px;width:12px;height:10px;border-radius:3px;background:var(--dv-soft);border:1px solid var(--dv-line);transform:translateX(-50%);animation:coreGlow 2s ease-in-out infinite}
 .robot .arm{position:absolute;top:41px;width:6px;height:16px;background:#2a3a4f;border:1px solid var(--line2);border-radius:4px}
 .robot .arm.l{left:4px;transform-origin:top center;animation:armSwing 2.6s ease-in-out infinite}
 .robot .arm.r{right:4px;transform-origin:top center;animation:armSwing 2.6s ease-in-out infinite reverse}
@@ -140,41 +143,42 @@ nav.tabs::-webkit-scrollbar{display:none}
 @media(max-width:1700px){.botgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1150px){.botgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.botgrid{grid-template-columns:1fr}}
-.btile{display:flex;flex-direction:column;background:linear-gradient(160deg,rgba(19,27,39,.9),rgba(14,20,29,.94));border:1px solid var(--line2);border-radius:12px;overflow:hidden;transition:transform .2s,border-color .2s,box-shadow .2s}
-.btile:hover{transform:translateY(-3px);border-color:rgba(255,68,79,.5);box-shadow:0 10px 26px rgba(0,0,0,.4)}
-.btile.open{border-color:var(--red);box-shadow:0 0 0 1px rgba(255,68,79,.45)}
-.btile .th{background:linear-gradient(90deg,#8f1014,#6d0c0f);color:#fff;padding:9px 12px;font:800 12px var(--font);letter-spacing:.05em;display:flex;align-items:center;gap:8px}
-.btile .th .no{background:rgba(255,255,255,.18);border-radius:4px;padding:1px 6px;font:800 10px var(--mono)}
+.btile{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.btile:hover{border-color:var(--dv-line);box-shadow:0 4px 14px rgba(0,0,0,.30)}
+.btile.open{border-color:var(--dv);box-shadow:0 0 0 1px var(--dv-soft)}
+.btile .th{background:linear-gradient(90deg,var(--dv),var(--dv-lo));color:#fff;padding:9px 12px;font:700 12.5px var(--font);letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.btile .th .no{background:rgba(255,255,255,.20);border-radius:4px;padding:1px 6px;font:700 10px var(--mono)}
 .btile .tb{padding:11px 12px;display:flex;flex-direction:column;gap:8px;flex:1}
 .btile .trow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
 .btile .tpl{font:700 15px var(--mono)}
-.loadbtn{width:100%;margin-top:auto;background:linear-gradient(90deg,#8f1014,#c9971c);color:#fff;border:none;border-radius:7px;padding:9px 10px;font:800 12px var(--font);letter-spacing:.1em;cursor:pointer;transition:filter .15s}
-.loadbtn:hover{filter:brightness(1.15)}
+.loadbtn{width:100%;margin-top:auto;background:var(--dv);color:#fff;border:none;border-radius:8px;padding:9px 10px;font:600 12.5px var(--font);letter-spacing:.02em;cursor:pointer;transition:background .15s}
+.loadbtn:hover{background:var(--dv-hi)}
 /* ---------- stage: only the loaded bot's editor is visible ---------- */
 #botStage{margin-top:16px}
 #stageHint{color:var(--dim);font-size:12px;text-align:center;padding:18px;border:1px dashed var(--line2);border-radius:12px}
 #botStage .botcard{display:none}
 #botStage .botcard.show{display:block}
-/* ---------- DBot-style block editor (bots 1,2,3,5) ---------- */
-.botcard.blkstyle{padding:0;background:#d9d9d9;border:none;border-radius:8px;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.45);color:#1c1c1c}
-.botcard.blkstyle:hover{transform:none;border-color:transparent;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+/* ---------- DBot-style bot card, in Deriv's DARK surfaces (their block workspace is a calm
+   greyboard with the strategy header in brand blue — not the old light-grey + maroon skin) ---------- */
+.botcard.blkstyle{padding:0;background:#1b212b;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.32);color:var(--text)}
+.botcard.blkstyle:hover{transform:none;border-color:var(--dv-line);box-shadow:0 6px 20px rgba(0,0,0,.32)}
 .botcard.blkstyle::before{display:none}
-.botcard.blkstyle>h3{background:linear-gradient(90deg,#8f1014,#7a0e11);color:#fff;border-radius:0;padding:10px 14px;margin:0;font:800 13px var(--font);letter-spacing:.04em}
-.botcard.blkstyle .botrun{background:linear-gradient(90deg,#8f1014,#7a0e11);padding:9px 14px;margin:0}
-.botcard.blkstyle .botrun .sub{color:#f3d9d9}
-.botcard.blkstyle .cfg,.botcard.blkstyle .stats,.botcard.blkstyle .chips,.botcard.blkstyle .chartwrap,.botcard.blkstyle .scrollx,.botcard.blkstyle .note{background:#d9d9d9;color:#1c1c1c;border-top:1px solid #bdbdbd}
+.botcard.blkstyle>h3{background:linear-gradient(90deg,var(--dv),var(--dv-lo));color:#fff;border-radius:0;padding:11px 14px;margin:0;font:600 13.5px var(--font);letter-spacing:.01em;border-bottom:none}
+.botcard.blkstyle .botrun{background:var(--panel2);padding:10px 14px;margin:0;border-bottom:1px solid var(--line)}
+.botcard.blkstyle .botrun .sub{color:var(--muted)}
+.botcard.blkstyle .cfg,.botcard.blkstyle .stats,.botcard.blkstyle .chips,.botcard.blkstyle .chartwrap,.botcard.blkstyle .scrollx,.botcard.blkstyle .note{background:#1b212b;color:var(--text);border-top:1px solid var(--line)}
 .botcard.blkstyle .cfg{padding:12px 14px}
-.botcard.blkstyle .cfg label{color:#333}
-.botcard.blkstyle .cfg input,.botcard.blkstyle .cfg select{background:#fff;color:#111;border:1px solid #b0b0b0;border-radius:999px;padding:4px 10px}
-.botcard.blkstyle .stat{background:#cfcfcf;border:1px solid #bdbdbd}
-.botcard.blkstyle .stat .k{color:#5a5a5a}
-.botcard.blkstyle .stat .v{color:#111}
-.botcard.blkstyle .up{color:#0a7a4b}
-.botcard.blkstyle .down{color:#c02733}
-.botcard.blkstyle .chartlbl{color:#5a5a5a}
-.botcard.blkstyle .tbl th{color:#5a5a5a}
-.botcard.blkstyle .tbl td{color:#1c1c1c;border-color:#c2c2c2}
-.botcard.blkstyle .note{background:#cfcfcf;color:#222;border:1px solid #bdbdbd;border-top:1px solid #bdbdbd;border-radius:6px;margin:10px 14px}
+.botcard.blkstyle .cfg label{color:var(--dim)}
+.botcard.blkstyle .cfg input,.botcard.blkstyle .cfg select{background:var(--panel2);color:var(--text);border:1px solid var(--line2);border-radius:8px;padding:5px 10px}
+.botcard.blkstyle .stat{background:var(--panel2);border:1px solid var(--line)}
+.botcard.blkstyle .stat .k{color:var(--dim)}
+.botcard.blkstyle .stat .v{color:var(--text)}
+.botcard.blkstyle .up{color:var(--green)}
+.botcard.blkstyle .down{color:var(--red)}
+.botcard.blkstyle .chartlbl{color:var(--dim)}
+.botcard.blkstyle .tbl th{color:var(--dim);background:#161a22}
+.botcard.blkstyle .tbl td{color:var(--text);border-color:var(--line)}
+.botcard.blkstyle .note{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-top:1px solid var(--line);border-radius:8px;margin:10px 14px}
 .botcard.blkstyle .note:first-of-type{margin-top:12px}
 /* ---------- strategy command space (Bot 4) ---------- */
 .cmdspace{width:100%;min-height:132px;resize:vertical;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;color:var(--text);font:11px/1.55 var(--mono);padding:9px 10px;box-sizing:border-box;outline:none}
@@ -182,19 +186,22 @@ nav.tabs::-webkit-scrollbar{display:none}
 .cmdstatus{margin-top:6px;font:600 10px var(--mono);letter-spacing:.05em;color:var(--dim)}
 .cmdstatus.ok{color:var(--green)}
 .cmdstatus.err{color:var(--red)}
-/* ---------- buttons / inputs ---------- */
-.btn{padding:9px 16px;border:none;border-radius:7px;font:700 13px var(--font);cursor:pointer}
+/* ---------- buttons / inputs — Deriv geometry: 8px, medium weight, brand blue for the primary
+   action (their RUN button is blue), red kept strictly for stopping and for losses ---------- */
+.btn{padding:9px 16px;border:none;border-radius:8px;font:600 13px var(--font);cursor:pointer;letter-spacing:.01em;transition:background .15s,border-color .15s,opacity .15s}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-blue{background:var(--dv);color:#fff}
+.btn-blue:hover:not(:disabled){background:var(--dv-hi)}
 .btn-green{background:var(--green);color:#03150c}
 .btn-green:hover:not(:disabled){background:#00d982}
 .btn-red{background:var(--red);color:#fff}
 .btn-red:hover:not(:disabled){background:#ff5f69}
 .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line2)}
-.btn-ghost:hover:not(:disabled){border-color:var(--muted)}
-.btn-big{padding:12px 22px;font-size:14px}
-input,select{background:#0b1119;border:1px solid var(--line2);color:var(--text);border-radius:6px;padding:7px 9px;font:13px var(--mono);width:100%}
-input:focus,select:focus{outline:none;border-color:var(--blue)}
-input[type=checkbox]{width:auto;accent-color:var(--green)}
+.btn-ghost:hover:not(:disabled){border-color:var(--dv);color:var(--dv-hi)}
+.btn-big{padding:11px 22px;font-size:14px}
+input,select{background:#121821;border:1px solid var(--line2);color:var(--text);border-radius:8px;padding:7px 9px;font:13px var(--mono);width:100%}
+input:focus,select:focus{outline:none;border-color:var(--dv);box-shadow:0 0 0 2px var(--dv-soft)}
+input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:9px;margin:10px 0}
 .cfg label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
 .note{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-top:10px}
@@ -210,7 +217,7 @@ input[type=checkbox]{width:auto;accent-color:var(--green)}
 .dchip.new{border-color:var(--red);color:var(--text);background:var(--red-soft)}
 .wbtns{display:flex;gap:5px}
 .wbtn{padding:4px 10px;border-radius:5px;border:1px solid var(--line2);background:transparent;color:var(--muted);font:600 11px var(--mono);cursor:pointer}
-.wbtn.active{background:var(--red-soft);border-color:var(--red);color:#ff8a91}
+.wbtn.active{background:var(--dv-soft);border-color:var(--dv);color:var(--dv-hi)}
 #distBars{position:relative;display:flex;gap:6px;align-items:stretch;height:170px;margin-top:14px}
 .dcol{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
 .dcol .pct{font:700 11px var(--mono);color:var(--muted);margin-bottom:4px}
@@ -304,23 +311,35 @@ input[type=checkbox]{width:auto;accent-color:var(--green)}
 .mode-fall{background:var(--red-soft);border-color:rgba(255,68,79,.45);color:#ff8a91}
 .mode-wait{background:rgba(90,107,128,.12);border-color:rgba(90,107,128,.45);color:var(--muted)}
 .chartwrap{position:relative;margin-top:8px}
-.chartlbl{position:absolute;top:2px;left:6px;z-index:1;font:700 9px var(--mono);letter-spacing:.08em;color:var(--dim)}
-.botchart{width:100%;height:104px;display:block;background:rgba(13,20,30,.45);border:1px solid var(--line);border-radius:8px}
-#priceChart{width:100%;height:250px;display:block;background:rgba(13,20,30,.45);border:1px solid var(--line);border-radius:8px}
+.chartlbl{position:absolute;top:2px;left:6px;z-index:1;font:600 9px var(--mono);letter-spacing:.08em;color:var(--dim)}
+.botchart{width:100%;height:104px;display:block;background:#121821;border:1px solid var(--line);border-radius:8px}
+#priceChart{width:100%;height:250px;display:block;background:#121821;border:1px solid var(--line);border-radius:8px}
 .botrun{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
 .botrun .sub{font-size:12px;color:var(--muted);flex:1;min-width:180px}
+/* ---------- Round 75: the DBot run-status bar. Deriv tells you plainly whether a bot is
+   running, stopped or between orders, and puts the state — not the decoration — up top. ---------- */
+.runbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:10px 14px 0;font:600 12px var(--font);color:var(--muted)}
+.botcard.blkstyle .runbar{border-radius:0;border:none;border-top:1px solid var(--line);margin:0;padding:8px 14px}
+.runbar .rdot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:0 0 auto}
+.runbar.on .rdot{background:var(--green);box-shadow:0 0 0 3px var(--green-soft);animation:pulse 1.6s infinite}
+.runbar.busy .rdot{background:var(--amber);animation:pulse 1s infinite}
+.runbar .rstate{color:var(--text)}
+.runbar.on .rstate{color:var(--green)}
+.runbar .rmeta{margin-left:auto;display:flex;align-items:center;gap:12px;font:500 11px var(--mono);color:var(--dim);flex-wrap:wrap}
+.runbar .rmeta b{color:var(--text);font-weight:600}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin:10px 0}
 .stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .stat .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)}
-.stat .v{font:700 15px var(--mono);margin-top:2px}
+.stat .v{font:600 15px var(--mono);margin-top:2px}
 .chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
 .rchip{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:800 10.5px var(--mono)}
 .rchip.w{background:var(--green-soft);color:var(--green);border:1px solid rgba(0,192,118,.4)}
 .rchip.l{background:var(--red-soft);color:var(--red);border:1px solid rgba(255,68,79,.4)}
-/* ---------- tables ---------- */
+/* ---------- tables — Deriv's trade table: quiet grey caps, hairline rows, money right-aligned ---------- */
 table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
-.tbl th{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:5px 7px;border-bottom:1px solid var(--line2)}
+.tbl th{color:var(--dim);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:6px 7px;border-bottom:1px solid var(--line2);background:#161a22;font-weight:600;white-space:nowrap}
 .tbl td{padding:6px 7px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;vertical-align:top}
+.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
 .tbl .src{font-family:var(--font)}
 .tbl tr.bestrow td{background:rgba(0,192,118,.07)}
 .pill{display:inline-block;font:700 10px var(--mono);padding:2px 8px;border-radius:10px;letter-spacing:.04em}
@@ -556,7 +575,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
            stays hidden on a REAL account — Deriv only lets a demo balance be reset. -->
       <button class="btn btn-red btn-mini" id="resetDemoBtn" style="display:none" title="Reset THIS demo account's Deriv balance back to 10,000 USD. Asks first, and only ever touches the demo account you are signed into">RESET DEMO</button>
     </div>
-    <button class="btn btn-red" id="authBtn">AUTHORIZE</button>
+    <button class="btn btn-blue" id="authBtn">AUTHORIZE</button>
   </div>
   <div class="connban" id="connBan">⚠ Connection to Deriv lost — reconnecting…</div>
 </header>
@@ -664,7 +683,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
     <div class="panel botcard" id="card_b10" style="border-color:rgba(37,255,154,.28)">
       <h3>BOT 10 · Even Odd Strategy <span class="mode"><span class="mode-badge mode-wait" id="b10_mode">IDLE · STRATEGY</span></span></h3>
       <div style="margin:4px 0 14px;display:flex;align-items:center;gap:10px">
-        <button class="btn btn-green btn-big" id="eoTradeBtn">TRADE AI NOW</button>
+        <button class="btn btn-blue btn-big" id="eoTradeBtn">TRADE AI NOW</button>
         <span class="sub" id="eoScanStatus" style="flex:1">AI CORE STANDBY · press TRADE AI NOW to make it read every volatility market once, pick the best EVEN/ODD setup and start Bot 10 on it.</span>
       </div>
       <div class="scanwrap" id="eoScanwrap" style="display:none">
@@ -678,8 +697,10 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       </div>
       <div class="scrollx" id="eoBars"></div>
       <div class="note" id="eoVerdict"></div>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b10_runbar"><span class="rdot"></span><span class="rstate" id="b10_state">Bot stopped</span><span class="rmeta" id="b10_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b10_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b10_toggle">START</button>
         <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, paints the digits like the dashboard (green 8.5–11.5%, red ≥11.5%) and checks your six rules in the gate list further down the card. <b>It picks one side and stays on it:</b> the parity of the FIRST entry — EVEN or ODD — locks for the whole session, so it never flips from odd to even mid-run. That first entry is the market OPPOSITE the hottest digit (that hottest digit on the other market is the entry point). <b>Buy every tick after lock</b> is on by default: the six rules decide only that FIRST entry, and from then on the bot buys the locked side <b>every tick</b> instead of holding when a rule closes — untick it on the card if you want every entry gated again. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press and then chooses a new side from scratch. The stop-loss level and 3 wins in a row no longer halt the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
       </div>
       <div class="cfg">
@@ -708,12 +729,14 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b10_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b10_pl">0.00</div></div>
         <div class="stat"><div class="k">Stake</div><div class="v" id="b10_next">1.00</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b10_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b10_roi">—</div></div>
       </div>
       <div class="note" id="b10_entry">Not started — the six rules are checked once a second while the bot runs.</div>
       <div id="b10_gates"></div>
       <div class="chips" id="b10_chips"></div>
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
       <div class="note"><b>Strategy (your sheet, six of the eight rules):</b> trade the market opposite the hottest digit — <b>but only ONE market per session</b> (see below); the green bar must sit on the traded market between 11% and 12.5%; 3 to 4 digits must read 10.2% or more; no two digits on the opposite market may share a percentage; no two digits may compete head-to-head on the opposite market; no trade above a 13% green bar or with the two greens 1.5% apart. Entry point = the digit with the highest percentage on the opposite market.<br><b>One market until TP (your rule of 24 Oct):</b> the parity of the <b>first entry</b> — EVEN or ODD — is LOCKED for the rest of the session. The bot no longer flips sides when the hottest digit moves: every later second it re-scores the six gates for that SAME parity, and if the green bar has migrated to the other side it simply <b>holds</b> instead of switching. It keeps buying only that one market until it hits its target; a fresh START (or the new session after TP) picks a new market from scratch.<br><b>Buy every tick after lock (on by default):</b> the six rules are what choose the <i>first</i> entry — that read names the market. Once locked they stop vetoing, so the bot buys the locked side <b>every tick</b> instead of holding when a rule closes. Only TP, the recovery-step limit / stake cap resetting the ladder, or your own STOP button interrupt it. Untick the box on the card to gate every entry again. <b>Every tick means the ladder moves fast:</b> at ×2.10 and 4 recovery steps a run of losses reaches the top step in four seconds, so watch the stake and set your cap.<br><b>What was cut:</b> the <i>green bar + second green bar both on the traded market, 0.2–0.4% apart</i> rule and the <i>red bars on the traded market only, at 8.6% or above, second red losing momentum</i> rule. Measured on 20,000 random 100-tick windows they opened <b>0%</b> and <b>0.1%</b> of the time — the traded market is by definition the one <i>opposite</i> the hottest digit, and the hottest digit is the likeliest green or red, so both rules fought the bot's own definition and Bot 10 never traded.<br><b>Now:</b> the six-rule stack opens on <b>7.6%</b> of 906 rolling 100-tick windows of <b>real 1HZ100V ticks</b> (7.9% on 5,000 random windows — the eight-rule stack opened on 0 of 20,000), and in the last live all-market scan <b>1 of 13 markets</b> cleared all six. So the bot does reach entry. Note rule 5 (the 13% green reversal cap) can never fire on the dashboard's own colours — a bar above 11.5% is painted red, not green — it is kept only because your sheet names it.<br><b>Honesty:</b> this is a timing filter, not an edge. EVEN/ODD pays ×1.82 here ⇒ 54.95% of the window must land on the bought side, and nothing in the digit shares measured on this terminal (7,208 rolling 100-tick windows, 8 markets) makes that favourable. The stack is still strict: most seconds it holds, which limits how much it trades — not how much it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> and the <b>3-consecutive-wins</b> bank are announcements only — the AI says the number once and the bot keeps buying on the same market, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
     </div>
@@ -787,8 +810,10 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 
     <div class="panel botcard blkstyle" id="card_b1">
       <h3>BOT 1 · Over 3 → Under 6 recovery <span class="mode"><span class="mode-badge mode-main" id="b1_mode">MAIN · OVER 3</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b1_runbar"><span class="rdot"></span><span class="rstate" id="b1_state">Bot stopped</span><span class="rmeta" id="b1_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b1_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b1_toggle">START</button>
         <span class="sub" id="b1_sub">Next: DIGITOVER 3 · base stake</span>
       </div>
       <div class="cfg">
@@ -807,18 +832,22 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b1_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b1_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake</div><div class="v" id="b1_next">0.35</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b1_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b1_roi">—</div></div>
       </div>
       <div class="chips" id="b1_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b1_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b1_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b1_recent"></tbody></table></div>
       <div class="note" id="b1_expo"></div>
       <div class="note"><b>Strategy:</b> main trade = DIGIT OVER 3 (wins on digits 4–9, ~60% probability). After any loss the bot switches to <b>DIGIT UNDER 6</b> (wins on 0–5) and multiplies the stake by the <b>martingale factor</b> for each consecutive loss. UNDER 6 pays about 1.65×, so the ladder wins back short losing runs in full; deeper runs are cut off by the limits below. It resets to base after a recovery win, after the max recovery steps, or when the next stake would exceed the cap. <b>After every loss it also holds 3s</b>, analyses every market it has data for, and will not place the next trade until the digits that just beat it (0–3 after an OVER 3 loss, 6–9 after an UNDER 6 loss) have been touched <b>3 or more times in the last 100 ticks</b> — the analysis only informs the entry, the bot always keeps trading the market you selected. Decisions run on a ~1 second heartbeat.</div>
     </div>
 
     <div class="panel botcard blkstyle" id="card_b2">
       <h3>BOT 2 · AI Signal Even/Odd <span class="mode"><span class="mode-badge mode-wait" id="b2_mode">WAITING · AI SIGNAL</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b2_runbar"><span class="rdot"></span><span class="rstate" id="b2_state">Bot stopped</span><span class="rmeta" id="b2_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b2_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b2_toggle">START</button>
         <span class="sub" id="b2_sub">Idle — press RUN BOT on an EVEN/ODD signal in the AI Signal Center to start it</span>
       </div>
       <div class="cfg">
@@ -837,19 +866,23 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b2_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b2_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake</div><div class="v" id="b2_next">0.35</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b2_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b2_roi">—</div></div>
       </div>
       <div class="cmdstatus" id="b2_sig">Signal watch: idle — no EVEN/ODD digit-heat signal yet.</div>
       <div class="chips" id="b2_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b2_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b2_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b2_recent"></tbody></table></div>
       <div class="note"><b>Strategy:</b> this bot <b>never picks a side itself</b> and the tile/card START button does <b>not</b> start trading. It only begins when you press <b>RUN BOT</b> on an EVEN/ODD digit-heat signal in the AI Signal Center; from then on it stays running and trades <b>every new EVEN/ODD signal</b> — one contract per signal, never the same signal twice, signals up to the <b>Signal max age</b> below — until you press STOP or your take-profit / stop-loss is reached. No loss-switching, no self-decided direction.</div>
       <div class="note" id="b2_expo"></div>
     </div>
 
     <div class="panel botcard blkstyle" id="card_b3">
       <h3>BOT 3 · Rise/Fall <span class="mode"><span class="mode-badge mode-wait" id="b3_mode">WAITING · NO PATTERN</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b3_runbar"><span class="rdot"></span><span class="rstate" id="b3_state">Bot stopped</span><span class="rmeta" id="b3_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b3_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b3_toggle">START</button>
         <span class="sub" id="b3_sub">Next: RISE/FALL · waiting for 2 ticks in a row</span>
       </div>
       <div class="cfg">
@@ -872,18 +905,22 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b3_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b3_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake</div><div class="v" id="b3_next">0.35</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b3_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b3_roi">—</div></div>
       </div>
       <div class="chips" id="b3_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b3_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Direction</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b3_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b3_recent"></tbody></table></div>
       <div class="note" id="b3_expo"></div>
       <div class="note"><b>Strategy (your rule of 25 Oct):</b> fully automatic Rise/Fall — no per-trade confirmation. It reads the last <b>100 ticks</b> and enters on the <b>reversal</b>: <b>2 FALL ticks in a row → buy RISE</b>, <b>2 RISE ticks in a row → buy FALL</b>. When the two most recent moves disagree, or a move is flat, there is no entry point and it waits. Contracts run <b>1 tick</b> — the very next price is the exit. By default it enters only when the run is <b>exactly</b> the pattern count, so a long trend cannot machine-gun the stake ladder; untick "Only at exactly that count" to re-enter on every tick while the run lasts. Switch <b>Entry rule</b> back to <b>AI ensemble</b> for the old 5-model read (momentum, EMA cross, trend, streak, RSI) gated by <b>Min confidence</b> — that field does nothing in reversal mode.<br><b>Martingale:</b> after each loss the stake is multiplied by your × factor to recover the run; it resets to base after a win, or when it would exceed the stake cap (set × to 1 for flat stakes). The bot keeps trading until <b>you stop it</b> or it hits the <b>take profit / stop loss</b> you set (0 = that limit is off).<br><b style="color:var(--amber)">What this rule is not:</b> ticks are independent, so betting against a 2-tick run does not make the next tick more likely to reverse. Rise/Fall pays ≈<b>1.80×</b> ⇒ <b>55.56%</b> must win to break even, and a 1-tick contract is the closest thing to a coin flip the market offers. Reversal + martingale changes <i>when</i> it buys and <i>how much</i> — not the odds. Keep the base stake small.</div>
     </div>
 
     <div class="panel botcard" id="card_b4">
       <h3>BOT 4 · Strategy Command <span class="mode"><span class="mode-badge mode-wait" id="b4_mode">WAITING · NO RULE HIT</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b4_runbar"><span class="rdot"></span><span class="rstate" id="b4_state">Bot stopped</span><span class="rmeta" id="b4_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b4_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b4_toggle">START</button>
         <span class="sub" id="b4_sub">Next: your rules decide · waiting for a match</span>
       </div>
       <div class="cfg">
@@ -914,18 +951,22 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b4_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b4_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake</div><div class="v" id="b4_next">0.35</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b4_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b4_roi">—</div></div>
       </div>
       <div class="chips" id="b4_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b4_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b4_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b4_recent"></tbody></table></div>
       <div class="note" id="b4_expo"></div>
       <div class="note"><b>Strategy:</b> your own rules. Each line is <b>IF &lt;conditions&gt; THEN &lt;action&gt;</b>; conditions join with <b>AND</b> and compare a live metric (<b>rsi</b> 0–100, <b>mom</b>/<b>trend</b>/<b>ema</b> −1…+1, <b>streak</b> consecutive same-direction ticks, <b>rise</b>/<b>fall</b> AI confidence %, <b>digit</b> last tick digit, <b>price</b>/<b>high</b>/<b>low</b>, <b>conf</b>) with &gt; &lt; &gt;= &lt;= = (or above/below/over/under). Special conditions: <b>ema cross up/down</b>, <b>digit even/odd</b>, <b>streak up n / streak down n</b>. The first rule whose conditions all hold fires its action (BUY RISE / BUY FALL / DIGIT OVER n / DIGIT UNDER n / EVEN / ODD); if no rule matches the bot waits. Lines starting with # are comments. <b>Martingale:</b> after each loss the stake is multiplied by your × factor to recover the run; it resets to base after a win, or when it would exceed the stake cap (set × to 1 for flat stakes). Runs until you stop it or TP/SL hits.</div>
     </div>
 
     <div class="panel botcard blkstyle" id="card_b6">
       <h3>BOT 6 · Under 7 → Under 6 recovery <span class="mode"><span class="mode-badge mode-main" id="b6_mode">MAIN · UNDER 7</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b6_runbar"><span class="rdot"></span><span class="rstate" id="b6_state">Bot stopped</span><span class="rmeta" id="b6_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b6_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b6_toggle">START</button>
         <span class="sub" id="b6_sub">Next: DIGITUNDER 7 · base stake</span>
       </div>
       <div class="cfg">
@@ -944,18 +985,22 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b6_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b6_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake</div><div class="v" id="b6_next">2.00</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b6_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b6_roi">—</div></div>
       </div>
       <div class="chips" id="b6_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b6_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b6_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b6_recent"></tbody></table></div>
       <div class="note" id="b6_expo"></div>
       <div class="note"><b>Strategy:</b> main trade = <b>DIGIT UNDER 7</b> (wins on digits 0–6, ~70% probability) at your base stake. After any loss it switches to <b>DIGIT UNDER 6</b> (wins on 0–5) and multiplies the stake by the <b>martingale factor</b> for each further loss, until a win closes the run and it returns to UNDER 7 at the base stake. The ladder resets early if the next stake would exceed the <b>stake cap</b> or the run passes <b>max recovery steps</b>. This is the bot the AI Signal Center runs for <b>UNDER 6</b> digit-heat signals. <b style="color:var(--amber)">Martingale sizing can lose a full ladder in a losing streak — the exposure figure above is the real worst case.</b></div>
     </div>
 
     <div class="panel botcard blkstyle" id="card_b7">
       <h3>BOT 7 · Digit Matches <span class="mode"><span class="mode-badge mode-wait" id="b7_mode">WAITING · TICKS</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b7_runbar"><span class="rdot"></span><span class="rstate" id="b7_state">Bot stopped</span><span class="rmeta" id="b7_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b7_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b7_toggle">START</button>
         <span class="sub" id="b7_sub">Next: DIGITMATCH on ONE digit at a time — the first accepted cycle names the digit (top of the last 50 ticks by share + momentum) and the run then hunts that same digit until it hits</span>
       </div>
       <div class="cfg">
@@ -978,11 +1023,13 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b7_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b7_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake / leg</div><div class="v" id="b7_next">0.50</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b7_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b7_roi">—</div></div>
       </div>
       <div class="note" id="b7_hot">Waiting for ticks — the digit window fills as the market streams.</div>
       <div class="chips" id="b7_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b7_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b7_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b7_recent"></tbody></table></div>
       <div class="note" id="b7_expo"></div>
       <div class="note"><b>Strategy — ONE contract per cycle on ONE locked digit (back to the way it was before the 3-at-once version):</b> the bot ranks all ten digits of the last <b>50 ticks</b> of the current market by <b>share <i>plus</i> momentum</b> (the last 25 ticks against the first 25, so a digit that is waking up outranks one fading — ties go to the more recently seen digit). The <b>first cycle that the hot-share band accepts</b> buys <b>one DIGITMATCH contract on that one digit</b>, and from then on <b style="color:var(--green)">the digit is LOCKED for the run</b>: every cycle buys that same digit and nothing else, one contract at a time, until it hits. A hit ends the run — <b>your rule: if one wins, stop</b> — and the popup reads <b>RUN BANKED ON THE FIRST HIT</b>; take profit and stop loss still take precedence, and STOP always works. <b>"Hunt one locked digit" is a switch on this card:</b> untick it to go back to re-ranking every cycle and buying the top <b>Digits per cycle</b> digits at once (2/3/4 legs, all bought in the same second so they ride the same exit tick). <b>The band gates the FIRST entry only</b> — no digit is locked while the ranked leader sits under the <b>min hot share</b> (it can rank first on momentum while another digit holds a taller raw share; a flat market hands every digit ~10%) and an over-heated leader at or above the <b>max hot share</b> is refused — across 10,000 real ticks a hottest-of-50 leader past 22% repeated on the next tick only <b>9.3%</b> of the time (6.9% past 24%), i.e. a streak running out rather than a trend. <b style="color:var(--amber)">The price of the lock:</b> once a digit is chosen the bot keeps buying it every cycle whatever its share does, so a cold locked digit is a slow steady bleed of <b>one</b> stake per cycle until the stake cap, the stop loss or your STOP key ends it. After a missed cycle that stake is multiplied by the martingale factor. <b>Measured payout:</b> a 1-tick match returns ≈<b>6.66×</b> the stake, so a single-digit cycle needs the locked digit to land <b>1 ÷ 6.66 = 15.02%</b> of exits to break even (≈1 in 6.7, the flat baseline for any digit is 10%) and a hit nets ≈5.66× the stake, which is why <b>×1.18</b> is enough to recover one missed cycle — you have ×<b>1.50</b>. With the box unticked and <b>K</b> legs, coverage has to reach <b>K ÷ 6.66</b> — <b>30.03%</b> at 2, <b>45.05%</b> at 3, <b>60.06%</b> at 4 — and recovery needs <b>1 + K ÷ (6.66 − K)</b> (≈×1.82 at 3 legs). <b style="color:var(--amber)">Read this honestly:</b> the odds of a 1-tick match do not change because one digit is being hunted — on this market's last 1,005 ticks the top-1 leader of a rolling 50-tick window held the next tick's digit only about <b>11.6%</b> of the time against the <b>15.02%</b> a single leg needs, and the same ≈<b>−30%</b> of everything staked came out at every leg count. This is a <b>timing and staking</b> rule, not an edge: locking one digit makes the run cheaper per cycle and the hits smaller in number, it does not make the digit more likely. Keep the base stake small and the stop loss real.</div>
     </div>
@@ -1065,8 +1112,10 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 
       <div class="panel botcard" id="card_b8" style="margin-top:12px;border-color:rgba(37,255,154,.28)">
         <h3>BOT 8 · Sync Even/Odd <span class="mode"><span class="mode-badge mode-wait" id="b8_mode">IDLE · AI CORE</span></span></h3>
+        <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+        <div class="runbar" id="b8_runbar"><span class="rdot"></span><span class="rstate" id="b8_state">Bot stopped</span><span class="rmeta" id="b8_runmeta"></span></div>
         <div class="botrun">
-          <button class="btn btn-green btn-big" id="b8_toggle">START</button>
+          <button class="btn btn-blue btn-big" id="b8_toggle">START</button>
           <span class="sub" id="b8_sub">Press TRADE AI NOW first — the AI then reads 50–100 ticks on every market and buys one contract per cycle on the parity that WINS THE DIGIT COMPETITION (its highest digits all RED, none on the other side), or clears the coverage edge; when neither does it says DANGER ZONE DETECTED instead of buying</span>
         </div>
         <div class="cfg">
@@ -1088,19 +1137,23 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
           <div class="stat"><div class="k">Win rate</div><div class="v" id="b8_wr">—</div></div>
           <div class="stat"><div class="k">Net P/L</div><div class="v" id="b8_pl">0.00</div></div>
           <div class="stat"><div class="k">Stake</div><div class="v" id="b8_next">1.00</div></div>
+          <div class="stat"><div class="k">Total stake</div><div class="v" id="b8_staked">0.00</div></div>
+          <div class="stat"><div class="k">ROI</div><div class="v" id="b8_roi">—</div></div>
         </div>
         <div class="note" id="b8_hot">No market chosen by the AI yet — the bot trades the symbol currently selected in the header.</div>
         <div class="chips" id="b8_chips"></div>
         <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b8_chart"></canvas></div>
-        <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b8_recent"></tbody></table></div>
+        <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b8_recent"></tbody></table></div>
         <div class="note" id="b8_expo"></div>
         <div class="note"><b>Strategy:</b> once a second it reads the last <b>50–100 ticks</b> of the market in the header and counts <b>EVEN</b> against <b>ODD</b> on the closing digit, then buys <b>one contract on whichever parity covers more of the window</b>. <b>Measured on this terminal</b> (read-only proposals): EVEN and ODD both pay <b>1.82×</b> the stake. So the side it picks needs <b>54.95%</b> of the window just to break even, while a coin flip covers <b>50%</b> — at that quote each trade is worth roughly <b>−0.09 per 1.00 staked</b>. <b style="color:var(--red)">A 55–58% reading over only 50–100 ticks is 1–2σ — sampling noise, not a proven bias — and digit parity has no known durable edge. Stakes stay flat on purpose: a martingale on a negative-expectancy side only accelerates the drawdown. Use a small stake, keep a real stop loss, and treat it as a demonstration.</b><br><b>Danger zone:</b> before buying it checks that entry against the <b>Danger gate (σ)</b> field — the parity must be above break-even <i>and</i> at least that many σ above a coin flip (1.5σ over a 100-tick window = 50 + 1.5×5 = <b>≥57.5%</b> coverage; the card prints the live number for your window). Measured over <b>7,208 rolling 100-tick windows across 8 volatility markets</b> of this terminal's own tick streams: the stronger of EVEN/ODD was above break-even on only <b>41.4%</b> of steps, cleared 1.5σ on <b>13.6%</b> and 2σ on <b>6.3%</b>. So when the market is bad or there is no good entry point the AI says <b style="color:var(--red)">DANGER ZONE DETECTED</b>, logs the reason and <b>buys nothing</b> — waiting is the normal state, not a fault. Set the gate to <b>0</b> to trade every cycle instead. Clearing the gate only rejects readings a fair coin explains; it does not create an edge.</div>
       </div>
 
       <div class="panel botcard" id="card_b9" style="margin-top:12px;border-color:rgba(37,255,154,.28)">
         <h3>BOT 9 · Sync Under 6 ⇄ Over 3 Recovery <span class="mode"><span class="mode-badge mode-wait" id="b9_mode">IDLE · U6 ⇄ O3</span></span></h3>
+        <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+        <div class="runbar" id="b9_runbar"><span class="rdot"></span><span class="rstate" id="b9_state">Bot stopped</span><span class="rmeta" id="b9_runmeta"></span></div>
         <div class="botrun">
-          <button class="btn btn-green btn-big" id="b9_toggle">START</button>
+          <button class="btn btn-blue btn-big" id="b9_toggle">START</button>
           <span class="sub" id="b9_sub">Starts on the market the header shows — UNDER 6 at the base stake, and every loss flips the side to OVER 3 while the stake climbs the martingale ladder set below. Each entry needs the digit competition (or the 100-tick edge) on its side; a refusal only pauses the ladder — same side, same step, same stake</span>
         </div>
         <div class="cfg">
@@ -1122,11 +1175,13 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
           <div class="stat"><div class="k">Win rate</div><div class="v" id="b9_wr">—</div></div>
           <div class="stat"><div class="k">Net P/L</div><div class="v" id="b9_pl">0.00</div></div>
           <div class="stat"><div class="k">Next stake</div><div class="v" id="b9_next">1.00</div></div>
+          <div class="stat"><div class="k">Total stake</div><div class="v" id="b9_staked">0.00</div></div>
+          <div class="stat"><div class="k">ROI</div><div class="v" id="b9_roi">—</div></div>
         </div>
         <div class="note" id="b9_hot">Not started — press START to run the UNDER 6 ⇄ OVER 3 ladder on the market the header shows.</div>
         <div class="chips" id="b9_chips"></div>
         <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b9_chart"></canvas></div>
-        <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b9_recent"></tbody></table></div>
+        <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b9_recent"></tbody></table></div>
         <div class="note" id="b9_expo"></div>
         <div class="note"><b>Strategy:</b> it opens on <b>DIGITUNDER 6</b> (the exit digit must be 0–5). When that loses, the digit that killed it was <b>6–9</b> — which is exactly the zone <b>DIGITOVER 3</b> wins — so the next stake is bought on <b>OVER 3</b> instead, and a loss there flips back to UNDER 6. Each flip multiplies the stake by <b>Martingale ×</b> until a win closes the run, the side returns to UNDER 6, and the stake returns to base.<br><b>Measured on this terminal</b> (read-only proposals): UNDER 6 and OVER 3 both pay <b>1.54×</b> ⇒ each side needs <b>64.94%</b> of the ticks, while at random each covers <b>60%</b> — an honest expectation of ≈<b>−0.076 per 1.00 staked</b>. The <b>Require 100-tick edge</b> box refuses entries where the side it is about to play covered less than 64.94% of the last 100 ticks; over <b>7,208 rolling 100-tick windows across 8 volatility markets</b> UNDER 6 cleared it on <b>19.0%</b> of windows and OVER 3 on <b>18.6%</b>, and <b style="color:var(--red)">the two sides cleared it together in none of them</b> — they overlap on digits 4 and 5, so one side's edge is the other's hole. The flip is a <b>stake rule, not a prediction</b>: after a 6–9 tick the next tick was ≥4 on 59.78% of 3,170 steps against a 60.46% baseline.<br><b style="color:var(--amber)">Martingale risk:</b> a ladder only wins a deep run back in full at ≈<b>×2.85</b>; at ×2.20 the first loss is recovered outright and deeper runs are abandoned by the steps/cap. Worst-case exposure grows geometrically — at the defaults above a ×2.20 ladder over 4 steps risks ≈<b>42× the base stake</b> (1.00 → 2.20 → 4.84 → 10.65 → 23.43) before the cap or the step limit resets it. Keep the base stake small and the stop loss on. <b style="color:var(--red)">No setting of these fields turns a 1.54× payout on a 60% side into positive expectancy.</b></div>
       </div>
@@ -1237,7 +1292,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
     <div class="dir" id="sigcDir">—</div>
     <div class="meta" id="sigcMeta">Monitoring the live tick stream… a signal appears when the 3 highest red digits over the last 100 ticks all sit in one group.</div>
     <div class="sigactions">
-      <button class="btn btn-green btn-big" id="sigConfirm" disabled>RUN BOT</button>
+      <button class="btn btn-blue btn-big" id="sigConfirm" disabled>RUN BOT</button>
       <button class="btn btn-ghost" id="sigSkip" disabled>SKIP</button>
       <span id="sigCountdown"></span>
     </div>
@@ -1245,7 +1300,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 
   <div class="sigcard loadbot">
     <div class="lbrow">
-      <button class="btn btn-green btn-big" id="loadBotBtn">LOAD BOT</button>
+      <button class="btn btn-blue btn-big" id="loadBotBtn">LOAD BOT</button>
       <div class="lbmeta" id="loadBotStatus">Reading the live feeds…</div>
     </div>
     <div class="note" style="margin-top:10px"><b>One press:</b> picks the strongest <b>Over 3 / Under 6</b> or <b>Rise/Fall</b> setup across every scanned market (the current market when the scanner is off), switches to that exact market, sets the matching bot's base stake to <b>1.00</b> and starts it immediately — the press <i>is</i> the confirmation, no extra dialog. <b style="color:var(--amber)">It places real trades on your authorized account (DEMO or LIVE).</b> Rise/Fall loads <b>Bot 3 · Rise/Fall</b>, which enters on your <b>2-in-a-row reversal</b> — over the last 100 ticks, 2 FALLs in a row buys RISE and 2 RISEs in a row buys FALL, one-tick contracts — automatically, with no per-trade confirmation, until you stop it or its TP/SL hits. <b>Even/Odd is not loadable</b> — Bot 2 only trades the side the AI Signal Center provides. Stop anytime with STOP ALL BOTS or the bot's STOP.</div>
@@ -1306,8 +1361,10 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
 
     <div class="panel botcard blkstyle" id="card_b5" style="margin-top:12px;border-color:rgba(37,255,154,.28)">
       <h3>ALL IN ONE · 4-Family AI Bot <span class="mode"><span class="mode-badge mode-wait" id="b5_mode">IDLE · PRESS TRADE AI NOW</span></span></h3>
+      <!-- Round 75: DBot-style run status strip — renderBot() writes the state, the dot and the meta -->
+      <div class="runbar" id="b5_runbar"><span class="rdot"></span><span class="rstate" id="b5_state">Bot stopped</span><span class="rmeta" id="b5_runmeta"></span></div>
       <div class="botrun">
-        <button class="btn btn-green btn-big" id="b5_toggle">START</button>
+        <button class="btn btn-blue btn-big" id="b5_toggle">START</button>
         <span class="sub" id="b5_sub">Trades only the market TRADE AI NOW locked · EVEN/ODD · RISE/FALL · OVER 2 ⇄ UNDER 6 · waits when no family is ready</span>
       </div>
       <div class="cfg">
@@ -1330,11 +1387,13 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
         <div class="stat"><div class="k">Win rate</div><div class="v" id="b5_wr">—</div></div>
         <div class="stat"><div class="k">Net P/L</div><div class="v" id="b5_pl">0.00</div></div>
         <div class="stat"><div class="k">Next stake</div><div class="v" id="b5_next">1.00</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b5_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b5_roi">—</div></div>
       </div>
       <div class="note" id="b5_hot">No market locked yet — press TRADE AI NOW and the AI picks the best market that is ready right now.</div>
       <div class="chips" id="b5_chips"></div>
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b5_chart"></canvas></div>
-      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Stake</th><th>Exit digit</th><th>Result</th><th>P/L</th></tr></thead><tbody id="b5_recent"></tbody></table></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b5_recent"></tbody></table></div>
       <div class="note" id="b5_expo"></div>
       <div class="note"><b>Strategy:</b> ONE bot, ONE locked market at a time — and on that market the AI re-reads <b>four families every cycle</b> over the <b>last 100 ticks</b> and trades <b>whichever one is ready</b>, one contract per accepted cycle:<br>
       • <b>EVEN/ODD</b> — the Synchronization desk's read: the <b>3 or 4 highest digits all RED bars (≥11.5%), all on one parity, the other parity holding no RED digit of its own</b>, or as the second route in a coverage that clears the <b>Danger gate (σ)</b>. Measured payout <b>1.82×</b> ⇒ <b>54.95%</b> break-even against a ~50% coin flip.<br>
@@ -1382,7 +1441,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
     <h2>Log in to your Deriv account</h2>
     <div class="note hidden" id="oauthStatus"></div>
     <div class="oauthhero">
-      <button class="btn btn-red" id="oauthLoginBtn">LOG IN WITH DERIV</button>
+      <button class="btn btn-blue" id="oauthLoginBtn">LOG IN WITH DERIV</button>
     </div>
     <details class="adv gear">
       <summary>⚙</summary>
@@ -1435,7 +1494,7 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
     <div id="confirmBody"></div>
     <div class="mfoot">
       <button class="btn btn-ghost" id="confirmCancel">Cancel</button>
-      <button class="btn btn-green" id="confirmOk">Confirm</button>
+      <button class="btn btn-blue" id="confirmOk">Confirm</button>
     </div>
   </div>
 </div>
@@ -3326,7 +3385,7 @@ async function waitGap(ms){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.stats = { trades: 0, wins: 0, losses: 0, pl: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
+    this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; }
   countStreak(res){ if (res && res.virtual) return; this.winStreak = res.won ? this.winStreak + 1 : 0; }
   async start(opts){
@@ -3468,8 +3527,11 @@ class BaseBot {
         this.failStreak = 0;
         this.stats.trades++;
         this.stats.pl += res.profit;
-        if (res.won) this.stats.wins++; else this.stats.losses++;
-        this.results.push({ won: res.won, profit: res.profit, digit: (plan.type === "CALL" || plan.type === "PUT") ? (plan.type === "CALL" ? "▲ RISE" : "▼ FALL") : lastDigitChar(res.exit), type: plan.type + (plan.barrier != null ? " " + plan.barrier : ""), stake: plan.stake, t: Date.now(), virtual: !!res.virtual });
+        /* Round 75: the two numbers DBot's Summary shows that we did not keep — everything staked
+           and everything paid back. Pure bookkeeping; nothing here decides a trade. */
+        this.stats.staked = round2((this.stats.staked || 0) + (+plan.stake || 0));
+        if (res.won) { this.stats.wins++; this.stats.paid = round2((this.stats.paid || 0) + (+res.payout || 0)); } else this.stats.losses++;
+        this.results.push({ won: res.won, profit: res.profit, digit: (plan.type === "CALL" || plan.type === "PUT") ? (plan.type === "CALL" ? "▲ RISE" : "▼ FALL") : lastDigitChar(res.exit), type: plan.type + (plan.barrier != null ? " " + plan.barrier : ""), stake: plan.stake, payout: res.payout, entry: res.entry, exit: res.exit, t: Date.now(), virtual: !!res.virtual });
         if (this.results.length > 60) this.results.shift();
         this.runEquity.push(this.limitPl());
         if (this.runEquity.length > 240) this.runEquity.shift();
@@ -3887,12 +3949,13 @@ class MatchesBot extends BaseBot {
     const res = leg.res, plan = leg.plan, d = lastDigitChar(res.exit);
     this.stats.trades++;
     this.stats.pl += res.profit;
-    if (res.won) this.stats.wins++; else this.stats.losses++;
+    this.stats.staked = round2((this.stats.staked || 0) + (+plan.stake || 0));
+    if (res.won) { this.stats.wins++; this.stats.paid = round2((this.stats.paid || 0) + (+res.payout || 0)); } else this.stats.losses++;
     this.exitDigit = (d && d !== "—") ? d : this.exitDigit;
     if (res.won) this.hitDigits.push(plan.barrier);
     this.results.push({ won: res.won, profit: res.profit, digit: d,
       type: "DIGITMATCH " + plan.barrier + (plan.legOf > 1 ? " · leg " + plan.legNo + "/" + plan.legOf : ""),
-      stake: plan.stake, t: Date.now(), virtual: !!res.virtual });
+      stake: plan.stake, payout: res.payout, entry: res.entry, exit: res.exit, t: Date.now(), virtual: !!res.virtual });
     if (this.results.length > 60) this.results.shift();
     applyBalanceAfter(res);
     this.sys((virt ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + "DIGITMATCH " + plan.barrier +
@@ -6454,7 +6517,7 @@ function renderBot(b){
   const p = b.id;
   const tgl = $("#" + p + "_toggle");
   tgl.textContent = b.running ? "STOP" : "START";
-  tgl.className = "btn btn-big " + (b.running ? "btn-red" : "btn-green");
+  tgl.className = "btn btn-big " + (b.running ? "btn-red" : "btn-blue");   // Round 75: Deriv's RUN is brand blue
   const pv = b.preview();
   const mb = $("#" + p + "_mode");
   mb.textContent = pv.label; mb.className = "mode-badge " + pv.cls;
@@ -6475,10 +6538,41 @@ function renderBot(b){
   plEl.textContent = fmtS(b.stats.pl);
   plEl.className = "v " + (b.stats.pl >= 0 ? "up" : "down");
   $("#" + p + "_next").textContent = b.running || b.busy ? fmt(pv.stake) : "—";
+  /* Round 75 — the DBot read-out. Deriv's Summary keeps two figures we had never totalled:
+     everything this bot has staked and what it paid back, which is where return-on-investment
+     comes from. And the run strip above the controls says the bot's CONDITION in words, the way
+     their own runner does. All of it reads state; none of it decides a trade. */
+  const stEl = $("#" + p + "_staked"), roiEl = $("#" + p + "_roi");
+  if (stEl) stEl.textContent = fmt(b.stats.staked || 0);
+  if (roiEl){
+    roiEl.textContent = b.stats.staked > 0 ? fmt(b.stats.pl / b.stats.staked * 100, 1) + "%" : "—";
+    roiEl.className = "v " + (b.stats.staked > 0 ? (b.stats.pl >= 0 ? "up" : "down") : "");
+  }
+  const rb = $("#" + p + "_runbar"), rs = $("#" + p + "_state"), rm = $("#" + p + "_runmeta");
+  if (rb && rs && rm){
+    rb.className = "runbar" + (b.running ? " on" : (b.busy ? " busy" : ""));
+    rs.textContent = b.running ? (b.busy ? "Bot is running — an order is on Deriv" : "Bot is running")
+      : (b.busy ? "Stopped — an order is still settling on Deriv"
+      : (b.restartAt ? "Stopped — the next run is queued" : "Bot stopped"));
+    const cur = (state.account && state.account.currency) || "USD";
+    rm.innerHTML = "<span>MARKET <b>" + state.symbol + "</b></span>" +
+      "<span>CONTRACTS <b>" + b.stats.trades + "</b></span>" +
+      "<span>NET P/L <b class='" + (b.stats.pl >= 0 ? "up" : "down") + "'>" + fmtS(b.stats.pl) + " " + cur + "</b></span>" +
+      (lc.tp > 0 || lc.sl > 0 ? "<span>TP / SL <b>" + (lc.tp > 0 ? "+" + fmt(lc.tp) : "off") + " · " + (lc.sl > 0 ? "−" + fmt(lc.sl) : "off") + "</b></span>" : "");
+  }
   $("#" + p + "_chips").innerHTML = b.results.slice(-24).map(r =>
     "<span class='rchip " + (r.won ? "w" : "l") + "' title='" + r.type + " · " + fmtS(r.profit) + "'>" + (r.won ? "W" : "L") + "</span>").join("");
-  $("#" + p + "_recent").innerHTML = b.results.slice(-6).reverse().map(r =>
-    "<tr><td>" + new Date(r.t).toLocaleTimeString() + "</td><td>" + r.type + (r.virtual ? " ·V" : "") + "</td><td>" + fmt(r.stake) + "</td><td>" + r.digit + "</td><td><span class='pill " + (r.won ? "w" : "l") + "'>" + (r.won ? "WON" : "LOST") + "</span></td><td class='" + (r.profit >= 0 ? "up" : "down") + "'>" + fmtS(r.profit) + "</td></tr>").join("");
+  /* Trade information, in Deriv's columns: buy price, payout, result and the exit it settled on. */
+  $("#" + p + "_recent").innerHTML = b.results.slice(-6).reverse().map(r => {
+    const isDir = r.type.indexOf("CALL") === 0 || r.type.indexOf("PUT") === 0;
+    const dg = r.digit && r.digit !== "—" ? (isDir ? r.digit : "digit " + r.digit) : "";
+    const exitTxt = (r.exit ? String(r.exit) : "—") + (dg ? " · " + dg : "");
+    const pay = r.won ? (r.payout != null && r.payout !== undefined && isFinite(r.payout) ? fmt(r.payout) : "—") : "0.00";
+    return "<tr><td>" + new Date(r.t).toLocaleTimeString() + "</td><td>" + r.type + (r.virtual ? " ·V" : "") +
+      "</td><td>" + fmt(r.stake) + "</td><td>" + pay +
+      "</td><td><span class='pill " + (r.won ? "w" : "l") + "'>" + (r.won ? "WON" : "LOST") + "</span></td>" +
+      "<td>" + exitTxt + "</td><td class='" + (r.profit >= 0 ? "up" : "down") + "'>" + fmtS(r.profit) + "</td></tr>";
+  }).join("");
   if (p === "b1"){
     const c = cfg1(), cur = (state.account && state.account.currency) || "USD";
     let s = c.stake, total = 0, steps = 0;
