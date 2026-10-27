@@ -471,6 +471,9 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 #syncScan.on{display:flex}
 #aioScan{display:none;flex-direction:column;align-items:center;gap:12px;padding:22px 14px;width:100%}
 #aioScan.on{display:flex}
+/* the RISE FALL desk reuses every rule above; only its own scan overlay id needs listing */
+#rfScan{display:none;flex-direction:column;align-items:center;gap:12px;padding:22px 14px;width:100%}
+#rfScan.on{display:flex}
 .aiohud{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;width:100%;max-width:760px;align-items:start}
 .aiohud .k{font:800 11px var(--mono);letter-spacing:.18em;color:#7fdcb4;margin-bottom:6px}
 .aiohud .rd{display:flex;justify-content:space-between;gap:10px;font:700 12px var(--mono);color:#9fe6c6;padding:3px 0;border-bottom:1px dashed rgba(37,255,154,.16)}
@@ -549,6 +552,9 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <select id="acctSelect" title="Switch the trading session between your demo and real accounts"></select>
       </div>
       <span class="bal" id="acctBal"></span>
+      <!-- Round 74: RESET DEMO sits on the balance itself. Hidden until an account is authorised, and it
+           stays hidden on a REAL account — Deriv only lets a demo balance be reset. -->
+      <button class="btn btn-red btn-mini" id="resetDemoBtn" style="display:none" title="Reset THIS demo account's Deriv balance back to 10,000 USD. Asks first, and only ever touches the demo account you are signed into">RESET DEMO</button>
     </div>
     <button class="btn btn-red" id="authBtn">AUTHORIZE</button>
   </div>
@@ -560,6 +566,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
   <button class="tabbtn" data-tab="eostrat">EVEN ODD STRATEGY</button>
   <button class="tabbtn" data-tab="bots">Bots</button>
   <button class="tabbtn" data-tab="sync">Synchronization</button>
+  <button class="tabbtn" data-tab="rf">RISE FALL DESK</button>
   <button class="tabbtn" data-tab="signals">AI Signal Center</button>
   <button class="tabbtn" data-tab="allinone">ALL IN ONE</button>
   <button class="tabbtn" data-tab="activity">Activity Log</button>
@@ -745,15 +752,6 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <div class="trow"><span>Net P/L</span><span class="tpl up" id="t2_pl">0.00</span></div>
         <div class="trow"><span>Trades</span><span class="mono" id="t2_tr">0</span></div>
         <button class="loadbtn" id="t2_load">▶ LOAD</button>
-      </div>
-    </div>
-    <div class="btile" id="tile_b3">
-      <div class="th"><span class="no">3</span> RISE / FALL REVERSAL</div>
-      <div class="tb">
-        <div class="trow"><span class="mode-badge mode-wait" id="t3_mode">WAITING · NO PATTERN</span></div>
-        <div class="trow"><span>Net P/L</span><span class="tpl up" id="t3_pl">0.00</span></div>
-        <div class="trow"><span>Trades</span><span class="mono" id="t3_tr">0</span></div>
-        <button class="loadbtn" id="t3_load">▶ LOAD</button>
       </div>
     </div>
     <div class="btile" id="tile_b4">
@@ -1132,6 +1130,61 @@ IF streak &gt;= 4 THEN BUY FALL</textarea>
         <div class="note" id="b9_expo"></div>
         <div class="note"><b>Strategy:</b> it opens on <b>DIGITUNDER 6</b> (the exit digit must be 0–5). When that loses, the digit that killed it was <b>6–9</b> — which is exactly the zone <b>DIGITOVER 3</b> wins — so the next stake is bought on <b>OVER 3</b> instead, and a loss there flips back to UNDER 6. Each flip multiplies the stake by <b>Martingale ×</b> until a win closes the run, the side returns to UNDER 6, and the stake returns to base.<br><b>Measured on this terminal</b> (read-only proposals): UNDER 6 and OVER 3 both pay <b>1.54×</b> ⇒ each side needs <b>64.94%</b> of the ticks, while at random each covers <b>60%</b> — an honest expectation of ≈<b>−0.076 per 1.00 staked</b>. The <b>Require 100-tick edge</b> box refuses entries where the side it is about to play covered less than 64.94% of the last 100 ticks; over <b>7,208 rolling 100-tick windows across 8 volatility markets</b> UNDER 6 cleared it on <b>19.0%</b> of windows and OVER 3 on <b>18.6%</b>, and <b style="color:var(--red)">the two sides cleared it together in none of them</b> — they overlap on digits 4 and 5, so one side's edge is the other's hole. The flip is a <b>stake rule, not a prediction</b>: after a 6–9 tick the next tick was ≥4 on 59.78% of 3,170 steps against a 60.46% baseline.<br><b style="color:var(--amber)">Martingale risk:</b> a ladder only wins a deep run back in full at ≈<b>×2.85</b>; at ×2.20 the first loss is recovered outright and deeper runs are abandoned by the steps/cap. Worst-case exposure grows geometrically — at the defaults above a ×2.20 ladder over 4 steps risks ≈<b>42× the base stake</b> (1.00 → 2.20 → 4.84 → 10.65 → 23.43) before the cap or the step limit resets it. Keep the base stake small and the stop loss on. <b style="color:var(--red)">No setting of these fields turns a 1.54× payout on a 60% side into positive expectancy.</b></div>
       </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ RISE FALL DESK (Round 74) ============ -->
+<section class="tabpanel" id="tab_rf">
+  <div class="syncwrap">
+
+    <!-- ---------- GATE: cube + welcome + ENTER ---------- -->
+    <div id="rfGate" style="display:flex">
+      <div class="cubebox">
+        <div class="cube">
+          <i class="f">AI</i><i class="b">CORE</i><i class="l">RISE</i><i class="r">FALL</i><i class="t">UP</i><i class="dn">DN</i>
+        </div>
+      </div>
+      <div class="welcome">
+        <div class="kick">RISE/FALL REVERSAL CORE · DERIV VOLATILITY MARKETS</div>
+        <h2>WELCOME TO THE RISE FALL DESK</h2>
+        <p>The same bot, the same rules — it just lives here now instead of in the Bots grid. <b>Bot 3&rsquo;s strategy is UNCHANGED</b>: it still looks at the <b>last 100 ticks</b>, finds the current <b>run of consecutive ups or downs</b>, waits until that run reaches <b>your pattern length</b>, and then buys the <b>opposite direction of the run&rsquo;s last move</b> — a run of downs becomes <b>CALL/RISE</b>, a run of ups becomes <b>PUT/FALL</b> — on a <b>1-tick</b> contract. Nothing about that maths, the window, the pattern, the exact-run option, the confidence gate, the stake, the martingale or the TP/SL has been edited. What this desk adds is the picture around the bot: the <b>robot face</b>, the read-out, and a <b>TRADE AI NOW</b> press that scans every volatility market once and puts the unchanged bot on the market whose reversal setup is cleanest. No market is chosen on its own — until you press it, the bot trades whatever the header shows. The <b>card below</b> is Bot 3&rsquo;s own card, moved here whole.</p>
+        <span class="core">AI CORE ACTIVE</span>
+      </div>
+      <button class="synbtn" id="rfEnter">ENTER</button>
+      <div class="verdict" id="rfGateNote">Requires an authorized demo account. Nothing is bought until you press START on the card below or TRADE AI NOW. The scanner only <b>reads</b> ticks and asks Deriv for payout quotes — it never buys, and it uses the identical reversal maths the bot uses, so a market it ranks first is a market whose last-100-tick run data lines up with the bot&rsquo;s own entry rule. When <b>no</b> market shows a run at all it says <b>DANGER ZONE DETECTED</b>, changes nothing and buys nothing. <b style="color:#ffc46b">Read the honest note on the card: a 1-tick reversal is a timing bet, not a measured edge — Deriv&rsquo;s Rise/Fall payout is below 2×, so a coin-toss path is negative expectancy and the martingale only scales it.</b></div>
+    </div>
+
+    <!-- ---------- DESK: scan + the moved BOT 3 card ---------- -->
+    <div id="rfDesk" style="display:none">
+      <div class="synhead">
+        <h3 style="margin:0">AI RISE FALL DESK · BOT 3</h3>
+        <span class="sub" id="rfHeadSub">AI CORE STANDBY · the market is only chosen when you press TRADE AI NOW · strategy unchanged</span>
+        <button class="synbtn" id="rfTradeBtn">TRADE AI NOW</button>
+        <button class="synbtn red" id="rfStopBtn">STOP AI TRADING</button>
+        <button class="synbtn" id="rfExit" style="padding:11px 14px">EXIT</button>
+      </div>
+
+      <div class="dzband" id="rfDz"><span>⚠ DANGER ZONE DETECTED</span><span class="why" id="rfDzWhy"></span></div>
+
+      <div class="scanwrap">
+        <div id="rfScanIdle" class="verdict" style="padding:20px">SCANNER SLEEPING — press <b>TRADE AI NOW</b> to make the AI read every volatility market once over the last <b>100 ticks</b> and rank them by the <b>reversal setup your bot already uses</b>: how long the <b>current run of ups or downs</b> is against your <b>pattern length</b>, which way it would buy (<b>RISE</b> after downs, <b>FALL</b> after ups) and how much of the window leaned that way. It picks the market with the fullest setup, moves the header market there and starts <b>BOT 3</b> with its <b>existing settings</b> — this press does not change a single rule, field or threshold. If no market shows a run at all it says <b>DANGER ZONE DETECTED</b>, leaves your symbol exactly where it is and buys nothing.</div>
+        <div id="rfScan">
+          <div class="robotface">
+            <img src="sync-scanner.jpg" alt="AI core" onerror="this.style.display='none'">
+            <div class="beam"></div>
+            <div class="mouth"></div>
+            <span class="faceTag">MAILO'S VISION</span>
+          </div>
+          <div class="saybox" id="rfSay">Analysing the best market for you…</div>
+          <div class="bars" id="rfBars"></div>
+          <div class="verdict" id="rfVerdict"></div>
+        </div>
+      </div>
+
+      <!-- Bot 3's real card is moved into this slot by init(); nothing is duplicated here. -->
+      <div id="rfCardSlot"></div>
     </div>
 
   </div>
@@ -5648,6 +5701,275 @@ async function runSyncAI(){
   }
 }
 
+/* ================= RISE FALL DESK (Round 74, user request 26 Oct) =================
+   Bot 3 has moved out of the Bots grid into a desk built on the Synchronization template — cube gate,
+   neon HUD, the robot face with MAILO'S VISION, a spoken scan, TRADE AI NOW / STOP AI TRADING / EXIT.
+   The BOT IS UNTOUCHED: same RiseFallBot class, same rfReversal() maths, same card with the same field
+   ids and listeners, same stake/pattern/window/martingale/TP/SL. The only thing this desk adds is a
+   scan that CHOOSES THE MARKET for it: it runs the bot's own reversal read against every volatility
+   index instead of only the header symbol, and puts the bot on the market sitting on the entry point.
+   The scan buys nothing by itself — a press that finds nothing changes nothing. */
+const rfDesk = { entered: false, busy: false, sayTimer: null, bars: new Map(), pick: null };
+function rfSay(text, animate){
+  const el = $("#rfSay"); if (!el) return;
+  if (rfDesk.sayTimer){ clearInterval(rfDesk.sayTimer); rfDesk.sayTimer = null; }
+  if (!animate){ el.classList.remove("talk"); el.textContent = text; return; }
+  el.classList.add("talk"); el.textContent = "";
+  let i = 0;
+  rfDesk.sayTimer = setInterval(() => {
+    i += 2; el.textContent = text.slice(0, i);
+    if (i >= text.length){ clearInterval(rfDesk.sayTimer); rfDesk.sayTimer = null; el.classList.remove("talk"); }
+  }, 26);
+}
+function rfShowDesk(on){ rfDesk.entered = !!on; renderRf(); }
+/* A PURE TWIN of rfReversal() that reads a price ARRAY instead of state.prices, so the scan can apply
+   the bot's rule to every market feed. The counting is identical on purpose — same window slice, same
+   run at the tail, same opposite-direction buy, same exact/at-least pattern gate. Bot 3 itself keeps
+   calling rfReversal(); this function never feeds back into it. */
+function rfScanOf(pts, win, pat, exact){
+  const n = Math.min(pts.length, Math.max(2, +win || 100));
+  const p = pts.slice(-n);
+  const need = Math.max(1, pat | 0);
+  if (p.length < 2 || p.length < need + 1) return null;
+  let up = 0, dn = 0, flat = 0;
+  for (let i = 1; i < p.length; i++){ const d = p[i] - p[i - 1]; if (d > 0) up++; else if (d < 0) dn++; else flat++; }
+  const moves = p.length - 1;
+  const last = Math.sign(p[p.length - 1] - p[p.length - 2]);
+  let run = 0;
+  if (last !== 0){
+    run = 1;
+    for (let i = p.length - 2; i >= 1; i--){ if (Math.sign(p[i] - p[i - 1]) !== last) break; run++; }
+  }
+  const runSide = last > 0 ? "RISE" : (last < 0 ? "FALL" : "FLAT");
+  const buyDir = last > 0 ? -1 : 1;                     // the trade is the OPPOSITE of the run
+  const hit = last !== 0 && (exact ? run === need : run >= need);
+  const buyPct = buyDir > 0 ? up / moves * 100 : dn / moves * 100;   // how often the side it would buy actually moved
+  return {
+    n: moves, up, dn, flat, window: n, upPct: up / moves * 100, dnPct: dn / moves * 100,
+    run, runSide, need, exact, hit, buyDir, buyPct,
+    side: buyDir > 0 ? "RISE" : "FALL",
+    type: buyDir > 0 ? "CALL" : "PUT",
+    why: last === 0 ? "last tick was flat — there is no direction to reverse"
+      : run < need ? "only " + run + " " + runSide + " tick" + (run === 1 ? "" : "s") + " in a row — the entry point needs " + need
+      : (exact && run > need) ? "the run is already " + run + " deep — past the entry point at exactly " + need + ", waiting for it to break and reform"
+      : ""
+  };
+}
+/* every market we hold a feed for, read through the bot's own rule and ranked: markets actually ON the
+   entry point first, then by how often the side it would buy moves, then by the depth of the run */
+function rfSurvey(win, pat, exact){
+  const rows = [];
+  for (const sym of scanSymbols()){
+    const pts = feedPrices(sym);
+    if (!pts || pts.length < 3) continue;
+    const r = rfScanOf(pts, win, pat, exact);
+    if (!r) continue;
+    const pay = aioPayOf(sym, "RF"), be = 100 / pay;
+    rows.push({ sym, n: r.n, window: r.window, up: r.up, dn: r.dn, flat: r.flat, upPct: r.upPct, dnPct: r.dnPct,
+      run: r.run, runSide: r.runSide, need: r.need, exact: r.exact, hit: r.hit, buyDir: r.buyDir, buyPct: r.buyPct,
+      side: r.side, type: r.type, why: r.why, payout: round2(pay), be: round2(be), ev: round2(pay * r.buyPct / 100 - 1),
+      current: sym === state.symbol });
+  }
+  return rfRank(rows);
+}
+function rfRank(rows){
+  return rows.slice().sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0) ||
+    b.buyPct - a.buyPct || b.run - a.run || String(a.sym).localeCompare(String(b.sym)));
+}
+/* the RF side pays a little differently on every market, and the honest ranking number is expected
+   value, so quote the leaders for real before comparing them (read-only proposals, stake 1.00) */
+async function rfQuoteLeaders(rows, dur){
+  const leads = rows.slice(0, 3);
+  const cur = (state.account && state.account.currency) || "USD";
+  const out = [];
+  for (const lead of leads){
+    try {
+      const r = await api.send({ proposal: 1, amount: 1, basis: "stake", contract_type: lead.type,
+        currency: cur, duration: dur, duration_unit: "t", underlying_symbol: lead.sym });
+      const pay = num(r.proposal && r.proposal.payout);
+      if (pay > 1){ aioPayouts.set(lead.sym + "|RF", pay); out.push(lead.sym); }
+    } catch(e){ /* the measured default stands */ }
+  }
+  return out;
+}
+function rfBarsBuild(syms){
+  const box = $("#rfBars"); if (!box) return;
+  box.innerHTML = ""; rfDesk.bars.clear();
+  syms.forEach(sym => {
+    const row = document.createElement("div");
+    row.className = "barrrow";
+    row.innerHTML = "<span class='nm'></span><span class='track'><span class='fill'></span></span><span class='pc'>—</span>";
+    row.querySelector(".nm").textContent = symLabel(sym) + (sym === state.symbol ? " ·here" : "");
+    box.appendChild(row);
+    rfDesk.bars.set(sym, row);
+  });
+}
+function rfBarsUpdate(rows, ranked){
+  if (!rows.length) return;
+  const lo = 42, hi = Math.max(56, rows[0].buyPct);      // tick-up/tick-down share clusters near 50% — floor for contrast
+  rows.forEach(r => {
+    const row = rfDesk.bars.get(r.sym); if (!row) return;
+    row.querySelector(".fill").style.width = Math.max(3, Math.min(100, (r.buyPct - lo) / (hi - lo) * 100)) + "%";
+    row.querySelector(".pc").textContent = (r.hit ? "▶ " : "") + fmt(r.buyPct, 1) + "% " + r.side + " · run " + r.run + "/" + r.need + (r.exact ? "=" : "+");
+    row.title = "run of " + r.run + " " + r.runSide + (r.run === 1 ? " tick" : " ticks") + " → buys " + r.side +
+      (r.hit ? " NOW (entry point)" : " — NOT at the entry point (" + r.why + ")") +
+      " · of " + r.n + " moves " + fmt(r.upPct, 1) + "% were up / " + fmt(r.dnPct, 1) + "% down" +
+      " · payout " + fmt(r.payout) + "× ⇒ break-even " + fmt(r.be, 2) + "% ⇒ EV " + fmtS(r.ev) + " per 1.00";
+    row.classList.toggle("dz", !r.hit);
+    row.classList.toggle("best", !!(ranked && r.sym === rows[0].sym && r.hit));
+  });
+  if (ranked){
+    const box = $("#rfBars");
+    rows.forEach(r => { const row = rfDesk.bars.get(r.sym); if (row) box.appendChild(row); });   // re-rank in place
+  }
+}
+function rfReleaseFeeds(){
+  if (bot5.running || (bot4.running && bot4.sweepOn())) return;   // those bots own the sweep feeds
+  sweepCloseAll();
+}
+function renderRf(){
+  const g = $("#rfGate"), d = $("#rfDesk");
+  if (!g || !d) return;
+  g.style.display = rfDesk.entered ? "none" : "flex";
+  d.style.display = rfDesk.entered ? "block" : "none";
+  const anyRun = bot3.running || bot3.busy;
+  const btn = $("#rfTradeBtn");
+  if (btn){ btn.disabled = rfDesk.busy; btn.textContent = rfDesk.busy ? "AI SCANNING…" : (anyRun ? "TRADE AI NOW AGAIN" : "TRADE AI NOW"); }
+  const stopBtn = $("#rfStopBtn");
+  if (stopBtn) stopBtn.disabled = !anyRun;
+  const p = rfDesk.pick;
+  const band = $("#rfDz"), why = $("#rfDzWhy");
+  if (band && why){
+    const on = !!(p && p.dangerText);
+    band.classList.toggle("on", on);
+    why.textContent = on ? p.dangerText : "";
+  }
+  const head = $("#rfHeadSub");
+  if (head){
+    const c = cfg3();
+    const live = bot3.running ? rfReversal(c.win, c.pat, c.exact) : null;
+    head.textContent = rfDesk.busy ? "AI CORE SCANNING · the reversal run on every volatility market over the last " + c.win + " ticks · strategy unchanged"
+      : bot3.running ? (live && live.hit ? "BOT 3 TRADING " + live.side + " · after " + live.run + "× " + live.runSide + " on " + state.symbol + " · " + c.dur + "-tick contract, one per heartbeat"
+          : "BOT 3 RUNNING ON " + state.symbol + " · HOLDING — " + (live ? live.why : "not enough ticks yet") + " · the rule is untouched")
+        : p ? (p.dangerText ? "LAST SCAN — DANGER ZONE DETECTED · no market sat on the entry point · " + p.markets + " markets read · your market was not changed"
+          : "AI CHOSE " + symLabel(p.sym) + " · " + p.run + "× " + p.runSide + " → buys " + p.side + " · " + fmt(p.buyPct, 1) + "% of moves · press START or TRADE AI NOW to run it")
+        : "AI CORE STANDBY · the market is only chosen when you press TRADE AI NOW · Bot 3's rules are unchanged";
+  }
+}
+async function runRfAI(){
+  if (rfDesk.busy) return;
+  if (!api.connected){ toast("Deriv is still connecting — try again in a moment", "warn"); return; }
+  if (!state.account){ toast("Connect your Deriv account first — click AUTHORIZE", "warn"); openAuth(); return; }
+  if (!(state.account.scopes || []).includes("trade")){ toast("Your token lacks the Trade scope — create a token with Read + Trade", "error"); return; }
+  if (!state.symbolsLoaded || !scanSymbols().length){ toast("The market list is still loading — try again in a second", "warn"); return; }
+  rfDesk.busy = true; rfShowDesk(true); renderRf(); scanPopOpen("rf");
+  const idle = $("#rfScanIdle"); if (idle) idle.style.display = "none";
+  $("#rfScan").classList.add("on");
+  $("#rfVerdict").textContent = "";
+  try {
+    const c = cfg3(), win = c.win, pat = c.pat, exact = c.exact, dur = c.dur, syms = scanSymbols();
+    rfBarsBuild(syms);
+    rfSay("Analysing the best market for you", true);
+    speak("Analysing the best market for you. One moment.", { force: true, interrupt: true, now: true });
+    bot3.sys("AI scan started — " + syms.length + " markets, the reversal run over the last " + win + " ticks, entry point " + pat + (exact ? " exactly" : " or more"));
+    sweepSync();   // open the feeds we don't already have; each seeds ~120 historical ticks
+    const t0 = Date.now();
+    const needMoves = Math.min(win, 60) - 1;
+    let rows = [];
+    while (Date.now() - t0 < 9000){
+      await sleep(420);
+      rows = rfSurvey(win, pat, exact);
+      rfBarsUpdate(rows, false);
+      if (Date.now() - t0 > 2400 && rows.length >= Math.min(4, syms.length) && rows.every(r => r.n >= needMoves)) break;
+    }
+    if (!rows.length){
+      rfSay("No market data — nothing was bought", false);
+      $("#rfVerdict").textContent = "The scan could not read any market. No symbol was changed and nothing was bought.";
+      bot3.sys("AI scan failed — no market data");
+      toast("AI scan found no market data — nothing was bought", "error");
+      rfReleaseFeeds();
+      return;
+    }
+    const quoted = await rfQuoteLeaders(rows, dur);
+    rows = rfSurvey(win, pat, exact);
+    rfBarsUpdate(rows, true);
+    const cleared = rows.filter(r => r.hit);
+    const lead = rows[0];
+    const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+    const payTxt = quoted.length ? "payout quoted live on " + plural(quoted.length, "market") + ": " + fmt(lead ? lead.payout : AIO_PAY_RF) + "× on the leader"
+      : "payout from the measured default: " + fmt(AIO_PAY_RF) + "×";
+    const patTxt = pat + (exact ? " exactly" : " or more");
+    const head1 = "<b>" + plural(rows.length, "market") + " read over the last " + win + " ticks — the run of ups/downs at the tail against your entry point of " + patTxt +
+      " (" + payTxt + ").</b> " +
+      "<b>" + cleared.length + " of " + plural(rows.length, "market") + " sit on the entry point right now</b>" +
+      ". Best of the list: " + (lead ? symLabel(lead.sym) + " · " + (lead.hit ? lead.run + "× " + lead.runSide + " → buys " + lead.side : "no entry point yet") +
+        " · " + fmt(lead.buyPct, 1) + "% of moves were " + lead.side + " ⇒ EV " + fmtS(lead.ev) + " per 1.00" : "none");
+    /* NO MARKET ON THE ENTRY POINT: say DANGER ZONE DETECTED, change nothing, buy nothing */
+    if (!cleared.length){
+      const top = rows[0];
+      const txt = "no market showed a run of " + patTxt + " " + (top.runSide === "FLAT" ? "moves" : top.runSide + " moves") +
+        " at the tail of its last " + win + " ticks — the deepest run anywhere was " + Math.max.apply(null, rows.map(r => r.run)) +
+        (exact ? " (exactly " + patTxt + " is the entry point, a deeper run has already passed it)" : " ticks, short of " + patTxt);
+      rfDesk.pick = { sym: top.sym, markets: rows.length, run: top.run, runSide: top.runSide, side: top.side,
+        buyPct: top.buyPct, payout: top.payout, be: top.be, ev: top.ev, win, pat, exact, dur, at: Date.now(),
+        dangerText: txt };
+      rfSay("Danger zone detected. No market sits on the entry point.", false);
+      speak("Danger zone detected. I read " + rows.length + " markets and in none of them is the current run of ticks exactly at your entry point, so the reversal rule has nothing to trade. Nothing is bought and your market has not been changed.",
+        { force: true, interrupt: true, rate: 0.9, pitch: 0.9 });
+      $("#rfVerdict").innerHTML = head1 +
+        "<br><b style='color:var(--red)'>DANGER ZONE DETECTED</b> — " +
+        (rows.length === 1 ? "the only market read has no entry point" : "not one of the " + rows.length + " markets sits on the entry point") +
+        ": " + txt + ".<br>The closest was <b>" + symLabel(top.sym) + "</b> — " + top.run + "× " + top.runSide +
+        ", " + fmt(top.buyPct, 1) + "% of its " + top.n + " moves go the way the rule would buy, payout " + fmt(top.payout) +
+        "× against " + fmt(top.be, 2) + "% break-even.<br>" +
+        "<b>No symbol was changed and no contract was bought.</b> The bot&rsquo;s own rule is unchanged: press START on the card anyway and it will trade this market and wait for the entry point itself, second by second, exactly as it always did.";
+      bot3.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets have no entry point · closest was " + top.sym +
+        " at " + top.run + "× " + top.runSide + " (needs " + patTxt + ") · nothing bought");
+      toast("DANGER ZONE DETECTED — no market sits on the reversal entry point, nothing was bought", "warn", 9000);
+      rfReleaseFeeds();
+      return;
+    }
+    const best = cleared[0];
+    const others = rows.length - 1;
+    rfDesk.pick = { sym: best.sym, markets: rows.length, run: best.run, runSide: best.runSide, side: best.side,
+      buyPct: best.buyPct, payout: best.payout, be: best.be, ev: best.ev, win, pat, exact, dur,
+      at: Date.now(), dangerText: null, quotes: quoted.length ? "live" : "default" };
+    bot3.aiPick = rfDesk.pick;
+    rfSay("Found it. " + symLabel(best.sym) + " — " + best.run + " " + best.runSide + " ticks in a row, buying " + best.side + ".", true);
+    $("#rfVerdict").innerHTML = head1 +
+      "<br><b style='color:var(--syn-green)'>TRADE AI NOW</b> moves the desk to <b>" + symLabel(best.sym) + "</b> and starts <b>BOT 3</b> there with its <b>existing settings</b>: " +
+      patTxt + " " + best.runSide + " in a row ⇒ buy <b>" + best.side + "</b>, " + dur + "-tick contract, stake " + fmt(c.stake) +
+      (c.mult > 1 ? ", martingale ×" + fmt(c.mult) + " up to cap " + fmt(c.maxStake) : ", flat stakes") + ". " +
+      "<b>" + cleared.length + " market" + (cleared.length === 1 ? " is" : "s are") + " on the entry point now</b>" +
+      (others > 0 ? "; the other " + others + " " + (others === 1 ? "market" : "markets") + " " + (cleared.length === 1 ? "has" : "have") + " no entry point yet"
+        + (rows[1] ? " — runner-up read: " + symLabel(rows[1].sym) + " at " + rows[1].run + "× " + rows[1].runSide + ", " + fmt(rows[1].buyPct, 1) + "% " + rows[1].side : "") : "") +
+      ".<br><b style='color:var(--amber)'>Changing the market stops every other bot</b> — that is how the header symbol works, same as the sync desk. And the honest note stays: " +
+      "this is the bot&rsquo;s own rule on a market chosen by that same rule. A run of " + pat + " ticks does not make the next tick more likely to reverse, and at " +
+      fmt(best.payout) + "× the side needs " + fmt(best.be, 2) + "% of moves to break even, so the measured expectancy is " + fmtS(best.ev) + " per 1.00.";
+    bot3.sys("AI scan done — " + rows.length + " markets · " + cleared.length + " on the entry point · chose " + symLabel(best.sym) +
+      " · " + best.run + "× " + best.runSide + " → " + best.side + " · " + fmt(best.buyPct, 1) + "% of " + best.n +
+      " moves · payout " + fmt(best.payout) + "× (break-even " + fmt(best.be, 2) + "%, EV " + fmtS(best.ev) + ")" +
+      (quoted.length ? " · quoted live on " + plural(quoted.length, "market") : " · measured default payout"));
+    speak("The best reversal setup is on " + symLabel(best.sym) + ". " + best.run + " " + best.runSide +
+      " ticks in a row, so the rule buys " + best.side + ". Trading now.", { force: true, interrupt: true });
+    rfReleaseFeeds();
+    if (best.sym !== state.symbol) await changeSymbol(best.sym);   // changeSymbol stops every bot, so it must come BEFORE the start
+    await bot3.start({ skipConfirm: true });
+    if (bot3.running) showTab("rf");   // BaseBot.start lands on the Activity Log — here the user asked to watch the desk
+    renderRf();
+  } catch(e){
+    console.error("runRfAI error:", e);
+    rfSay("Scan failed — nothing was bought", false);
+    $("#rfVerdict").textContent = "The scan stopped with an error: " + (e && e.message ? e.message : e) + ". No contract was bought.";
+    bot3.sys("AI scan error: " + (e && e.message ? e.message : e));
+    toast("AI scan failed — " + (e && e.message ? e.message : "unknown error"), "error");
+    rfReleaseFeeds();
+  } finally {
+    rfDesk.busy = false;
+    renderRf();
+  }
+}
+
 /* ================= the robot-face scan popup =================
    Every TRADE AI NOW press lifts the AI's face over the whole page, wherever the client is standing, so
    they watch it read instead of hunting for the desk. It is a VIEW of the scan, never a controller: it
@@ -5657,6 +5979,7 @@ const SCAN_POP = {
   aio:  { desk: "ALL IN ONE · AI MARKET PICKER", busy: () => aio.busy,      say: "#aioSay",  bars: "#aioBars" },
   sync: { desk: "AI SYNC DESK · BOTS 8 + 9",     busy: () => syncDesk.busy, say: "#syncSay", bars: "#syncBars" },
   eo:   { desk: "EVEN ODD STRATEGY · BOT 10",    busy: () => eoScan.busy,   say: "#eoSay",   bars: "#eoBars" },
+  rf:   { desk: "RISE FALL DESK · BOT 3",        busy: () => rfDesk.busy,   say: "#rfSay",   bars: "#rfBars" },
 };
 const scanPop = { src: null, timer: null, doneAt: 0, t0: 0 };
 function scanPopRender(){
@@ -5683,7 +6006,7 @@ function scanPopClose(){
 }
 /* Which bot a desk's TRADE AI NOW press runs — decides whether the read ended in live contracts. */
 function scanPopTrader(src){
-  const b = src === "aio" ? bot5 : src === "sync" ? bot8 : src === "eo" ? bot10 : null;
+  const b = src === "aio" ? bot5 : src === "sync" ? bot8 : src === "eo" ? bot10 : src === "rf" ? bot3 : null;
   return !!(b && b.running);
 }
 function scanPopOpen(src){
@@ -6189,6 +6512,7 @@ function renderBot(b){
     } else {
       $("#b3_expo").innerHTML = "<b>Flat stakes (×1)</b> — no martingale; each trade risks " + fmt(c.stake) + " " + cur + ".";
     }
+    renderRf();   // the RISE FALL desk header, danger band and card all hang off Bot 3's state
   }
   if (p === "b4"){
     const pr = b.readRules();
@@ -7112,13 +7436,78 @@ async function logout(){
   renderAccount(); renderSignalCard(); renderBots();
   toast("Logged out", "info");
 }
+/* Round 74: declared before renderAccount() because that renderer reads it on every balance tick. */
+let resetBusy = false;
 function renderAccount(){
   const a = state.account;
   $("#acctChip").classList.toggle("on", !!a);
   $("#authBtn").textContent = a ? "LOGOUT" : "LOGIN";
   renderAcctSelect();
   if (a) $("#acctBal").textContent = fmt(a.balance) + " " + a.currency;
+  /* Round 74: RESET DEMO rides next to the balance. Deriv only lets a DEMO balance be reset, so the
+     button is hidden while signed out and hidden on a real-money account — it never tempts a click
+     that can only fail. */
+  const rd = $("#resetDemoBtn");
+  if (rd){
+    const show = !!(a && a.isVirtual) && !state.authBusy;
+    rd.style.display = show ? "" : "none";
+    rd.disabled = !!resetBusy;
+    rd.textContent = resetBusy ? "RESETTING…" : "RESET DEMO";
+    rd.title = resetBusy ? "A reset request is already in flight"
+      : "Reset THIS demo account's Deriv balance back to 10,000 " + (a && a.currency ? a.currency : "USD") +
+        ". Asks first, and only ever touches the demo account you are signed into";
+  }
   syncHdrOffset();
+}
+/* ================= reset the demo balance (Round 74) =================
+   The official endpoint is POST /accounts/{account_id}/reset-demo-balance on the same REST base the
+   OTP sign-in already uses: Bearer token + Deriv-App-ID, NO request body, and a success is a bare
+   200 with no JSON. It only accepts a demo account — a real account id earns 400 — and it puts the
+   balance back to 10,000. That wipes a demo run, so it asks twice-ish: a confirm card first, and a
+   hard refusal while any bot is trading or has an order in flight, because resetting under a live
+   contract distorts the P/L the bot is steering by. */
+async function resetDemoBalance(){
+  if (resetBusy) return;
+  const a = state.account;
+  if (!a){ toast("Connect your Deriv account first — click LOGIN", "warn"); openAuth(); return; }
+  if (!a.isVirtual){ toast("Only a DEMO account can be reset — Deriv refuses a real-money balance", "error", 7000); return; }
+  const running = BOTS.filter(b => b.running);
+  const inFlight = BOTS.filter(b => !b.running && b.busy);
+  if (running.length || inFlight.length){
+    const who = running.concat(inFlight).map(b => b.name).join(" + ");
+    toast("Stop " + who + " first — use STOP RUNNING BOTS in the Activity Log. Resetting mid-trade distorts the bot's P/L", "warn", 9000);
+    return;
+  }
+  const ok = await confirmDialog("Reset the demo balance?",
+    "Deriv will set the <b>demo account</b> you are signed into back to <b>10,000 " + (a.currency || "USD") + "</b>." +
+    "<br><br>It does <b>not</b> touch a real-money account, your trade history on Deriv, or the local Activity Log — and it cannot be undone." +
+    "<br><br>The bots are all stopped, so this only changes the money in the demo purse.",
+    "RESET DEMO BALANCE");
+  if (!ok){ toast("Reset cancelled — nothing was changed", "info"); return; }
+  resetBusy = true; renderAccount();
+  try {
+    const isOAuth = state.authMode === "oauth";
+    const appId = isOAuth ? "" : (store.get("dt_app_id") || api.appId);
+    await derivRest("/accounts/" + encodeURIComponent(a.loginid) + "/reset-demo-balance",
+      isOAuth ? { method: "POST", token: state.token } : { method: "POST", token: state.token, appId });
+    await fetchBalanceOnce();
+    renderAccount(); renderBots();
+    toast("Demo balance reset to 10,000 " + ((state.account && state.account.currency) || "USD"), "success", 6000);
+    speak("Demo balance reset. Ten thousand.", { force: true, interrupt: true, now: true });
+  } catch(e){
+    const code = (e && e.code) || "";
+    let hint = "";
+    if (/HTTP400/.test(code)) hint = " — Deriv says this account is not a demo account";
+    else if (/HTTP401/.test(code)) hint = " — your Deriv sign-in was refused; log in again";
+    else if (/HTTP403/.test(code)) hint = " — this token is not allowed to reset a balance";
+    else if (/HTTP404/.test(code)) hint = " — Deriv has no such account for this sign-in";
+    else if (/HTTP5/.test(code)) hint = " — Deriv is having trouble right now, try again in a minute";
+    console.error("resetDemoBalance failed:", e);
+    toast("Reset failed: " + ((e && e.message) || "unknown error") + hint, "error", 9000);
+  } finally {
+    resetBusy = false;
+    renderAccount();
+  }
 }
 /* The header's DEMO/REAL menu. Options carry the account type only — no currency, never the
    login id — and the value is the index into acctOptions, so the id does not sit in the markup
@@ -7308,6 +7697,7 @@ function init(){
     } else if (sigScan.on) syncReleaseFeeds();
     if (b.dataset.tab === "sync"){ renderBot(bot8); renderBot(bot9); }   // cards + charts + desk state (renderSync runs from those branches)
     if (b.dataset.tab === "eostrat") renderBot(bot10);
+    if (b.dataset.tab === "rf") renderBot(bot3);   // the moved card + the desk header (renderRf runs from that branch)
     if (b.dataset.tab === "allinone"){ renderBot(bot5); renderAio(); aioStartTimer(); }
     else aioStopTimer();
   }));
@@ -7437,7 +7827,10 @@ function init(){
     if (bot2.running){ bot2.stop(); }
     else { showTab("signals"); toast("Bot 2 only trades from the AI Signal Center — press RUN BOT on an EVEN/ODD signal", "info", 7000); }
   });
-  $("#b3_toggle").addEventListener("click", () => bot3.running ? bot3.stop() : bot3.start());
+  $("#b3_toggle").addEventListener("click", () => {
+    if (bot3.running){ bot3.stop("manual stop"); renderRf(); return; }
+    bot3.start().then(() => { if (bot3.running) showTab("rf"); renderRf(); });   // the card lives on the desk — stay there
+  });
   $("#b4_toggle").addEventListener("click", () => bot4.running ? bot4.stop() : bot4.start());
   $("#b5_toggle").addEventListener("click", () => {
     if (bot5.running){ bot5.stop(); return; }
@@ -7486,6 +7879,28 @@ function init(){
     bot8.stop("STOP AI TRADING pressed on the sync desk");
     bot9.stop("STOP AI TRADING pressed on the sync desk");
     toast(who + " stopped — nothing more is bought", "warn");
+  });
+  /* ---------- RISE FALL desk (Round 74) ----------
+     Bot 3's card is not duplicated here — it is MOVED whole into #rfCardSlot, so every id, listener,
+     setting and chart it already had keeps working exactly as before. Dropping the `blkstyle` class and
+     the green border is all that restyles it; it leaves #botStage, where `.botcard{display:none}` lives,
+     so it becomes permanently visible on the desk like the sync cards. */
+  const b3card = $("#card_b3");
+  if (b3card && $("#rfCardSlot")){
+    b3card.classList.remove("blkstyle");
+    b3card.style.borderColor = "rgba(37,255,154,.28)";
+    b3card.style.marginTop = "12px";
+    $("#rfCardSlot").appendChild(b3card);
+  }
+  $("#rfEnter").addEventListener("click", () => { rfShowDesk(true); renderBot(bot3); });
+  $("#rfExit").addEventListener("click", () => rfShowDesk(false));
+  $("#rfTradeBtn").addEventListener("click", () => runRfAI());
+  $("#rfStopBtn").addEventListener("click", () => {
+    const any = bot3.running || bot3.busy;
+    if (!any){ toast("Bot 3 is not trading", "info"); return; }
+    bot3.stop("STOP AI TRADING pressed on the Rise/Fall desk");
+    toast("Bot 3 stopped — nothing more is bought", "warn");
+    renderRf();
   });
   $("#b8_toggle").addEventListener("click", () => {
     if (bot8.running){ bot8.stop("manual stop"); renderSync(); return; }
@@ -7551,6 +7966,9 @@ function init(){
     a.click();
     URL.revokeObjectURL(a.href);
   });
+  /* RESET DEMO (Round 74) — sits on the header balance, not in this log, because it resets Deriv's
+     money rather than this page's records. resetDemoBalance() asks first and refuses while a bot trades. */
+  $("#resetDemoBtn").addEventListener("click", () => resetDemoBalance());
   $("#resetHistory").addEventListener("click", async () => {
     const open = activity.filter(e => e.result === "OPEN").length;
     const ok = await confirmDialog("Reset trade history",
