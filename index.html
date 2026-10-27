@@ -1480,14 +1480,24 @@ const store = {
   set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
   del(k){ try { localStorage.removeItem(k); } catch(e){} }
 };
-function toast(msg, type = "info", ms = 1000){
+/* the maximum number of toasts allowed on screen at once — see toast() */
+const TOAST_MS = 3000;
+const TOAST_MAX = 4;
+function toast(msg, type = "info", ms = TOAST_MS){
   const el = document.createElement("div");
   el.className = "toast " + type;
   el.textContent = msg;
-  $("#toasts").appendChild(el);
-  /* Hard cap: every notification — including the old 7–12s signal call sites — lives 1s,
-     then fades out. Long messages stay readable because the AI voice + banner still carry them. */
-  const life = Math.min(Math.max(+ms || 1000, 400), 1000);
+  const box = $("#toasts");
+  /* A 3s life is 3x the old 1s cap, so on a busy desk the stack would grow past the bottom of the
+     screen. Keep at most TOAST_MAX on screen: the OLDEST goes first, faded so it doesn't jerk. */
+  while (box.children.length >= TOAST_MAX) {
+    const old = box.firstElementChild; if (!old) break;
+    old.remove();
+  }
+  box.appendChild(el);
+  /* Hard cap (your rule of 26 Oct): every notification — including the old 7–12s signal call sites —
+     lives 3 seconds, then fades out and removes itself. Nothing is allowed to sit on the screen longer. */
+  const life = Math.min(Math.max(+ms || TOAST_MS, 400), TOAST_MS);
   setTimeout(() => { el.style.transition = "opacity .18s ease,transform .18s ease"; el.style.opacity = "0"; el.style.transform = "translateY(-8px)"; }, life - 180);
   setTimeout(() => el.remove(), life);
 }
