@@ -582,7 +582,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 
 <nav class="tabs">
   <button class="tabbtn active" data-tab="dashboard">Dashboard · Digit Distribution</button>
-  <button class="tabbtn" data-tab="eostrat">EVEN ODD STRATEGY</button>
+  <button class="tabbtn" data-tab="eostrat">OVER UNDER STRATEGY</button>
   <button class="tabbtn" data-tab="bots">Bots</button>
   <button class="tabbtn" data-tab="sync">Synchronization</button>
   <button class="tabbtn" data-tab="rf">RISE FALL DESK</button>
@@ -677,14 +677,14 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 </section>
 
 <!-- ============ BOTS ============ -->
-<!-- ============ EVEN ODD STRATEGY ============ -->
+<!-- ============ OVER UNDER STRATEGY ============ -->
 <section class="tabpanel" id="tab_eostrat">
   <div class="wrap">
     <div class="panel botcard" id="card_b10" style="border-color:rgba(37,255,154,.28)">
-      <h3>BOT 10 · Even Odd Strategy <span class="mode"><span class="mode-badge mode-wait" id="b10_mode">IDLE · STRATEGY</span></span></h3>
+      <h3>BOT 10 · Over/Under Strategy <span class="mode"><span class="mode-badge mode-wait" id="b10_mode">IDLE · STRATEGY</span></span></h3>
       <div style="margin:4px 0 14px;display:flex;align-items:center;gap:10px">
         <button class="btn btn-blue btn-big" id="eoTradeBtn">TRADE AI NOW</button>
-        <span class="sub" id="eoScanStatus" style="flex:1">AI CORE STANDBY · press TRADE AI NOW to make it read every volatility market once, pick the best EVEN/ODD setup and start Bot 10 on it.</span>
+        <span class="sub" id="eoScanStatus" style="flex:1">AI CORE STANDBY · press TRADE AI NOW and the robot face reads every volatility market once, finds the one whose RED digits name an OVER or UNDER campaign, moves the desk there and starts Bot 10 on it.</span>
       </div>
       <div class="scanwrap" id="eoScanwrap" style="display:none">
         <div class="robotface">
@@ -701,24 +701,21 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="runbar" id="b10_runbar"><span class="rdot"></span><span class="rstate" id="b10_state">Bot stopped</span><span class="rmeta" id="b10_runmeta"></span></div>
       <div class="botrun">
         <button class="btn btn-blue btn-big" id="b10_toggle">START</button>
-        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, paints the digits like the dashboard (green 8.5–11.5%, red ≥11.5%) and checks your six rules in the gate list further down the card. <b>It picks one side and stays on it:</b> the parity of the FIRST entry — EVEN or ODD — locks for the whole session, so it never flips from odd to even mid-run. That first entry is the market OPPOSITE the hottest digit (that hottest digit on the other market is the entry point). <b>Buy every tick after lock</b> is on by default: the six rules decide only that FIRST entry, and from then on the bot buys the locked side <b>every tick</b> instead of holding when a rule closes — untick it on the card if you want every entry gated again. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press and then chooses a new side from scratch. The stop-loss level and 3 wins in a row no longer halt the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
+        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, ranks the ten digits by percentage and takes the <b>3 highest</b> — exactly like the AI Signal Center. <b>Two campaigns are scored:</b> OVER 3, which recovers at OVER 4, and UNDER 7, which recovers at UNDER 6. A campaign is ready only when its RED leaders all win that side, the rival side holds no RED digit of its own and the winning side covers more of the window. <b>It picks one campaign and stays on it:</b> the first entry locks OVER or UNDER for the whole session, so it never flips mid-run. <b>Buy every tick after lock</b> is on by default: the heat rule decides only that FIRST entry, and from then on the bot buys the locked campaign <b>every tick</b> — untick it on the card if you want every entry gated again. <b>The recovery rung is always the harder barrier:</b> a loss moves you to OVER 4 / UNDER 6, which pays more, and the first win returns you to the main barrier. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press and then chooses a new campaign from scratch. The stop-loss level no longer halts the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
       </div>
       <div class="cfg">
         <label>Stake<input type="number" id="b10_stake" value="1.00" min="0.35" step="0.05" title="Base stake — multiplied by ×2.1 after each loss up to the recovery-step limit"></label>
         <label>Martingale ×<input type="number" id="b10_mult" value="2.1" min="1.5" max="4" step="0.1" title="Multiplier applied after each loss (default 2.1)"></label>
         <label>Max recovery steps<input type="number" id="b10_steps" value="4" min="1" max="8" step="1" title="Maximum ladder steps before resetting to base stake"></label>
         <label>Stake cap<input type="number" id="b10_maxstake" value="0" min="0" step="1" title="Hard cap on ladder stakes (0 = off, use steps only)"></label>
-        <label>Duration (ticks)<input type="number" id="b10_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks — the closing digit of the exit tick decides EVEN or ODD"></label>
-        <label>Window (ticks)<input type="number" id="b10_win" value="100" min="30" max="200" step="10" title="How many recent ticks the six rules are measured over (default 100, like the AI Signal Center)"></label>
-        <label>Buy every tick after lock<input type="checkbox" id="b10_every" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="ONCE the session is locked on a market, buy EVERY TICK on it instead of waiting for all six rules to agree. The six rules still pick the FIRST entry — that is what decides the market — after that the bot only stops when it hits TP, when the recovery-step limit or stake cap cuts the ladder, or when you press STOP. Untick it to go back to gated entries only"></label>
-        <label>Green bar min %<input type="number" id="b10_glo" value="11" min="0" max="15" step="0.1" title="Rule 1: the green bar on the traded market must read at least this percent"></label>
-        <label>Green bar max %<input type="number" id="b10_ghi" value="12.5" min="0" max="20" step="0.1" title="Rule 1: …and at most this percent. The dashboard paints green only up to 11.5%, so above that the bar is already red"></label>
-        <label>Attraction %<input type="number" id="b10_attract" value="10.2" min="0" max="20" step="0.1" title="Rule 2: digits at or above this percent are the ones 'attracting the cursor'"></label>
-        <label>Attraction digits min<input type="number" id="b10_amin" value="3" min="1" max="10" step="1" title="Rule 2: at least this many digits must sit at or above the attraction percent (your sheet says 3 to 4)"></label>
-        <label>Attraction digits max<input type="number" id="b10_amax" value="4" min="1" max="10" step="1" title="Rule 2: …and no more than this many"></label>
-        <label>Opposite lead min<input type="number" id="b10_compete" value="0.2" min="0" max="5" step="0.1" title="Rule 4: on the opposite market the entry digit must lead the next digit by at least this much — two digits fighting head-to-head there veto the trade"></label>
-        <label>Green reversal cap %<input type="number" id="b10_gcap" value="13" min="0" max="30" step="0.5" title="Rule 5: no trade while the green bar reads above this percent (reversal risk)"></label>
-        <label>Green gap veto %<input type="number" id="b10_gapveto" value="1.5" min="0" max="10" step="0.1" title="Rule 6: no trade while green bar and second green bar are this far apart or more — the cursor will not be attracted to both"></label>
+        <label>Duration (ticks)<input type="number" id="b10_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks — the closing digit of the exit tick decides whether it is above/below the barrier"></label>
+        <label>Window (ticks)<input type="number" id="b10_win" value="100" min="30" max="200" step="10" title="How many recent ticks the digit heat is measured over (default 100, like the AI Signal Center)"></label>
+        <label>Leaders counted<input type="number" id="b10_top" value="3" min="3" max="4" step="1" title="How many of the highest-percentage digits must all be RED and all win the campaign side (3 = the AI Signal Center's own rule, 4 = stricter)"></label>
+        <label>Buy every tick after lock<input type="checkbox" id="b10_every" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="ONCE the session is locked on a campaign, buy EVERY TICK on it instead of waiting for the heat rule to agree again. The rule still picks the FIRST entry — that is what decides OVER or UNDER — after that the bot only stops when it hits TP, when the recovery-step limit or stake cap cuts the ladder, or when you press STOP. Untick it to go back to gated entries only"></label>
+        <label>Over · main barrier<input type="number" id="b10_ovmain" value="3" min="0" max="8" step="1" title="Main OVER campaign: win when the closing digit is above this (digits 4-9 for the default 3)"></label>
+        <label>Over · recovery barrier<input type="number" id="b10_ovrec" value="4" min="1" max="8" step="1" title="Recovery rung after a loss. Always forced HARDER than the main barrier (at least main + 1), so the payout climbs to cover the ladder — OVER 4 needs digits 5-9"></label>
+        <label>Under · main barrier<input type="number" id="b10_unmain" value="7" min="1" max="9" step="1" title="Main UNDER campaign: win when the closing digit is below this (digits 0-6 for the default 7)"></label>
+        <label>Under · recovery barrier<input type="number" id="b10_unrec" value="6" min="1" max="8" step="1" title="Recovery rung after a loss. Always forced HARDER than the main barrier (at most main − 1), so the payout climbs — UNDER 6 needs digits 0-5"></label>
         <label>Take profit<input type="number" id="b10_tp" value="5" min="0" step="0.5" title="The ONE limit that stops this bot (0 = off). When the session P/L — every run since you pressed START, the Net P/L on this card — reaches +this, the bot stops for good with the green win popup and the amount spoken. Nothing resumes it automatically: a new run needs a fresh START press"></label>
         <label>Stop loss<input type="number" id="b10_sl" value="10" min="0" step="0.5" title="Announcement level only on this bot (0 = silent): when the session P/L falls to −this the AI says the amount once and the bot KEEPS TRADING with the ladder still climbing. It does not stop the bot — press STOP yourself to protect the balance"></label>
       </div>
@@ -732,13 +729,13 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <div class="stat"><div class="k">Total stake</div><div class="v" id="b10_staked">0.00</div></div>
         <div class="stat"><div class="k">ROI</div><div class="v" id="b10_roi">—</div></div>
       </div>
-      <div class="note" id="b10_entry">Not started — the six rules are checked once a second while the bot runs.</div>
+      <div class="note" id="b10_entry">Not started — the RED-digit heat rule is checked once a second while the bot runs.</div>
       <div id="b10_gates"></div>
       <div class="chips" id="b10_chips"></div>
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
-      <div class="note"><b>Strategy (your sheet, six of the eight rules):</b> trade the market opposite the hottest digit — <b>but only ONE market per session</b> (see below); the green bar must sit on the traded market between 11% and 12.5%; 3 to 4 digits must read 10.2% or more; no two digits on the opposite market may share a percentage; no two digits may compete head-to-head on the opposite market; no trade above a 13% green bar or with the two greens 1.5% apart. Entry point = the digit with the highest percentage on the opposite market.<br><b>One market until TP (your rule of 24 Oct):</b> the parity of the <b>first entry</b> — EVEN or ODD — is LOCKED for the rest of the session. The bot no longer flips sides when the hottest digit moves: every later second it re-scores the six gates for that SAME parity, and if the green bar has migrated to the other side it simply <b>holds</b> instead of switching. It keeps buying only that one market until it hits its target; a fresh START (or the new session after TP) picks a new market from scratch.<br><b>Buy every tick after lock (on by default):</b> the six rules are what choose the <i>first</i> entry — that read names the market. Once locked they stop vetoing, so the bot buys the locked side <b>every tick</b> instead of holding when a rule closes. Only TP, the recovery-step limit / stake cap resetting the ladder, or your own STOP button interrupt it. Untick the box on the card to gate every entry again. <b>Every tick means the ladder moves fast:</b> at ×2.10 and 4 recovery steps a run of losses reaches the top step in four seconds, so watch the stake and set your cap.<br><b>What was cut:</b> the <i>green bar + second green bar both on the traded market, 0.2–0.4% apart</i> rule and the <i>red bars on the traded market only, at 8.6% or above, second red losing momentum</i> rule. Measured on 20,000 random 100-tick windows they opened <b>0%</b> and <b>0.1%</b> of the time — the traded market is by definition the one <i>opposite</i> the hottest digit, and the hottest digit is the likeliest green or red, so both rules fought the bot's own definition and Bot 10 never traded.<br><b>Now:</b> the six-rule stack opens on <b>7.6%</b> of 906 rolling 100-tick windows of <b>real 1HZ100V ticks</b> (7.9% on 5,000 random windows — the eight-rule stack opened on 0 of 20,000), and in the last live all-market scan <b>1 of 13 markets</b> cleared all six. So the bot does reach entry. Note rule 5 (the 13% green reversal cap) can never fire on the dashboard's own colours — a bar above 11.5% is painted red, not green — it is kept only because your sheet names it.<br><b>Honesty:</b> this is a timing filter, not an edge. EVEN/ODD pays ×1.82 here ⇒ 54.95% of the window must land on the bought side, and nothing in the digit shares measured on this terminal (7,208 rolling 100-tick windows, 8 markets) makes that favourable. The stack is still strict: most seconds it holds, which limits how much it trades — not how much it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> and the <b>3-consecutive-wins</b> bank are announcements only — the AI says the number once and the bot keeps buying on the same market, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
+      <div class="note"><b>Strategy (your rule of 27 Oct — the AI Signal Center's read, now run as a trade):</b> the Even/Odd bot is gone from this desk. It plays two <b>over/under campaigns</b> — <b>OVER 3, recovering at OVER 4</b>, and <b>UNDER 7, recovering at UNDER 6</b> — and chooses between them exactly the way the dashboard's signal center chooses a signal: over the last <b>100 ticks</b> the <b>3 highest-percentage digits</b> must all be <b>RED bars (≥11.5% — what the dashboard paints red)</b>, they must <b>all win</b> the side being bought, the other side must hold <b>no RED digit of its own</b>, and the bought side must <b>cover more of the window</b> than the rival. Whichever campaign answers yes with the better expected value is traded; if neither does, the bot holds.<br><b>ONE campaign per session:</b> the family of the <b>first entry</b> — OVER or UNDER — is LOCKED for the rest of the run. The bot does not hop to the other side because the hottest digit moved: it re-reads the same campaign every second and, with <b>Buy every tick after lock</b> on (your rule, on by default), keeps buying it <b>every tick</b> until TP. Untick the box to gate every entry again.<br><b>The recovery rung is always the harder barrier:</b> a win stays on the main barrier at base stake; a loss moves to <b>OVER 4</b> (needs digits 5–9) or <b>UNDER 6</b> (needs 0–5) with the stake multiplied ×2.1 per consecutive loss, cut off by the recovery-step limit or the stake cap and then back to main at base. The recovery barrier is forced harder than the main one on the card for exactly that reason — its payout is bigger, so one win can cover the run. <b>Every tick means the ladder moves fast:</b> four straight losses reach the top step in four seconds.<br><b>How often it opens:</b> 20,000 random 100-tick windows through the same algorithm the bot runs — OVER 3 clears on <b>8.7%</b>, UNDER 7 on <b>16.9%</b>, at least one of them on <b>25.2%</b> (both on 0.4%). Real tick streams are lumpier than random ones, so read it as the order of magnitude: the bot does reach entry often (the six-rule stack it replaces opened on 7.6%).<br><b>Honesty:</b> this is a timing filter, not an edge. At this terminal's measured hold (a payout ≈ <b>0.93×</b> of the fair share) OVER 3 quotes ≈ <b>1.55×</b> and needs <b>64.5%</b> of ticks in 4–9, UNDER 7 ≈ <b>1.33×</b> and needs <b>75.2%</b> in 0–6, while their fair shares are 60% and 70% — so on a flat market all four barriers are worth about <b>−0.07 per 1.00</b> staked. The card quotes the <b>real payout for your market with read-only proposals</b> (nothing is bought to quote) and shows each barrier's measured share against its break-even; where a quote is missing it falls back to the theoretical number, which is labelled as such. No gate here lifts that −7% — they decide WHEN a contract is bought, not whether it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> is an announcement only — the AI says the number once and the bot keeps buying the same campaign, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
     </div>
   </div>
 </section>
@@ -2208,9 +2205,34 @@ const HEAT_GROUP = {
   high: { lab: "OVER 3",  digits: [4,5,6,7,8,9] },
   over2:{ lab: "OVER 2",  digits: [3,4,5,6,7,8,9] }
 };
-function heatSetup(h, mineKey, loseKey){
+/* Round 77: the same competition, but for ANY barrier pair — the new Bot 10 buys OVER n / UNDER n at
+   whatever barriers the card names, so the groups are built from the barrier instead of looked up.
+   heatSetup() below is now a thin wrapper over this, so every existing caller (Bots 8, 9, ALL IN ONE)
+   gets byte-identical results. DigitOver b wins on b+1…9, DigitUnder b wins on 0…b-1. */
+function ouGroupOver(b){
+  const digits = [];
+  for (let d = b + 1; d <= 9; d++) digits.push(d);
+  return { key: "OVER " + b, lab: "OVER " + b, digits };
+}
+function ouGroupUnder(b){
+  const digits = [];
+  for (let d = 0; d <= b - 1; d++) digits.push(d);
+  return { key: "UNDER " + b, lab: "UNDER " + b, digits };
+}
+/* The side that takes every digit MY group does not: the exact complement, so a digit BOTH sides win
+   can never be counted against the rival (that is how heatSetup already treats 4 and 5). */
+function ouGroupRivalOf(g){
+  const mine = {};
+  g.digits.forEach(d => { mine[d] = 1; });
+  const digits = [];
+  for (let d = 0; d <= 9; d++) if (!mine[d]) digits.push(d);
+  const low = digits[0], high = digits[digits.length - 1];
+  /* the complement of a barrier group is itself a barrier group: 0..k reads UNDER k+1, k..9 reads OVER k−1 */
+  const lab = digits.length && low === 0 ? "UNDER " + (high + 1) : "OVER " + (digits.length ? low - 1 : 0);
+  return { key: g.key + " RIVAL", lab, digits };
+}
+function heatSetupG(h, mine, lose){
   if (!h) return null;
-  const mine = HEAT_GROUP[mineKey], lose = HEAT_GROUP[loseKey];
   const inMine = d => mine.digits.indexOf(d) >= 0;
   const inLose = d => lose.digits.indexOf(d) >= 0;
   const share = g => round2(g.digits.reduce((a, d) => a + h.pcts[d], 0));
@@ -2223,13 +2245,19 @@ function heatSetup(h, mineKey, loseKey){
   if (share(mine) <= share(lose)) reasons.push("THE LOSING SIDE COVERS MORE");
   const sum = h.top.reduce((a, t) => a + t.p, 0);
   return {
-    ok: reasons.length === 0, reasons, key: mineKey, n: h.n, topN: h.topN,
+    ok: reasons.length === 0, reasons, key: mine.key, n: h.n, topN: h.topN,
     top: h.top.map(t => t.d), lab: mine.lab, rivalLab: lose.lab,
     leaders: h.top.map(t => t.d + " " + fmt(t.p, 1) + "%").join(", "),
     redMine: h.hot.filter(inMine), redRival,
     covMine: share(mine), covLose: share(lose),
     conf: Math.max(50, Math.min(95, Math.round(50 + (sum - h.topN * 10) * 3)))
   };
+}
+/* The original named-group entry point — unchanged in behaviour, now a wrapper. */
+function heatSetup(h, mineKey, loseKey){
+  const mine = HEAT_GROUP[mineKey], lose = HEAT_GROUP[loseKey];
+  if (!mine || !lose) return null;
+  return heatSetupG(h, Object.assign({ key: mineKey }, mine), lose);
 }
 function heatSetupTxt(v){
   if (!v) return "fewer than 30 ticks counted in the window — the digit competition cannot be read yet";
@@ -3104,9 +3132,15 @@ function beep(dir){
 /* Uses cash_register.mp3 placed next to this HTML file when present; otherwise a
    synthesized "cha-ching" plays so the feature works with no extra file. */
 let cashAudio = null, cashMissing = false;
-function playCash(){
+/* Round 77 (your rule of 27 Oct): the register sound stays exactly what it always was — the "previous
+   one", cash_register.mp3 with the built-in cha-ching fallback — but it now rings ONLY on a WIN. A loss
+   gets the denying tone below instead, so while a bot runs the sound alone tells you the result.
+   playCash(true) / playCash() ring the register; playCash(false) is the refusal. Undefined stays a win
+   so any call site that does not pass a result keeps its old behaviour. */
+function playCash(won){
   const cb = $("#cashSound");
   if (cb && !cb.checked) return;
+  if (won === false){ denyTone(); return; }
   if (!cashMissing){
     try {
       cashAudio = cashAudio || new Audio("cash_register.mp3");
@@ -3144,6 +3178,27 @@ function chaChing(){
     ng.gain.setValueAtTime(0.22, t0); ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
     src.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
     src.start(t0);
+  } catch(e){}
+}
+/* The sound of "no" — a low, drooping two-note buzz. It is deliberately the same sawtooth family as
+   the stop-loss fanfare below (that is the app's established refusal colour), just shorter and lower so
+   it reads as a denial rather than an alarm. Shares the one audioCtx and never throws. */
+function denyTone(){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t0 = audioCtx.currentTime;
+    [[392, 0, 0.16], [262, 0.13, 0.34]].forEach(([f, dt, len]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(f, t0 + dt);
+      o.frequency.exponentialRampToValueAtTime(Math.max(60, f * 0.72), t0 + dt + len);   // the droop
+      g.gain.setValueAtTime(0.0001, t0 + dt);
+      g.gain.exponentialRampToValueAtTime(0.34, t0 + dt + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + len);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0 + dt); o.stop(t0 + dt + len + 0.02);
+    });
   } catch(e){}
 }
 /* loud always-on backstop chime for the TP / SL moment (in case OS speech is unavailable) */
@@ -3244,7 +3299,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
   "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
   "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_gate","b9_tp","b9_sl",
-  "b10_stake","b10_dur","b10_win","b10_every","b10_mult","b10_steps","b10_maxstake","b10_glo","b10_ghi","b10_attract","b10_amin","b10_amax","b10_compete","b10_gcap","b10_gapveto","b10_tp","b10_sl",
+  "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","virtCount","winStreak","cashSound","aiVoice"];
 function loadSettings(){
@@ -3588,7 +3643,7 @@ class BaseBot {
         if (this.runEquity.length > 240) this.runEquity.shift();
         this.onSettled(res, plan);
         this.countStreak(res);
-        playCash();
+        playCash(res.won);        // Round 77: register on a win, denying tone on a loss
         applyBalanceAfter(res);
         this.sys((res.virtual ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + plan.type + (plan.barrier != null ? " " + plan.barrier : "") + " · exit digit " + lastDigitChar(res.exit) + " · " + fmtS(res.profit));
         if (this.checkLimits()) break;
@@ -3973,7 +4028,7 @@ class MatchesBot extends BaseBot {
         }
         this.runEquity.push(this.runPl());
         if (this.runEquity.length > 240) this.runEquity.shift();
-        playCash();
+        playCash(this.hitFlag);   // Round 77: a leg that HIT rings the register, a missed cycle gets the denial
         if (this.hitFlag){ this.lossStreak = 0; this.sys("A leg HIT on " + this.hitDigits.join(" · ") + " — " + (virt ? "VIRTUAL, " : "") + "ladder back to base " + fmt(lim.stake) + (cyc.plans.length > 1 ? " per leg" : "") + (cyc.locked ? " and the lock on " + this.lockD + " is cleared with the run" : "")); }
         else {
           this.lossStreak++;
@@ -5321,144 +5376,151 @@ const bot3 = new RiseFallBot();
 const bot4 = new StrategyBot();
 const bot5 = new AllInOneBot();
 const bot6 = new Under7Bot();
-/* ================= EVEN ODD STRATEGY · BOT 10 =================
-   The user's own rule sheet, implemented gate by gate over the digit shares of the last N ticks.
-   Six gates, not eight: the sheet's "second green bar on the traded market 0.2–0.4 apart" and
-   "all red bars on the traded market" rules were cut — since the traded market is the one OPPOSITE
-   the hottest digit, both were blocked by the bot's own definition and never opened.
-   Dashboard colours are the vocabulary: GREEN (mid) bar = share strictly between 8.5 and 11.5,
-   RED (hot) bar = share >= 11.5, BLUE (cold) = <= 8.5 (see the .dbar classes).
-   Traded market = the parity OPPOSITE the hottest digit — the entry-point digit ("the digit having
-   the highest percentage on the opposite market") therefore always lives on the market we do NOT buy.
-   SINCE ROUND 68 the parity is CHOSEN ONCE: the side of the first entry the session takes becomes
-   lockSide and every later read is scored for that same parity until TP ends the session (user rule:
-   "it trades odd odd then even, i want the bot to trade one market it gets first until it hit TP").
-   The entry-point digit is then the hottest digit on the parity we do not buy, which is no longer
-   necessarily the overall hottest digit — eoAnalyze returns both (hotD and entryD).
-   Every rule is a veto with its own reason and every threshold is an input on the card, so the sheet
-   can be loosened without touching code. None of these gates is a measured edge: they only decide
-   WHEN the bot is allowed to buy a plain EVEN/ODD contract. */
-const EO_MID_LO = 8.5, EO_MID_HI = 11.5;                 // the dashboard's green band, exactly as painted
-function eoAnalyze(win, lockSide){
-  const h = digitHeatOf(state.digits, win);
+/* ================= OVER / UNDER STRATEGY · BOT 10 (your rule of 27 Oct) =================
+   The Even/Odd Strategy Bot is deleted from this card. It now runs the two recovery campaigns you
+   named — OVER 3 recovering at OVER 4, and UNDER 7 recovering at UNDER 6.
+   WHICH campaign is chosen exactly the way the AI Signal Center chooses a signal: over the last `win`
+   ticks the TOP `top` digits must ALL be RED bars (>= DIGIT_HOT_PCT — what the dashboard paints red),
+   ALL win the side being bought, and the other side must hold no RED digit of its own. That is
+   heatSetupG above, the same competition the Synchronization desk enters on, run here for both
+   campaigns at once and ranked by expected value.
+   The campaign that clears it becomes the session and then LOCKS (your rule of 24 Oct — one market
+   until TP): nothing else is bought for the rest of the run.
+   THE LADDER: a win keeps the bot on its MAIN barrier at base stake; a loss moves it to that
+   campaign's RECOVERY barrier — the harder, higher-paying one — with the stake multiplied ×mult per
+   consecutive loss, cut off by the recovery-step limit or the stake cap and then back to MAIN at base.
+   Every barrier, stake and rung is an input on the card. None of these gates is a measured edge: at
+   these payouts each OVER/UNDER side is negative-expectancy, so the rules decide WHEN a contract is
+   bought, not whether it wins. */
+const ouPayouts = new Map();                       // "SYM|DIGITOVER 4" -> live quoted payout
+/* Read-only proposals only — nothing here buys. The fallback is the theoretical share with this
+   terminal's measured hold (OVER 2 quoted 1.34x against a 70% side, i.e. payout x share ~ 0.93). */
+function ouPayOf(sym, type, barrier){
+  const v = ouPayouts.get(sym + "|" + type + " " + barrier);
+  if (v && v > 1) return v;
+  const p = type === "DIGITOVER" ? (9 - barrier) / 10 : barrier / 10;
+  return round2(0.93 / Math.max(0.1, p));
+}
+async function ouQuoteSym(sym, dur, c){
+  if (!sym || !state.account) return;
+  const cur = (state.account && state.account.currency) || "USD";
+  const one = async (type, barrier) => {
+    try {
+      const r = await api.send({ proposal: 1, amount: 1, basis: "stake", contract_type: type, currency: cur,
+        duration: dur, duration_unit: "t", underlying_symbol: sym, barrier });
+      const pay = num(r.proposal && r.proposal.payout);
+      if (pay > 1) ouPayouts.set(sym + "|" + type + " " + barrier, pay);
+    } catch(e){ /* the measured default stands */ }
+  };
+  await Promise.all([one("DIGITOVER", c.ovMain), one("DIGITOVER", c.ovRec),
+    one("DIGITUNDER", c.unMain), one("DIGITUNDER", c.unRec)]);
+}
+/* One campaign read: its MAIN barrier and its RECOVERY barrier, both scored on the same window. */
+function ouCampaign(h, c, sym, fam){
+  const isOver = fam === "OVER";
+  const type = isOver ? "DIGITOVER" : "DIGITUNDER";
+  const mk = barrier => {
+    const mine = isOver ? ouGroupOver(barrier) : ouGroupUnder(barrier);
+    const heat = heatSetupG(h, mine, ouGroupRivalOf(mine));
+    const pay = ouPayOf(sym, type, barrier);
+    const p = heat ? round2(heat.covMine) : 0;
+    const be = round2(100 / pay);
+    const base = isOver ? (9 - barrier) * 10 : barrier * 10;      // the theoretical share, in %
+    const sd = Math.sqrt(base * (100 - base) / (h.n || 1)) || 1;
+    return { type, barrier, label: mine.lab, rival: heat ? heat.rivalLab : "the rest", pay: round2(pay),
+      p, be, ev: round2(pay * p / 100 - 1), gap: round2(p - be), sigma: round2((p - base) / sd),
+      heat, ok: !!(heat && heat.ok), reasons: heat ? heat.reasons : ["FEWER THAN 30 TICKS COUNTED"] };
+  };
+  const main = mk(isOver ? c.ovMain : c.unMain);
+  const rec = mk(isOver ? c.ovRec : c.unRec);
+  return { fam, type, label: main.label, main, rec, n: h.n, topN: h.topN,
+    ok: main.ok, reasons: main.reasons, why: heatSetupTxt(main.heat),
+    recWhy: heatSetupTxt(rec.heat) };
+}
+function ouRead(digs, c, sym, lockFam){
+  const src = digs && digs.length ? digs : state.digits;
+  const h = digitHeatOf(src, c.win, c.top);
   if (!h) return null;
-  const p = h.pcts, c = cfg10();
-  const rank = [0,1,2,3,4,5,6,7,8,9].sort((a,b) => p[b] - p[a] || b - a);
-  const hotD = rank[0];
-  /* Round 68: Bot 10 locks the parity of its FIRST entry and trades nothing else until TP.
-     lockSide is that parity; with no lock the traded market is still the one OPPOSITE the hottest
-     digit. The entry point is then simply the hottest digit on the market we do NOT buy — which is
-     the same digit as hotD while unlocked, and stops being it once the hottest digit migrates. */
-  const locked = lockSide === "EVEN" || lockSide === "ODD";
-  const side = locked ? lockSide : (hotD % 2 === 0 ? "ODD" : "EVEN");
-  const opp  = side === "EVEN" ? "ODD" : "EVEN";
-  const inSide = d => (side === "EVEN") === (d % 2 === 0);
-  const entryD = rank.find(d => !inSide(d));
-  const greens = rank.filter(d => p[d] > EO_MID_LO && p[d] < EO_MID_HI);
-  const oppD   = rank.filter(d => !inSide(d));
-  const g0 = greens[0], g1 = greens[1];
-  const gap  = g0 !== undefined && g1 !== undefined ? round2(p[g0] - p[g1]) : null;
-  const nAtt = rank.filter(d => p[d] >= c.attract).length;
-  const r10  = d => Math.round(p[d] * 10) / 10;
-  const twin = oppD.filter((d,i) => oppD.some((e,j) => j > i && r10(d) === r10(e)));
-  const oppGap = oppD.length > 1 ? round2(p[oppD[0]] - p[oppD[1]]) : null;
-  const gates = [];
-  const G = (txt, ok, have, why) => gates.push({ txt, ok, have, why });
-  G("GREEN BAR on the traded market (" + side + "), between " + fmt(c.glo,1) + "% and " + fmt(c.ghi,1) + "%",
-    g0 !== undefined && inSide(g0) && p[g0] >= c.glo && p[g0] <= c.ghi,
-    g0 === undefined ? "no green bar in the window" : "green leader " + g0 + " at " + fmt(p[g0],1) + "% on " + (inSide(g0) ? side : opp),
-    g0 === undefined ? "WINDOW HAS NO GREEN BAR" : "GREEN BAR " + (inSide(g0) ? "" : "ON " + opp + ", NOT " + side + ", ") + "AT " + fmt(p[g0],1) + "% OUTSIDE " + fmt(c.glo,1) + "–" + fmt(c.ghi,1) + "%");
-  G("3 to 4 digits at " + fmt(c.attract,1) + "% or more (cursor attraction)",
-    nAtt >= c.amin && nAtt <= c.amax,
-    nAtt + " digit" + (nAtt === 1 ? "" : "s") + " at ≥" + fmt(c.attract,1) + "%",
-    nAtt + " DIGITS AT ≥" + fmt(c.attract,1) + "%, NEEDS " + c.amin + "–" + c.amax);
-  G("No two " + opp + " digits sharing the same percentage (no indecision)",
-    twin.length === 0,
-    opp + " shares all distinct at 0.1",
-    "DIGITS " + twin.join(" & ") + " SHARE A PERCENTAGE ON " + opp);
-  G("No two digits competing head-to-head on " + opp + " (entry digit must lead by ≥" + fmt(c.compete,1) + "%)",
-    oppGap === null || oppGap >= c.compete,
-    oppGap === null ? "one digit on " + opp : opp + " leader leads by " + fmt(oppGap,1) + "%",
-    opp + " TOP TWO ONLY " + fmt(oppGap,1) + "% APART — IMBALANCE");
-  G("Green bar not above " + fmt(c.gcap,1) + "% (no reversal)",
-    g0 === undefined || p[g0] <= c.gcap,
-    g0 === undefined ? "no green bar" : "green leader " + fmt(p[g0],1) + "%",
-    "GREEN BAR " + fmt(p[g0],1) + "% ABOVE " + fmt(c.gcap,1) + "% — REVERSAL RISK");
-  G("Green gap under " + fmt(c.gapveto,1) + "% (attraction on both digits)",
-    gap === null || gap < c.gapveto,
-    gap === null ? "one green bar" : "greens " + fmt(gap,1) + "% apart",
-    "GREEN GAP " + fmt(gap,1) + "% ≥ " + fmt(c.gapveto,1) + "%");
-  return { n: h.n, p, rank, hotD, entryD, locked, side, opp, greens, gates,
-    ok: gates.every(g => g.ok), reasons: gates.filter(g => !g.ok).map(g => g.why) };
+  const s = sym || state.symbol;
+  const cands = [ouCampaign(h, c, s, "OVER"), ouCampaign(h, c, s, "UNDER")];
+  const ready = cands.filter(x => x.ok);
+  ready.sort((a, b) => b.main.ev - a.main.ev || b.main.sigma - a.main.sigma);
+  /* The session keeps the campaign its FIRST entry chose — your rule of 24 Oct, one market until TP.
+     With "buy every tick" on, a campaign whose rule has since closed is still traded. */
+  const pick = lockFam ? (cands.find(x => x.fam === lockFam) || ready[0] || cands[0]) : (ready[0] || null);
+  return { sym: s, win: c.win, topN: c.top, n: h.n, pcts: h.pcts, rank: h.rank, hot: h.hot,
+    top: h.top, cands, ready, pick, locked: !!(lockFam && pick && lockFam === pick.fam),
+    ok: !!pick && pick.ok, reasons: pick ? pick.reasons : ["NEITHER CAMPAIGN CLEARS THE RED-DIGIT RULE"] };
+}
+function ouAnalyze(lockFam){
+  const c = cfg10();
+  return ouRead(state.digits, c, state.symbol, lockFam);
 }
 function cfg10(){
+  const ovMain = clampInt($("#b10_ovmain").value, 0, 8, 3);
+  const unMain = clampInt($("#b10_unmain").value, 1, 9, 7);
   return {
     stake: Math.max(0.35, +$("#b10_stake").value || 1),
     dur: clampInt($("#b10_dur").value, 1, 10, 1),
     win: clampInt($("#b10_win").value, 30, 200, 100),
-    /* Round 69: after the session locks a market, buy on EVERY tick instead of waiting for the six
-       rules (user: "make it buy on every tick instead of holding"). The rules still choose the FIRST
-       entry — that read is what names the market — they just stop vetoing the follow-ups. */
+    top: clampInt($("#b10_top").value, SYNC_TOP_MIN, SYNC_TOP_MAX, 3),
+    /* Round 69 kept, in the new shape: once the session locks a campaign, buy on EVERY tick instead of
+       holding. The red-digit rule still chooses the FIRST entry — that read names the campaign. */
     every: !!$("#b10_every").checked,
     mult: clampFloat($("#b10_mult").value, 1.5, 4, 2.1),
     steps: clampInt($("#b10_steps").value, 1, 8, 4),
     maxstake: Math.max(0, +$("#b10_maxstake").value || 0),
-    glo: Math.max(0, +$("#b10_glo").value || 11),
-    ghi: Math.max(0, +$("#b10_ghi").value || 12.5),
-    attract: Math.max(0, +$("#b10_attract").value || 10.2),
-    amin: clampInt($("#b10_amin").value, 1, 10, 3),
-    amax: clampInt($("#b10_amax").value, 1, 10, 4),
-    compete: Math.max(0, +$("#b10_compete").value || 0.2),
-    gcap: Math.max(0, +$("#b10_gcap").value || 13),
-    gapveto: Math.max(0, +$("#b10_gapveto").value || 1.5),
+    ovMain,
+    /* the recovery rung is always the HARDER, higher-paying barrier: OVER 4 above OVER 3,
+       UNDER 6 below UNDER 7 — clamped so a typo cannot make recovery pay less than the main trade */
+    ovRec: Math.min(8, Math.max(ovMain + 1, clampInt($("#b10_ovrec").value, 0, 8, 4))),
+    unRec: Math.max(1, Math.min(unMain - 1, clampInt($("#b10_unrec").value, 1, 9, 6))),
+    unMain,
     tp: Math.max(0, +$("#b10_tp").value || 0),
     sl: Math.max(0, +$("#b10_sl").value || 0)
   };
 }
 /* Bot 10 must never sit idle (user rule, 2026-10-19), must not be stopped by anything except its
-   target (user rule, 2026-10-23 "never stop it, let it trade") and must still show the win card
-   when the target is achieved and never restart after it (same day: "the pop up after achieving
-   isn't available in even odd strategy and never resume trading after TP executed"). So its
-   stopKinds() is ONLY "tp": hitting take profit stops the session for good with the green result
-   popup + voice and no queued auto-restart — a new run needs a fresh START press — while the
-   stop-loss level and the N-consecutive-wins bank merely get spoken about once and the bot keeps
-   buying on the same market. STOP, a market switch (changeSymbol → stopAllBots) or a logout end it. */
-const EO_RESTART_MS = 6000;
-class EoStratBot extends BaseBot {
-  constructor(){ super("b10", "Even/Odd Strategy Bot", "Bot 10 · Even/Odd Strategy");
-    this.play = null; this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0;
-    this.lockSide = null; }          // the parity of this session's FIRST entry — nothing else is bought
+   target (user rule, 2026-10-23 "never stop it, let it trade") and must still show the win card when
+   the target is achieved and never restart after it (same day). Those three rules carry over
+   UNCHANGED to the Over/Under strategy you asked for on 27 Oct: stopKinds() is still ONLY "tp", so
+   take profit ends the session for good with the green popup and the spoken amount, while the
+   stop-loss level and the N-consecutive-wins bank are merely spoken about once and the bot keeps
+   trading. STOP, a market switch (changeSymbol → stopAllBots) or a logout are the other ways out.
+   What is new is WHAT it buys: the campaign the red-digit rule names (OVER 3 or UNDER 7), then that
+   campaign's recovery barrier (OVER 4 / UNDER 6) with the martingale stake while the run is losing. */
+class OverUnderStratBot extends BaseBot {
+  constructor(){ super("b10", "Over/Under Strategy Bot", "Bot 10 · Over/Under Strategy");
+    this.play = null; this.lastWhy = ""; this.lossStreak = 0; this.runLossAmt = 0;
+    this.lockFam = null; this.rung = "MAIN"; this.quoteAt = 0; }
   cfg(){ return cfg10(); }
-  analysis(){ return eoAnalyze(cfg10().win, this.lockSide); }
-  limitPl(){ return round2(this.stats.pl - (this.sessionPl || 0)); }   // the Net P/L the card shows — restarts do not reset the target
+  analysis(){ return ouAnalyze(this.lockFam); }
+  limitPl(){ return round2(this.stats.pl - (this.sessionPl || 0)); }   // restarts do not reset the target
   limitWord(){ return "session P/L"; }
   stopsOnLimits(){ return false; }                                     // only stopKinds() may halt it
   stopKinds(){ return ["tp"]; }                                        // TP ends the session; SL and win streaks do not
-  onStart(){ this.lockSide = null; this.play = this.analysis(); this.lastWhy = ""; this.lossStreak = 0; this.restartAt = 0; }
-  onStop(){ this.lossStreak = 0; }
-  afterLimitStop(reason, kind){
-    /* TP is the only kind stopKinds() allows this bot, so it returns here and NO auto-restart is
-       ever queued after a take profit — the session is over until the user presses START again.
-       The win-streak bank below stays in the file (unreachable now) so the 2026-10-20 behaviour
-       is one stopKinds() edit away if the user asks for it back. */
-    if (kind === "tp" || kind === "sl"){
-      this.sys((kind === "tp" ? "Target reached" : "Stop loss reached") + " — the session is over, press START to run it again");
-      renderBot(this);
-      return;
+  famTxt(fam, c){ return fam === "OVER" ? "OVER " + c.ovMain + " → recovery OVER " + c.ovRec
+                                        : "UNDER " + c.unMain + " → recovery UNDER " + c.unRec; }
+  candOf(a){
+    if (!a) return null;
+    return (this.lockFam && a.cands.find(x => x.fam === this.lockFam)) || a.pick || a.cands[0] || null;
+  }
+  onStart(){
+    this.lockFam = null; this.lastWhy = ""; this.lossStreak = 0; this.runLossAmt = 0; this.rung = "MAIN";
+    const c = cfg10();
+    /* payouts differ per market, so the four barriers are quoted for real (read-only proposals).
+       Throttled: the loop may restart the bot often, and a stale cache is only a fallback number. */
+    if (Date.now() - this.quoteAt > 20000){
+      this.quoteAt = Date.now();
+      ouQuoteSym(state.symbol, c.dur, c).then(() => renderBot(this)).catch(() => {});
     }
-    const sym = state.symbol, secs = Math.round(EO_RESTART_MS / 1000);
-    this.restartAt = Date.now() + EO_RESTART_MS;
-    this.sys("Run banked — a fresh run starts on " + sym + " in " + secs + "s, session P/L " + fmtS(this.limitPl()) + " kept (STOP or a market switch is the only way to keep it out)");
+  }
+  onStop(){ this.lossStreak = 0; this.runLossAmt = 0; this.rung = "MAIN"; }
+  afterLimitStop(reason, kind){
+    /* TP is the only kind stopKinds() allows this bot, so there is no auto-restart to plan for: the
+       session is over until the user presses START again (their rule of 23 Oct). */
+    this.sys((kind === "tp" ? "Target reached" : "Stop loss reached") + " — the session is over, press START to run it again");
     renderBot(this);
-    this.restartTimer = setTimeout(() => {
-      this.restartTimer = null; this.restartAt = 0;
-      if (this.running) return;
-      if (!state.account || !api.connected){ this.sys("Auto-restart cancelled — no authorized session"); renderBot(this); return; }
-      if (state.symbol !== sym){ this.sys("Auto-restart cancelled — market changed to " + state.symbol + ", press START to run it there"); renderBot(this); return; }
-      this.sys("Auto-restart: new run on " + sym + " after " + reason);
-      toast(this.name + ": run banked — new run starting automatically on " + sym, "success", 6000);
-      this.start({ skipConfirm: true, resume: true }).catch(e => this.sys("Auto-restart failed: " + e.message));
-    }, EO_RESTART_MS);
   }
   stakeFor(runLosses){
     const c = cfg10(), base = round2(c.stake);
@@ -5470,94 +5532,128 @@ class EoStratBot extends BaseBot {
     const c = cfg10(), a = this.analysis();
     this.play = a;
     if (!a) return null;
-    /* The six rules only veto BEFORE the market is locked: they pick the first entry, and that entry
-       names the market for the session. Once locked, "buy every tick" (the card switch, on by default)
-       means a closed gate no longer holds the bot — it keeps buying the SAME side every second. */
-    const freeRun = this.lockSide && c.every;
+    /* The red-digit rule picks the campaign; once it is locked, "buy every tick" means a closed rule
+       no longer holds the bot — it keeps buying the SAME campaign on the SAME market every second. */
+    const freeRun = this.lockFam && c.every;
     if (!a.ok && !freeRun){
       const why = a.reasons.join(" + ");
       if (why !== this.lastWhy){ this.lastWhy = why; this.sys("Holding — " + why); }
       return null;
     }
     this.lastWhy = "";
-    if (this.lossStreak >= c.steps) this.lossStreak = 0;
-    /* The first entry of the session decides the parity for the WHOLE session (user rule, round 68).
-       From here on analysis() is re-scored with that lock, so the bot never flips to the other side
-       because the hottest digit moved. With "buy every tick" on it also stops holding: it buys only
-       that locked side, every second, until TP ends the session. */
-    if (!this.lockSide){
-      this.lockSide = a.side;
-      this.sys("Locked on " + a.side + " — this session buys only " + a.side + " on " + state.symbol +
-        (c.every ? " EVERY TICK until it hits its target" : " until it hits its target"));
-      toast(this.name + ": locked on " + a.side + (c.every ? " — now buying it every tick until TP" : " for the rest of this session"), "info", 6000);
+    if (!this.lockFam){
+      this.lockFam = a.pick.fam;
+      const cand = this.candOf(a);
+      this.sys("Locked on " + this.famTxt(this.lockFam, c) + " — this session buys only " + cand.label +
+        " on " + state.symbol + (c.every ? " EVERY TICK until it hits its target" : " until it hits its target"));
+      toast(this.name + ": locked on " + this.famTxt(this.lockFam, c) +
+        (c.every ? " — now buying it every tick until TP" : " for the rest of this session"), "info", 6000);
+      ouQuoteSym(state.symbol, c.dur, c).then(() => renderBot(this)).catch(() => {});
     }
-    const stake = this.stakeFor(this.lossStreak);
-    return { type: "DIGIT" + a.side, barrier: null, stake, duration: c.dur,
-      source: this.source, symbol: state.symbol, label: a.side };
+    const cand = this.candOf(a);
+    if (!cand) return null;
+    if (this.lossStreak > c.steps){
+      this.sys("Recovery abandoned after " + this.lossStreak + " losses (−" + fmt(this.runLossAmt) + ") — back to " +
+        cand.main.label + " at base stake " + fmt(c.stake));
+      toast(this.name + ": recovery run abandoned (−" + fmt(this.runLossAmt) + ")", "error");
+      this.lossStreak = 0; this.runLossAmt = 0;
+    }
+    let stake = this.stakeFor(this.lossStreak);
+    if (this.lossStreak > 0 && c.maxstake > 0 && stake <= round2(c.stake)){
+      this.sys("Stake cap " + fmt(c.maxstake) + " reached (run loss −" + fmt(this.runLossAmt) + ") — back to " +
+        cand.main.label + " at base stake");
+      this.lossStreak = 0; this.runLossAmt = 0; stake = round2(c.stake);
+    }
+    const inRec = this.lossStreak > 0;
+    const leg = inRec ? cand.rec : cand.main;
+    this.rung = inRec ? "RECOVERY" : "MAIN";
+    return { type: leg.type, barrier: leg.barrier, stake, duration: c.dur,
+      source: this.source, symbol: state.symbol, label: leg.label, fam: cand.fam,
+      rung: this.rung };
   }
   onSettled(res, plan){
     if (!res || !plan) return;
+    const c = cfg10();
     if (!res.won){
       this.lossStreak++;
-      const c = cfg10(), next = this.stakeFor(this.lossStreak);
-      this.sys("Loss — next stake " + fmt(next) + " (step " + this.lossStreak + " of " + c.steps + ", ×" + fmt(c.mult) + ")");
+      this.runLossAmt = round2(this.runLossAmt + Math.abs(res.profit));
+      const recLab = plan.fam === "OVER" ? "OVER " + c.ovRec : "UNDER " + c.unRec;
+      this.sys("Loss on " + plan.label + " — recovery rung " + this.lossStreak + " of " + c.steps + ": " +
+        recLab + " at " + fmt(this.stakeFor(this.lossStreak)) + " (×" + fmt(c.mult) +
+        ", run loss −" + fmt(this.runLossAmt) + ")");
     } else {
-      this.lossStreak = 0;
+      if (plan.rung === "RECOVERY") this.sys("Recovered on " + plan.label + " at rung " + this.lossStreak +
+        " — the run nets " + fmtS(round2(res.profit - this.runLossAmt)) + ", back to " +
+        (plan.fam === "OVER" ? "OVER " + c.ovMain : "UNDER " + c.unMain) + " at base stake");
+      else this.sys("Win on " + plan.label + " — " + fmtS(res.profit) + ", stake stays at base " + fmt(c.stake));
+      this.lossStreak = 0; this.runLossAmt = 0; this.rung = "MAIN";
     }
   }
   preview(){
-    const c = cfg10(), a = this.play;
+    const c = cfg10(), a = this.play, cand = this.candOf(a);
     if (!this.running){
-      if (this.restartAt){
-        const left = Math.max(0, Math.ceil((this.restartAt - Date.now()) / 1000));
-        return { label: "BANKED · NEW RUN ON " + state.symbol + " IN " + left + "s", cls: "mode-wait", stake: this.stakeFor(0) };
-      }
-      return { label: this.busy && a ? "ORDER IN FLIGHT · " + a.side : "IDLE · STRATEGY", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
+      if (this.busy && cand) return { label: "ORDER IN FLIGHT · " + (this.lossStreak > 0 ? cand.rec.label : cand.main.label),
+        cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
+      return { label: "IDLE · OVER/UNDER STRATEGY", cls: "mode-wait", stake: this.stakeFor(0) };
     }
     if (!a) return { label: "WAITING · NO TICKS YET", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
-    /* Round 69: with the every-tick switch on and the market already locked, closed gates do NOT
-       hold the bot — it keeps buying the locked side, so the card must not say WAITING. */
-    if (!a.ok && !(this.lockSide && cfg10().every)) return { label: "WAITING · " + a.reasons.length + " GATE" + (a.reasons.length === 1 ? "" : "S") + " CLOSED", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
-    const st = this.stakeFor(this.lossStreak);
-    return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + "/" + c.steps + " · " : "") + "BUYS " + a.side + (a.locked ? (this.lockSide && cfg10().every ? " (LOCKED · EVERY TICK)" : " (LOCKED)") : "") + " · ENTRY DIGIT " + a.entryD + " ON " + a.opp + " · " + state.symbol, cls: "mode-main", stake: st };
+    if (!cand) return { label: "WAITING · NOTHING COUNTED YET", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
+    if (!a.ok && !(this.lockFam && c.every))
+      return { label: "WAITING · RED-DIGIT RULE CLOSED", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
+    const leg = this.lossStreak > 0 ? cand.rec : cand.main;
+    return { label: (this.lossStreak ? "RECOVERY RUNG " + this.lossStreak + "/" + c.steps + " · " : "MAIN · ") +
+      leg.label + (this.lockFam ? (c.every ? " (LOCKED · EVERY TICK)" : " (LOCKED)") : "") + " · " + state.symbol,
+      cls: this.lossStreak > 0 ? "mode-rec" : "mode-main", stake: this.stakeFor(this.lossStreak) };
   }
   subText(){
-    const c = cfg10(), a = this.play || this.analysis();
-    const tail = (!this.running && this.restartAt)
-      ? " · BANKED — new run on " + state.symbol + " in " + Math.max(0, Math.ceil((this.restartAt - Date.now()) / 1000)) + "s"
-      : "";
-    if (!a) return "EVEN ODD STRATEGY · waiting for " + c.win + " ticks" + tail;
-    const pass = a.gates.filter(g => g.ok).length;
+    const c = cfg10(), a = this.play || this.analysis(), cand = this.candOf(a);
+    if (!a) return "OVER/UNDER STRATEGY · waiting for " + c.win + " ticks on " + state.symbol;
     const st = this.stakeFor(this.lossStreak);
-    /* entryD is the hottest digit on the market we do NOT buy — the same digit as hotD until the
-       session locks a parity, after which the overall hottest digit may sit on our own side. */
-    const lead = a.locked
-      ? "LOCKED TO " + a.side + " since its first entry — buys only " + a.side + (c.every ? " EVERY TICK" : "") + " until TP (entry digit " + a.entryD + " at " + fmt(a.p[a.entryD],1) + "% on " + a.opp + ")"
-      : "trades the market OPPOSITE the hottest digit (" + a.entryD + " at " + fmt(a.p[a.entryD],1) + "% on " + a.opp + ")";
-    const freeRun = a.locked && c.every && !a.ok;
-    return "EVEN ODD STRATEGY · " + lead + " with one " + a.side + " contract at " + fmt(st) + (this.lossStreak ? " (step " + this.lossStreak + "/" + c.steps + ", ×" + fmt(c.mult) + ")" : "") + " · " + pass + "/" + a.gates.length + " gates open" +
-      (a.ok ? " — ENTRY CLEAR" : freeRun ? " — buying every tick anyway (the rules only choose the first entry)" : " — holding: " + a.reasons[0]) + tail;
+    const leg = this.lossStreak > 0 ? cand.rec : cand.main;
+    return "OVER/UNDER STRATEGY · " +
+      (this.lockFam ? "LOCKED to " + this.famTxt(this.lockFam, c) + " since its first entry"
+                    : "the " + a.topN + " highest RED digits name the campaign") +
+      " · buys " + leg.label + (this.lossStreak ? " (rung " + this.lossStreak + "/" + c.steps + ")" : "") +
+      " at " + fmt(st) + " · " + fmt(leg.p, 1) + "% of the last " + a.n + " ticks vs " + fmt(leg.be, 2) +
+      "% break-even ⇒ EV " + fmtS(leg.ev) + " per 1.00" +
+      (a.ok ? " — ENTRY CLEAR" : this.lockFam && c.every ? " — buying every tick anyway (the rule only picks the first entry)"
+        : " — holding: " + a.reasons[0]);
   }
   describe(){
-    const c = cfg10(), a = this.analysis();
-    const rows = a ? a.gates.map(g => "<br>" + (g.ok ? "✅ " : " ") + g.txt + " — <i>" + (g.ok ? g.have : g.why) + "</i>").join("")
+    const c = cfg10(), a = this.play || this.analysis();
+    const rows = a ? a.cands.map(x =>
+      "<br>" + (x.ok ? "✅ " : " ") + "<b>" + x.label + "</b> recovers at <b>" + x.rec.label + "</b> — " + x.why).join("")
       : "<br>waiting for ticks…";
     let s = c.stake, total = 0, steps = 0;
     while (s <= (c.maxstake || Infinity) && steps <= c.steps + 1 && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
-    return "<div class='note' style='margin:0'><b>Play:</b> once a second it reads the last <b>" + c.win +
-      " ticks</b> of " + state.symbol + ", paints the digits exactly like the dashboard (green bar = 8.5–11.5%, red bar = ≥11.5%) and checks your " + (a ? a.gates.length : 6) + " rules. Its FIRST traded market is the one <b>OPPOSITE the hottest digit</b> — that hottest digit on the other market is the ENTRY POINT the strategy names — and once the session is locked (below), when all " + (a ? a.gates.length : 6) + " rules agree it buys <b>one " + "DIGITEVEN/DIGITODD" + " contract</b> at " + fmt(c.stake) + " for " + c.dur + " tick" + (c.dur > 1 ? "s" : "") + ". Any closed gate means it holds and re-reads next second; nothing is bought on a partial pass.<br><b>ONE MARKET PER SESSION:</b> the parity of the <b>first entry</b> is locked for the rest of the session" + (this.lockSide ? " — this run is locked on <b>" + this.lockSide + "</b>" : "") + ", so every later read is scored for that SAME market and the bot never flips to the other side because the hottest digit moved. It keeps buying only " + (this.lockSide || "the market it first gets") + " until it hits its target; a new session after TP (or a fresh START after STOP) picks a new market from scratch. The price of the lock is only about the market, not the cadence: " + (c.every
-        ? "<b>BUY EVERY TICK IS ON</b> — the six rules are what choose the FIRST entry (that read names the market), and once the session is locked they no longer veto anything: the bot keeps buying " + (this.lockSide || "the locked side") + " every single tick instead of holding. Only TP, the recovery-step limit / stake cap or your own STOP button interrupt it. Untick <b>Buy every tick after lock</b> to put the gates back on every trade."
-        : "<b>Buy every tick after lock</b> is OFF, so a read whose green bar sits on the other parity holds instead of switching sides — tick it on the card to make the bot fire on the locked side every second.") + "<br><b>Cut from your sheet:</b> the 'second green bar on the traded market 0.2–0.4% apart' and 'all red bars on the traded market, second red losing momentum' rules — measured on 20,000 random 100-tick windows they opened 0% and 0.1% of the time, because the traded market is by definition the one without the hottest digit. They blocked every trade, so the stack is six rules." + rows +
-      "<br><b>Martingale:</b> ×" + fmt(c.mult) + " after each loss, up to " + c.steps + " recovery steps (then resets to base). Worst-case exposure ≈ " + fmt(round2(total)) + " before the step limit or stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + ") cuts it off. At the ×" + fmt(SYN_PAY_EO) + " EVEN/ODD quote, ×" + fmt(c.mult) + " wins back only the first loss outright — deeper runs rely on the cut-off.<br>" +
-      "<b>Honesty:</b> these gates are a timing filter written from your sheet, not a measured edge. EVEN/ODD pays <b>×" + fmt(SYN_PAY_EO) + "</b> on this terminal ⇒ <b>" + fmt(SYN_BE_EO,2) +
-      "%</b> of the window must land on the bought side, and no digit-share pattern measured here (7,208 rolling 100-tick windows across 8 markets) turns that negative expectancy positive. On <b>906 rolling 100-tick windows of real ticks</b> the six-rule stack opened all six on <b>7.6%</b> — roughly one read in thirteen reaches entry, the rest hold — so it does trade now; that number limits how much it trades, not how much it wins.<div class='warnstrip' style='margin:10px 0 0'> This places <b>real trades</b> on account <b>" +
+    const ov = a ? a.cands.find(x => x.fam === "OVER") : null;
+    const un = a ? a.cands.find(x => x.fam === "UNDER") : null;
+    return "<div class='note' style='margin:0'><b>Your rule of 27 Oct:</b> the Even/Odd Strategy bot is off this card — it now plays <b>OVER " +
+      c.ovMain + " recovering at OVER " + c.ovRec + "</b> and <b>UNDER " + c.unMain + " recovering at UNDER " + c.unRec +
+      "</b>, the same two campaigns the AI Signal Center names.<br><b>Play:</b> once a second it reads the last <b>" + c.win +
+      " ticks</b> of " + state.symbol + ", paints the digits exactly like the dashboard and asks the Signal Center's question of BOTH campaigns: are the <b>" +
+      c.top + " highest digits all RED bars (≥" + fmt(DIGIT_HOT_PCT,1) + "%)</b>, do they <b>all win</b> the side being bought, and does the other side hold <b>no RED digit of its own</b>? Whichever campaign answers yes with the better expected value is traded; if neither does, the bot holds.<br>" +
+      "<b>ONE CAMPAIGN PER SESSION:</b> the campaign of the <b>first entry</b> locks for the rest of the run" +
+      (this.lockFam ? " — this run is locked on <b>" + this.famTxt(this.lockFam, c) + "</b>" : "") +
+      ", so the bot never hops between OVER and UNDER because the hottest digit moved. <b>Buy every tick after lock</b> is " +
+      (c.every ? "<b>ON</b> — the rule chooses only the FIRST entry, and from then on it buys the locked campaign every single tick until TP."
+               : "<b>OFF</b> — every entry waits for the rule again.") + "<br><b>The recovery rung:</b> a win keeps the bot on its main barrier at base stake. A loss moves it to the <b>harder, higher-paying</b> barrier of the same campaign — " +
+      (ov ? "OVER " + c.ovMain + " (" + fmt(ov.main.pay) + "×) → OVER " + c.ovRec + " (" + fmt(ov.rec.pay) + "×)" : "") +
+      (ov && un ? " · " : "") + (un ? "UNDER " + c.unMain + " (" + fmt(un.main.pay) + "×) → UNDER " + c.unRec + " (" + fmt(un.rec.pay) + "×)" : "") +
+      " — and multiplies the stake ×" + fmt(c.mult) + " per consecutive loss, up to " + c.steps +
+      " rungs (then back to main at base) or the stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + "). Worst-case exposure ≈ " +
+      fmt(round2(total)) + " " + ((state.account && state.account.currency) || "USD") + " before either cut-off.<br><b>Both campaigns read:</b>" + rows +
+      "<br><b>Honesty:</b> the barrier you recover at pays more precisely because it wins less often — OVER " +
+      (ov ? fmt(ov.rec.p, 1) : "—") + "% of this window covered against " + (ov ? fmt(ov.rec.be, 2) : "—") +
+      "% break-even, UNDER " + (un ? fmt(un.rec.p, 1) : "—") + "% against " + (un ? fmt(un.rec.be, 2) : "—") +
+      "%. A RED-digit competition is a description of the last " + c.win + " ticks, not a prediction of the next one, and no digit-share pattern measured on this terminal turns either side's expectancy positive. The recovery rung raises the payout, it does not raise the odds.<div class='warnstrip' style='margin:10px 0 0'> This places <b>real trades</b> on account <b>" +
       ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") + ").</div><br><b>Session limits:</b> " + limitsText(c, this.stopKinds()) + " The session P/L stands at <b>" + fmtS(this.limitPl()) + "</b> right now.</div>";
   }
 }
 const bot7 = new MatchesBot();
 const bot8 = new SyncBot();
 const bot9 = new SyncRecoveryBot();
-const bot10 = new EoStratBot();
+const bot10 = new OverUnderStratBot();
 const BOTS = [bot1, bot2, bot3, bot4, bot5, bot6, bot7, bot8, bot9, bot10];
 const anyBotRunning = () => BOTS.some(b => b.running);
 const anyBotBusy = () => BOTS.some(b => b.busy);
@@ -5568,7 +5664,7 @@ function stopAllBots(reason){ BOTS.forEach(b => b.stop(reason)); }
    the markets by the stronger parity their last `win` ticks show, says what it is doing,
    switches to the best one and starts the bot on it. */
 const syncDesk = { entered: false, busy: false, sayTimer: null, bars: new Map() };
-/* even-odd strategy scan — mirrors syncDesk but ranks by eoAnalyze gates-open count */
+/* over-under strategy scan — mirrors syncDesk but ranks by the ouRead campaign's gap over break-even */
 const eoScan = { busy: false, bars: new Map(), sayTimer: null };
 function symLabel(sym){
   const sel = $("#symbolSelect");
@@ -6160,7 +6256,7 @@ async function runRfAI(){
 const SCAN_POP = {
   aio:  { desk: "ALL IN ONE · AI MARKET PICKER", busy: () => aio.busy,      say: "#aioSay",  bars: "#aioBars" },
   sync: { desk: "AI SYNC DESK · BOTS 8 + 9",     busy: () => syncDesk.busy, say: "#syncSay", bars: "#syncBars" },
-  eo:   { desk: "EVEN ODD STRATEGY · BOT 10",    busy: () => eoScan.busy,   say: "#eoSay",   bars: "#eoBars" },
+  eo:   { desk: "OVER UNDER STRATEGY · BOT 10",   busy: () => eoScan.busy,   say: "#eoSay",   bars: "#eoBars" },
   rf:   { desk: "RISE FALL DESK · BOT 3",        busy: () => rfDesk.busy,   say: "#rfSay",   bars: "#rfBars" },
 };
 const scanPop = { src: null, timer: null, doneAt: 0, t0: 0 };
@@ -6445,9 +6541,11 @@ async function runAllInOneAI(){
   }
 }
 
-/* ================= EVEN ODD STRATEGY — TRADE AI NOW =================
-   Scans every volatility index with eoAnalyze, ranks by gates-open count (tie-break: EV),
-   switches to the best market and starts Bot 10 on it. */
+/* ================= OVER UNDER STRATEGY — TRADE AI NOW =================
+   Scans every volatility index with ouRead — the AI Signal Center's RED-digit competition, run for
+   BOTH campaigns at once (OVER main → OVER recovery, UNDER main → UNDER recovery) — ranks the markets
+   that clear by their gap over break-even, then by expected value, moves the desk onto the best one
+   and starts Bot 10 on it. The robot face is on screen and talking for the whole read. */
 function eoSay(text, animate){
   const el = $("#eoSay"); if (!el) return;
   if (eoScan.sayTimer){ clearInterval(eoScan.sayTimer); eoScan.sayTimer = null; }
@@ -6485,15 +6583,15 @@ async function runEoTradeAI(){
       if (box) box.appendChild(row);
       eoScan.bars.set(sym, row);
     }
-    speak("Analysing every volatility market for the Even Odd Strategy.", { force: true, interrupt: true, now: true });
-    bot10.sys("AI scan started — " + syms.length + " markets, six-gate read over the last " + win + " ticks");
+    speak("Analysing every volatility market for the Over Under Strategy.", { force: true, interrupt: true, now: true });
+    bot10.sys("AI scan started — " + syms.length + " markets, RED-digit competition for OVER " + c.ovMain + " and UNDER " + c.unMain + " over the last " + win + " ticks");
     sweepSync();
     const t0 = Date.now();
     let rows = [];
     while (Date.now() - t0 < 9000){
       await sleep(420);
-      rows = eoSurvey(win);
-      eoBarsUpdate(rows, false);
+      rows = ouSurvey(c);
+      ouBarsUpdate(rows, false);
       if (Date.now() - t0 > 2400 && rows.length >= Math.min(4, syms.length)) break;
     }
     syncReleaseFeeds();
@@ -6505,36 +6603,53 @@ async function runEoTradeAI(){
       toast("AI scan found no market data — nothing was bought", "error");
       return;
     }
-    /* rank by gates-open desc, then EV desc */
-    rows.sort((a, b) => (b.ok ? 1 : 0) - (a.ok ? 1 : 0) || b.gatesOpen - a.gatesOpen || b.ev - a.ev);
-    eoBarsUpdate(rows, true);
+    /* payouts differ per market and per barrier, and the ranking quotes them — take the leaders' real numbers */
+    const quoted = await ouQuoteLeaders(rows, c.dur, c);
+    rows = ouSurvey(c);
+    /* ready markets first, then the biggest gap over break-even, then the better EV */
+    rows.sort((a, b) => (b.ok ? 1 : 0) - (a.ok ? 1 : 0) || b.gap - a.gap || b.ev - a.ev || b.sigma - a.sigma);
+    ouBarsUpdate(rows, true);
     const cleared = rows.filter(r => r.ok);
     const lead = rows[0];
     const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+    const famCount = {};
+    cleared.forEach(r => { famCount[r.fam] = (famCount[r.fam] || 0) + 1; });
     const head1 = "<b>" + plural(rows.length, "market") + " read over the last " + win + " ticks.</b> " +
-      "<b>" + cleared.length + " of " + plural(rows.length, "market") + " had all six gates open</b>. Best of the list: " +
-      (lead ? symLabel(lead.sym) + " · " + fmt(lead.gatesOpen, 0) + "/6 gates · EV " + fmtS(lead.ev) + " per 1.00" : "none");
+      "<b>" + cleared.length + " of " + plural(rows.length, "market") + " had a campaign the RED leaders all win</b>" +
+      (cleared.length ? " (" + Object.keys(famCount).map(k => famCount[k] + "× " + k).join(", ") + ")" : "") +
+      ". Best of the list: " + (lead && lead.ok ? symLabel(lead.sym) + " · " + lead.label + " · " + fmt(lead.gap, 1) +
+        " pts over break-even · EV " + fmtS(lead.ev) + " per 1.00" : "none");
     if (!cleared.length){
-      eoSay("Danger zone detected — nowhere did all six rules agree", false);
+      eoSay("Danger zone detected — no market had a campaign its RED leaders all win", false);
       if (status) status.textContent = "DANGER ZONE DETECTED — no market won the digit competition.";
       if (verdict) verdict.innerHTML = head1 +
-        "<br><b style='color:var(--red)'>DANGER ZONE DETECTED</b> — nowhere did all six rules agree.<br>" +
-        "The least-bad was <b>" + symLabel(lead.sym) + "</b>: " + lead.gatesOpen + "/6 gates open, " +
+        "<br><b style='color:var(--red)'>DANGER ZONE DETECTED</b> — in none of these markets do the " + c.top +
+        " highest digits all sit on one side of an OVER or UNDER barrier.<br>" +
+        "The least-bad was <b>" + symLabel(lead.sym) + "</b>: leaders " + lead.leaders.join(", ") + " — " +
         lead.reasons.slice(0, 2).join(" + ") + ".<br><b>No symbol was changed and no contract was bought.</b>";
-      bot10.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets rejected (0 with all 6 gates open) · best was " + symLabel(lead.sym) + " with " + lead.gatesOpen + "/6 gates");
-      toast("DANGER ZONE DETECTED — no market passed all six gates, nothing was bought", "warn", 9000);
-      speak("Danger zone detected. I read " + rows.length + " markets and in none of them did all six rules agree. Nothing is bought and your market has not been changed.", { force: true, interrupt: true });
+      bot10.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets rejected (0 with a clean campaign) · best read was " + symLabel(lead.sym) + " · " + lead.leaders.join(", "));
+      toast("DANGER ZONE DETECTED — no market cleared the RED-digit rule, nothing was bought", "warn", 9000);
+      speak("Danger zone detected. I read " + rows.length + " markets and in none of them did the highest digits all win one over or under campaign. Nothing is bought and your market has not been changed.", { force: true, interrupt: true });
       return;
     }
     const best = cleared[0];
-    eoSay("Best setup: " + symLabel(best.sym) + " — trading now", false);
-    if (status) status.textContent = "Best: " + symLabel(best.sym) + " — " + best.gatesOpen + "/6 gates open, EV " + fmtS(best.ev);
+    eoSay("Best setup: " + symLabel(best.sym) + " " + best.label + " — trading now", false);
+    if (status) status.textContent = "Best: " + symLabel(best.sym) + " — " + best.label + " recovering at " + best.rec + ", " + fmt(best.gap, 1) + " pts over break-even, EV " + fmtS(best.ev);
     if (verdict) verdict.innerHTML = head1 +
-      "<br>The AI takes <b>" + symLabel(best.sym) + "</b>: " + best.gatesOpen + "/6 gates open, EV " + fmtS(best.ev) + " per 1.00." +
-      "<br><b>Entry point:</b> digit <b>" + best.entryD + "</b> at " + fmt(best.pctHot, 1) + "% on <b>" + best.opp + "</b> → the first entry is <b>" + best.side + "</b> on " + symLabel(best.sym) + ", and that market <b>locks for the whole session</b> until it hits TP." +
-      "<br>A won digit competition over " + best.n + " ticks is still a <b>small sample</b> — the leaders move as new ticks arrive, and this does not turn a " + fmtS(best.ev) + "-per-1.00 structure into a proven edge.";
-    bot10.sys("AI scan done — " + rows.length + " markets · " + cleared.length + " with all 6 gates open · chose " + symLabel(best.sym) + " · " + best.gatesOpen + "/6 gates · EV " + fmtS(best.ev));
-    speak("Analysing every volatility market for the Even Odd Strategy. Done. The best setup is on " + symLabel(best.sym) + ": all six rules agree. Trading now.", { force: true, interrupt: true });
+      "<br>The AI takes <b>" + symLabel(best.sym) + "</b>: " + best.why +
+      "<br><b>Campaign:</b> buy <b>" + best.label + "</b> — a win needs the closing digit " +
+      (best.fam === "OVER" ? "ABOVE " + best.main.barrier + " (digits " + (best.main.barrier + 1) + "–9)"
+                            : "BELOW " + best.main.barrier + " (digits 0–" + (best.main.barrier - 1) + ")") +
+      " — recovering at <b>" + best.rec + "</b> (" + fmt(best.main.pay) + "× → " + fmt(best.rec.pay) + "×) with your " +
+      "existing Bot 10 settings: stake " + fmt(c.stake) + ", ×" + fmt(c.mult) + " for " + c.steps + " steps, " + c.dur +
+      "-tick contracts. That campaign <b>locks for the whole session</b> until it hits TP." +
+      "<br><b>Measured over " + best.n + " ticks:</b> " + best.label + " covered " + fmt(best.main.p, 1) + "% against a " +
+      fmt(best.main.be, 2) + "% break-even" + (quoted.length ? " (payouts quoted live on " + plural(quoted.length, "market") + ")" : " (measured default payout)") +
+      " ⇒ EV " + fmtS(best.ev) + " per 1.00." +
+      "<br>A digit competition over " + best.n + " ticks is still a <b>small sample</b> — the leaders move as new ticks arrive, and this does not turn a " + fmtS(best.ev) + "-per-1.00 structure into a proven edge." +
+      "<br><b style='color:var(--amber)'>Changing the market stops every other bot</b> — that is how the header symbol works, same as the sync desk.";
+    bot10.sys("AI scan done — " + rows.length + " markets · " + cleared.length + " with a clean campaign · chose " + symLabel(best.sym) + " · " + best.label + " (recovers " + best.rec + ") · " + fmt(best.main.p, 1) + "% vs " + fmt(best.main.be, 2) + "% break-even · EV " + fmtS(best.ev) + (quoted.length ? " · quoted live on " + plural(quoted.length, "market") : " · measured default payout"));
+    speak("Analysing every volatility market for the Over Under Strategy. Done. The best setup is on " + symLabel(best.sym) + ": the highest red digits all win " + best.label + ". Trading now.", { force: true, interrupt: true });
     if (best.sym !== state.symbol) await changeSymbol(best.sym);
     await bot10.start({ skipConfirm: true });
     if (bot10.running) showTab("eostrat");
@@ -6551,32 +6666,46 @@ async function runEoTradeAI(){
   }
 }
 
-function eoSurvey(win){
+/* One row per market: both campaigns scored on that market's own last `win` ticks, the pick being the
+   campaign the Signal Center rule clears with the better numbers. ouRead never buys — it only reads. */
+function ouSurvey(c){
   const rows = [];
   for (const sym of scanSymbols()){
     const digs = sigDigitsFor(sym);
     if (!digs || digs.length < 30) continue;
     const save = state.digits.slice();
     state.digits = digs;
-    const a = eoAnalyze(win);
+    const a = ouRead(digs, c, sym, null);
     state.digits = save;
     if (!a) continue;
-    const pass = a.gates.filter(g => g.ok).length;
-    rows.push({ sym, n: a.n, pcts: a.p, hotD: a.hotD, entryD: a.entryD, side: a.side, opp: a.opp,
-      gatesOpen: pass, ok: a.ok, reasons: a.reasons, ev: a.ok ? round2(SYN_PAY_EO * (pass / a.gates.length) - 1) : -1,
-      pctHot: a.p[a.entryD], label: a.side });
+    const p = a.pick;
+    rows.push({ sym, n: a.n, topN: a.topN, ok: !!a.ok, leaders: a.top.map(t => t.d + " " + fmt(t.p, 1) + "%"),
+      hot: a.hot.slice(), fam: p ? p.fam : null, label: p ? p.label : "—", rec: p ? p.rec.label : "—",
+      main: p ? p.main : null, recLeg: p ? p.rec : null,
+      ev: p ? p.main.ev : -1, gap: p ? p.main.gap : round2(-100 / Math.max(1, c.top) - 99),
+      sigma: p ? p.main.sigma : 0, reasons: a.reasons, why: p ? p.why : a.reasons.join(" + ") });
   }
   return rows;
 }
+/* the top 3 markets get their four barriers quoted for real (read-only proposals, nothing is bought) */
+async function ouQuoteLeaders(rows, dur, c){
+  const leads = rows.slice(0, 3), out = [];
+  for (const r of leads){
+    try { await ouQuoteSym(r.sym, dur, c); out.push(r.sym); } catch(e){ /* the measured default stands */ }
+  }
+  return out;
+}
 
-function eoBarsUpdate(rows, ranked){
+function ouBarsUpdate(rows, ranked){
   if (!rows.length) return;
-  const lo = 0, hi = Math.max(6, rows[0].gatesOpen);
+  const gaps = rows.map(r => r.gap);
+  const lo = Math.min.apply(null, gaps), hi = Math.max.apply(null, gaps);
   rows.forEach(r => {
     const row = eoScan.bars.get(r.sym); if (!row) return;
-    row.querySelector(".fill").style.width = Math.max(3, Math.min(100, (r.gatesOpen - lo) / (hi - lo) * 100)) + "%";
-    row.querySelector(".pc").textContent = r.gatesOpen + "/6 gates · " + r.label + " on " + symLabel(r.sym);
-    row.title = r.ok ? "All 6 gates open — entry clear" : r.reasons.slice(0, 3).join(" + ");
+    row.querySelector(".fill").style.width = Math.max(3, Math.min(100, (r.gap - lo) / ((hi - lo) || 1) * 100)) + "%";
+    row.querySelector(".pc").textContent = (r.ok ? "READY " : "hold ") + r.label + (r.ok ? " → " + r.rec : "") +
+      " · " + fmt(r.gap, 1) + " pts vs break-even · " + symLabel(r.sym);
+    row.title = r.ok ? r.why : r.reasons.slice(0, 3).join(" + ");
     row.classList.toggle("dz", !r.ok);
     row.classList.toggle("best", !!(ranked && r.sym === rows[0].sym));
   });
@@ -6585,7 +6714,6 @@ function eoBarsUpdate(rows, ranked){
     rows.forEach(r => { const row = eoScan.bars.get(r.sym); if (row) box.appendChild(row); });
   }
 }
-
 let resultResumeBot = null;
 function resultDirTxt(type){
   const t = String(type || "").toUpperCase();
@@ -6902,33 +7030,55 @@ function renderBot(b){
       if (entry) entry.innerHTML = "Waiting for " + c.win + " ticks on " + state.symbol + " — nothing counted, nothing bought.";
       if (gatesEl) gatesEl.innerHTML = "";
     } else {
-      if (entry) entry.innerHTML = "<b>Entry point:</b> " +
+      const cand = b.candOf(a);
+      const legLab = cand ? (b.lossStreak > 0 ? cand.rec.label + " (recovery rung " + b.lossStreak + ")" : cand.main.label) : "";
+      const leaders = a.top.map(t => t.d + " " + fmt(t.p, 1) + "%").join(" · ");
+      if (entry) entry.innerHTML = "<b>Entry read:</b> " +
         (a.locked
-          ? "<b style='color:var(--green)'>LOCKED TO " + a.side + "</b> since this session's first entry — it buys only " + a.side +
-            " on " + state.symbol + " " + (c.every ? "<b>every tick</b> " : "") + "until it hits TP. The greenest digit outside that parity is <b>" + a.entryD + "</b> (" +
-            fmt(a.p[a.entryD], 1) + "% on " + a.opp + ") over the last " + a.n + " ticks."
-          : "digit <b>" + a.entryD + "</b> holds the highest share (" + fmt(a.p[a.entryD], 1) +
-            "%) on <b>" + a.opp + "</b> — so the first entry trades <b>" + a.side + "</b> on " + state.symbol +
-            " over the last " + a.n + " ticks, and that market then locks.") + " " + (a.ok
-          ? "<b style='color:var(--green)'>ALL " + a.gates.length + " RULES AGREE — one " + a.side + " contract at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
+          ? "<b style='color:var(--green)'>LOCKED TO " + cand.fam + "</b> (" + b.famTxt(cand.fam, c) +
+            ") since this session's first entry — its next buy is " + legLab + " on " + a.sym +
+            (c.every ? " <b>every tick</b> " : " ") + "until it hits TP."
+          : a.pick
+            ? "the " + a.topN + " highest digits all win <b>" + a.pick.label + "</b> on " + a.sym + " — that campaign is the one to trade."
+            : "the leaders split between the two campaigns, so neither is tradable yet.") +
+        " The " + a.topN + " highest of the last " + a.n + " ticks: <b>" + leaders + "</b> (a bar is red at ≥" + fmt(DIGIT_HOT_PCT, 1) + "%)." +
+        (a.ok
+          ? " <b style='color:var(--green)'>RULE CLEAR — one " + legLab + " contract at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
           : (a.locked && c.every)
-            ? "<b style='color:var(--amber)'>" + a.reasons.length + " rule" + (a.reasons.length === 1 ? "" : "s") + " closed, but the market is locked and every-tick is ON — it still buys " + a.side + " at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
-            : "<b style='color:var(--red)'>HOLDING — " + a.reasons.length + " rule" + (a.reasons.length === 1 ? "" : "s") + " closed.</b>");
-      if (gatesEl) gatesEl.innerHTML = a.gates.map(g =>
-        "<div class='eorow " + (g.ok ? "ok" : "no") + "'><span>" + (g.ok ? "✅" : "") + "</span><b>" + g.txt +
-        "</b><i>" + (g.ok ? g.have : g.why) + "</i></div>").join("");
+            ? " <b style='color:var(--amber)'>" + a.reasons.length + " condition" + (a.reasons.length === 1 ? "" : "s") +
+              " closed, but the campaign is locked and every-tick is ON — it still buys " + legLab +
+              " at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
+            : " <b style='color:var(--red)'>HOLDING — " + a.reasons.join(" + ") + ".</b>");
+      /* BOTH campaigns, main leg and recovery leg, exactly as the engine scored them this second */
+      if (gatesEl) gatesEl.innerHTML = a.cands.map(x => {
+        const leg = (k, l) => "<div class='eorow " + (l.ok ? "ok" : "no") + "'><span>" + (l.ok ? "✅" : "▫") + "</span><b>" +
+          k + " · " + l.label + " (" + l.rival + ") ×" + fmt(l.pay) + "</b><i>" + fmt(l.p, 1) + "% covered vs " +
+          fmt(l.be, 2) + "% break-even ⇒ EV " + fmtS(l.ev) + (l.ok ? "" : " · " + l.reasons.join(" + ")) + "</i></div>";
+        return "<div class='note' style='margin:8px 0 0'>" + (x.ok ? "✅ " : "▫ ") + "<b>" + x.fam + " campaign — " + x.label +
+          ", recovering at " + x.rec.label + "</b>" +
+          "<div style='margin-top:5px'>" + leg("MAIN", x.main) + leg("RECOVERY", x.rec) + "</div>" +
+          "<div class='sub' style='margin-top:5px'>" + x.why + "</div></div>";
+      }).join("");
     }
     let s = c.stake, total = 0, steps = 0;
     while (s <= (c.maxstake || Infinity) && steps <= c.steps + 1 && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
-    $("#b10_expo").innerHTML = "<b>Martingale ladder:</b> ×" + fmt(c.mult) + " after each loss, up to " + c.steps + " recovery steps (then resets). Worst-case exposure ≈ " + fmt(round2(total)) + " " + cur +
-      " before the step limit or stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + ") cuts it off. At ×" + fmt(SYN_PAY_EO) + " EVEN/ODD, ×" + fmt(c.mult) + " wins back only the first loss outright." +
+    const cpick = a ? b.candOf(a) : null;
+    const mainPay = cpick ? cpick.main.pay : ouPayOf(state.symbol, "DIGITOVER", c.ovMain);
+    const recPay = cpick ? cpick.rec.pay : ouPayOf(state.symbol, "DIGITOVER", c.ovRec);
+    $("#b10_expo").innerHTML = "<b>Martingale ladder:</b> ×" + fmt(c.mult) + " after each loss, up to " + c.steps +
+      " recovery steps (then it drops back to the MAIN barrier at base stake). Worst-case exposure ≈ " + fmt(round2(total)) + " " + cur +
+      " before the step limit or stake cap (" + (c.maxstake > 0 ? fmt(c.maxstake) : "off") + ") cuts it off." +
+      " The recovery barrier is the harder one on purpose: at ×" + fmt(recPay) + " there against ×" + fmt(mainPay) +
+      " on the main leg, a first-rung win (stake " + fmt(round2(c.stake * c.mult)) + ") nets " +
+      fmtS(round2(c.stake * (c.mult * (recPay - 1) - 1))) + " on the run. Deeper rungs are where the maths stops being friendly —" +
+      " the EV printed per leg above is the honest number, and a hard step limit is usually the cheaper protection." +
       (c.sl > 0 ? " Stop loss −" + fmt(c.sl) + " " + cur + " is an announcement level on this bot, not a stop — only take profit ends the run." : " <b style='color:var(--red)'>No stop loss is set.</b>") +
-      " <b>Only the target stops it:</b> take profit is measured on the <b>session P/L since you pressed START</b> (" + fmtS(b.limitPl()) + " " + cur + " right now) and ends the session for good — green win popup, amount spoken, and <b>nothing resumes it</b>: a new run needs a fresh START press. The stop-loss level and " + (winStreakStop() || 3) + " consecutive wins no longer halt the bot; it says the number once and keeps buying, so the ladder can climb past −" + fmt(c.sl) + " " + cur + ". <b>STOP</b>, a market switch or a logout are the other ways out." +
+      " <b>Only the target stops it:</b> take profit is measured on the <b>session P/L since you pressed START</b> (" + fmtS(b.limitPl()) + " " + cur + " right now) and ends the session for good — green win popup, amount spoken, and <b>nothing resumes it</b>: a new run needs a fresh START press. The stop-loss level no longer halts the bot; it says the number once and keeps buying the same campaign, so the ladder can climb past −" + fmt(c.sl) + " " + cur + ". <b>STOP</b>, a market switch or a logout are the other ways out." +
+      "<div class='sub' style='margin-top:6px'>Payouts are the <b>live quotes for " + state.symbol + "</b> taken with read-only proposals when the bot starts (nothing is bought to quote them); until the first answer lands the card shows the theoretical share for that barrier.</div>" +
       "<div class='warnstrip' style='margin-top:8px'>⚠ Each accepted cycle places a real order on account <b>" +
       ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") +
       "). Martingale amplifies losses quickly; keep the base stake small.</div>";
-  }
-  drawBotChart(b);
+  }  drawBotChart(b);
   renderLoadBotStatus();
 }
 function renderBots(){ BOTS.forEach(renderBot); }
@@ -8058,13 +8208,13 @@ function init(){
    "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
-   "b10_stake","b10_dur","b10_win","b10_every","b10_mult","b10_steps","b10_maxstake","b10_glo","b10_ghi","b10_attract","b10_amin","b10_amax","b10_compete","b10_gcap","b10_gapveto","b10_tp","b10_sl"]
+   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl"]
     .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
   /* the every-tick switch is a checkbox: re-render the card so its label shows the new mode at once */
   $("#b10_every").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b10_every").checked
-    ? "Bot 10 will buy EVERY TICK once it locks a market (the six rules still pick the first entry)"
-    : "Bot 10 is back to gated entries — it buys only when all six rules agree", "info", 7000); });
+    ? "Bot 10 will buy EVERY TICK once it locks a campaign (the RED-digit rule still picks the first entry)"
+    : "Bot 10 is back to gated entries — it buys only when the RED-digit rule clears a campaign", "info", 7000); });
   /* Bot 3 entry-rule switch — the card re-renders and says which rule names the direction now */
   $("#b3_entry").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b3_entry").value === "ai"
     ? "Bot 3 is on the 5-model AI ensemble — it names RISE or FALL every tick and buys that call"
