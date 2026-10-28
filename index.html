@@ -336,8 +336,8 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
    Declared AFTER .stats/.stat on purpose: the panel re-uses those tiles, it does not clone them. */
 .dbot{margin:10px 14px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
 .botcard.blkstyle .dbot{margin:0 0 10px;border-radius:0;border:none;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.dbar{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--panel2);border-bottom:1px solid var(--line);flex-wrap:wrap}
-.dbar .btn-big{padding:9px 18px;font-size:13px;flex:0 0 auto;min-width:96px}
+.drunbar{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--panel2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.drunbar .btn-big{padding:9px 18px;font-size:13px;flex:0 0 auto;min-width:96px}
 .dstrip{flex:1;min-width:170px;display:flex;align-items:center;gap:8px;background:#0d1016;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
 .dstripmsg{flex:1;min-width:0;font:600 11.5px var(--font);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dpill{display:none;flex:0 0 auto;font:800 11px var(--mono);padding:3px 10px;border-radius:12px;border:1px solid var(--line2);color:var(--dim)}
@@ -601,6 +601,127 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 .barrrow.dz{color:#ff9ba1}
 .barrrow.dz .fill{background:linear-gradient(90deg,rgba(255,68,79,.5),#ff5c66);box-shadow:0 0 10px rgba(255,68,79,.5)}
 .verdict{font-size:12.5px;color:#bfe9d6;text-align:center;max-width:600px}
+/* ============ Round 80 — MOBILE LAYOUT PASS. Two additive breakpoints only: ≤820px (small tablet /
+   landscape phone) and ≤560px (phone). Nothing here moves markup, ids or listeners, and above 820px
+   the desktop layout is byte-for-byte the layout that was already verified, so the whole pass is
+   inert on a monitor. The phone rules concentrate on the four things that were unusable on a 390px
+   screen: the header (it wrapped to three tall rows), the bot config grid (fields crushed to ~90px),
+   the Deriv run panel (RUN + strip + Reset fought for one line, and the 3-column transaction table
+   wrapped into unreadable stacks) and iOS zooming the page whenever a field was focused. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media (max-width:820px){
+  .wrap{padding:10px 10px 30px}
+  .hrow{padding:8px 10px;gap:8px 10px}
+  #symbolSelect,#acctSelect{min-width:0}
+  .panel{padding:12px}
+  .panel>h3{font-size:12.5px}
+  .tabpanel{padding-top:10px}
+  .tabbtn{padding:10px 13px;font-size:12.5px}
+  .cfg{grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px}
+  .dgrid{gap:6px}
+  /* Grid blow-out guard. A 1fr track is never narrower than its content's min-content width, so one
+     long monospace label inside a dashboard panel pushed the whole column to ~396px and the page
+     scrolled sideways on a 390px phone. min-width:0 lets the track shrink; the two side-by-side
+     blocks below it are then allowed to stack instead of forcing the row wider. */
+  .grid > *{min-width:0}
+  .panel{min-width:0}
+  .covs{gap:8px}
+  .covs > *{min-width:0}
+  .hotcold{flex-wrap:wrap;gap:8px}
+  .hotcold > *{min-width:0;flex:1 1 150px}
+  .spreads > *{min-width:0}
+  .mcard{width:min(560px,96vw);padding:16px}
+  #toasts{max-width:min(340px,calc(100vw - 24px))}
+}
+@media (max-width:560px){
+  /* ---------- header: as few sticky rows as possible, everything still reachable ---------- */
+  .hrow{padding:6px 8px;gap:6px 8px}
+  .logo{font-size:13px;gap:7px}
+  .logo .thin{display:none}
+  .logo .wave{font-size:15px}
+  .hsep{display:none}
+  .hfield{flex:1 1 132px;min-width:0;gap:5px}
+  .hfield label{font-size:9.5px;letter-spacing:.05em}
+  .hprice{flex:0 0 auto}
+  #hdrPrice{font-size:14px}
+  #hdrDelta{font-size:10px}
+  .conn{flex:0 0 auto;font-size:10.5px;gap:5px}
+  .acct{flex:1 1 100%;justify-content:space-between;gap:7px 8px;padding:5px 8px;flex-wrap:wrap}
+  #acctSelect{flex:1 1 90px;min-width:0}
+  .acct .bal{font-size:13px}
+  .acct .hfield label{white-space:normal}
+  #authBtn{margin-left:auto;padding:7px 12px;font-size:12px}
+  .connban{font-size:11px;padding:7px 10px}
+  /* the tab bar keeps sticking under the header — syncHdrOffset() already follows the wrapped height */
+  nav.tabs{gap:2px}
+  /* 8 tabs cannot fit 390px, so the strip scrolls sideways; the scrollbar is hidden site-wide, so a
+     soft fade on the right edge is the only clue that more tabs exist. Phone widths only. */
+  nav.tabs{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 26px),rgba(0,0,0,0) 100%);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 26px),rgba(0,0,0,0) 100%)}
+  .tabbtn{padding:10px 11px;font-size:12px}
+  /* ---------- bot cards + the Deriv run panel ---------- */
+  .botcard.blkstyle>h3{padding:9px 11px;font-size:12.5px}
+  .botcard.blkstyle .cfg{padding:10px 11px}
+  .botcard.blkstyle .runbar{padding:7px 11px}
+  .botcard.blkstyle .dbot{margin:0 0 8px}
+  .runbar{font-size:11px;padding:7px 10px;gap:8px}
+  .runbar .rmeta{gap:8px;font-size:10px}
+  .cfg{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .cfg label{font-size:9.5px}
+  .note{font-size:11.5px;padding:8px 10px}
+  .cmdspace{min-height:112px;font-size:10.5px;padding:8px}
+  .drunbar{padding:8px;gap:8px}
+  /* RUN/STOP takes the row, Reset rides beside it, the status strip drops to its own line below */
+  .drunbar .btn-big{flex:1 1 auto;min-width:0;padding:12px 14px;font-size:13.5px}
+  .dstrip{flex:1 1 100%;order:3;min-width:0;padding:6px 8px}
+  .dstripmsg{font-size:11px}
+  .dsub button{padding:11px 2px;font-size:11.5px}
+  .dpane{padding:8px 7px}
+  .dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dgrid .stat{padding:8px 6px}
+  .dgrid .stat .k{font-size:10.5px}
+  .dgrid .stat .v{font-size:14px}
+  .dgrid .stat.alt:last-child{grid-column:1/-1}
+  .dwhat{margin-left:3px;font-size:9px}
+  .drow{gap:6px}
+  .dhint{font-size:10.5px;flex:1 1 100%}
+  /* thumb-sized targets: the mini buttons were ~30px tall, which is hard to hit on a phone */
+  .btn-mini{padding:10px 14px;font-size:11.5px}
+  /* transactions: keep the three columns honest instead of letting them wrap into stacks */
+  .tbl th{font-size:9px;padding:5px 4px;letter-spacing:.04em}
+  .tbl td{padding:5px 4px;font-size:11.5px}
+  .dtx td{padding:8px 4px}
+  .dtx .dico{width:12px;font-size:11px}
+  .dtx .dlab{font-size:11px}
+  .dtx .dmeta{display:block;margin-left:0;font-size:9px}
+  .dtx .dspot{font-size:11px;gap:5px}
+  .dtx .dring{width:6px;height:6px;border-width:1.5px}
+  .dempty{padding:12px 4px;font-size:11.5px}
+  .djournal{max-height:210px}
+  .djournal .jrow{font-size:10.5px;gap:6px}
+  /* ---------- overlays ---------- */
+  .modal{padding:8px;align-items:flex-start;overflow:auto}
+  .mcard{width:100%;max-height:calc(100vh - 16px);padding:14px;border-radius:11px}
+  .mcard h2{font-size:15px;margin-bottom:10px}
+  .mfoot{gap:8px}
+  /* dialog buttons stretch and grow to a thumb-sized target */
+  .mfoot .btn{flex:1 1 auto;padding:11px 14px;font-size:13px}
+  /* toasts stay at the top as the trader asked, but under the sticky header + tabs, full width */
+  #toasts{left:8px;right:8px;top:calc(var(--hdrH,53px) + 44px);max-width:none}
+  .toast{font-size:12px;padding:9px 11px}
+  /* ---------- sync desk / rise-fall desk / signal tables ---------- */
+  .spreads{grid-template-columns:1fr 1fr;gap:2px 10px}
+  .spfoot{gap:8px}
+  .spfoot .hint{flex:1 1 100%;min-width:0}
+  .barrrow{grid-template-columns:60px 1fr 58px;gap:6px;font-size:10px}
+  .dzband{font-size:11px;gap:8px;padding:9px 11px}
+  .dzband .why{flex:1 1 100%;min-width:0}
+  .verdict{font-size:11.5px}
+  /* 16px on every field: below it iOS Safari zooms the whole page when a number box is focused and
+     does not zoom back out, which is what made the bot editors unusable on a phone. */
+  input,select,textarea{font-size:16px}
+  .cmdspace{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -7010,7 +7131,7 @@ function buildRunPanels(){
     wrap.className = "dbot";
     wrap.id = p + "_panel";
     wrap.innerHTML =
-      '<div class="dbar">' +
+      '<div class="drunbar">' +
         '<div class="dstrip"><span class="dstripmsg" id="' + p + '_strip">Idle — press RUN and this strip reports what the bot is doing.</span><span class="dpill" id="' + p + '_pill"></span></div>' +
         '<button class="btn btn-ghost btn-mini" id="' + p + '_reset" title="Clears this bot\u2019s Summary, Transactions and Journal, like Deriv Bot\u2019s Reset. Greyed out while the bot runs or an order is settling, so it can never hide a live trade.">Reset</button>' +
       '</div>' +
@@ -7036,7 +7157,7 @@ function buildRunPanels(){
         '<div class="djournal" id="' + p + '_journal"></div>' +
       '</div>';
     runbar.parentNode.insertBefore(wrap, runbar.nextSibling);
-    const bar = wrap.querySelector(".dbar");
+    const bar = wrap.querySelector(".drunbar");
     /* the real START/STOP button moves in — its click handler is on the node, so it travels with it */
     const tgl = $("#" + p + "_toggle");
     if (tgl){
