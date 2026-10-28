@@ -331,6 +331,57 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .stat .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim)}
 .stat .v{font:600 15px var(--mono);margin-top:2px}
+/* ============ Round 79 — Deriv Bot's own run panel (bot.deriv.com: Run/Stop bar + Summary |
+   Transactions | Journal + the six summary cells + Download / View Detail / Reset).
+   Declared AFTER .stats/.stat on purpose: the panel re-uses those tiles, it does not clone them. */
+.dbot{margin:10px 14px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+.botcard.blkstyle .dbot{margin:0 0 10px;border-radius:0;border:none;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.dbar{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--panel2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.dbar .btn-big{padding:9px 18px;font-size:13px;flex:0 0 auto;min-width:96px}
+.dstrip{flex:1;min-width:170px;display:flex;align-items:center;gap:8px;background:#0d1016;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.dstripmsg{flex:1;min-width:0;font:600 11.5px var(--font);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dpill{display:none;flex:0 0 auto;font:800 11px var(--mono);padding:3px 10px;border-radius:12px;border:1px solid var(--line2);color:var(--dim)}
+.dpill.on{display:inline-block}
+.dpill.w{background:var(--green-soft);border-color:rgba(0,192,118,.45);color:var(--green)}
+.dpill.l{background:var(--red-soft);border-color:rgba(255,68,79,.45);color:var(--red)}
+.dsub{display:flex;border-bottom:1px solid var(--line);background:var(--panel)}
+.dsub button{flex:1;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);font:600 12px var(--font);padding:9px 6px;cursor:pointer}
+.dsub button:hover{color:var(--text)}
+.dsub button.on{color:var(--text);font-weight:800;border-bottom-color:var(--dv)}
+.dpane{display:none;padding:10px}
+.dpane.on{display:block}
+.dgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 8px}
+.dgrid .stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 8px;text-align:center}
+.dgrid .stat .k{font:700 11px var(--font);letter-spacing:.01em;text-transform:none;color:var(--text)}
+.dgrid .stat .v{font:700 15px var(--mono);margin-top:4px;color:var(--muted)}
+.dgrid .stat .v.up{color:var(--green)}
+.dgrid .stat .v.down{color:var(--red)}
+.dgrid .stat.alt{background:transparent;border:1px dashed var(--line);padding:6px 8px}
+.dgrid .stat.alt .k{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.dgrid .stat.alt .v{font-size:12.5px;font-weight:600}
+.dwhat{margin-left:5px;font:600 9.5px var(--font);color:var(--dim);text-decoration:underline dotted;cursor:help}
+.drow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.dbot .btn.on{border-color:var(--dv);color:var(--dv-hi);background:var(--dv-soft)}
+.dhint{font-size:11px;color:var(--dim)}
+.dtx td{padding:8px 7px;vertical-align:top}
+.dico{display:inline-block;width:15px;font:800 12px var(--mono)}
+.dico.up,.dico.ov{color:var(--green)}
+.dico.dn,.dico.un{color:var(--red)}
+.dico.par,.dico.mat{color:var(--dv-hi)}
+.dlab{font:700 12px var(--mono);color:var(--text)}
+.dmeta{font:600 10px var(--mono);color:var(--dim);margin-left:6px}
+.dspot{display:flex;align-items:center;gap:7px;font:600 12px var(--mono);color:var(--text);line-height:1.6}
+.dspot.x{color:var(--muted)}
+.dring{width:7px;height:7px;border-radius:50%;border:2px solid var(--red);flex:0 0 auto}
+.dspot.x .dring{border-color:var(--dim)}
+.dempty{padding:14px 6px;color:var(--dim);font-family:var(--font);font-size:12px}
+.dfull{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.djournal{max-height:250px;overflow:auto}
+.djournal .jrow{display:flex;gap:9px;padding:4px 2px;border-bottom:1px dashed var(--line);font:11.5px var(--mono)}
+.djournal .jt{color:var(--dim);flex:0 0 auto}
+.djournal .jm{color:var(--muted);word-break:break-word;font-family:var(--font)}
+.djournal .jrow.w .jm{color:var(--green)}
+.djournal .jrow.l .jm{color:var(--red)}
 .chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
 .rchip{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:800 10.5px var(--mono)}
 .rchip.w{background:var(--green-soft);color:var(--green);border:1px solid rgba(0,192,118,.4)}
@@ -6880,11 +6931,227 @@ function showResultModal(bot, kind, pl){
   $("#resultModal").classList.remove("hidden");
 }
 function hideResultModal(){ $("#resultModal").classList.add("hidden"); }
+/* ================= Round 79 — every bot's run area, laid out like Deriv Bot's own runner =========
+   The reference is bot.deriv.com: a Run/Stop button with a status strip and a Won/Lost badge, Reset
+   beside it, then Summary | Transactions | Journal tabs, the six summary cells (Total stake ·
+   Total payout · No. of runs · Contracts lost · Contracts won · Total profit/loss, the last carrying
+   their "What's this?"), Download + View Detail over a Type | Entry/Exit spot | Buy price and P/L
+   table, and a journal of everything the bot logged.
+   NOTHING in here decides a trade. The panel is built by MOVING the elements each card already had —
+   the START/STOP button, the stat tiles, the W/L chips, the P/L chart and the trades table — into
+   Deriv's arrangement, so every id, listener, setting and renderBot write keeps working untouched
+   (Round 74's rule: reparent, don't duplicate). One figure is genuinely new: Total payout, which
+   their Summary shows and our tiles never totalled.                                            */
+const DBOT_UI = {};                       // per-bot view state only: { pane, detail }
+const DBOT_RUNS_HELP = "No. of runs is how many times this bot has completed a full contract cycle since its panel was last reset — one run is one contract bought and settled. Deriv Bot counts them the same way.";
+function dbotEsc(s){ return String(s === undefined || s === null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function dbotCur(){ return (state.account && state.account.currency) || "USD"; }
+function dbotIco(type){
+  const t = String(type || "");
+  if (/^(CALL|RISE)/.test(t)) return { g: "▲", c: "up" };
+  if (/^(PUT|FALL)/.test(t)) return { g: "▼", c: "dn" };
+  if (/OVER/.test(t)) return { g: "▲", c: "ov" };
+  if (/UNDER/.test(t)) return { g: "▼", c: "un" };
+  if (/EVEN|ODD/.test(t)) return { g: "=", c: "par" };
+  if (/MATCH|DIFF/.test(t)) return { g: "◎", c: "mat" };
+  return { g: "•", c: "" };
+}
+function dbotLabel(type){ return String(type || "—").replace(/_/g, " "); }
+/* their Journal is one line per event — merge what the bot logged with what it settled */
+function dbotJournal(b){
+  const rows = (b.syslog || []).map(s => ({ t: s.t, msg: s.msg, cls: "" }));
+  (b.results || []).forEach(r => rows.push({ t: r.t, cls: r.won ? "w" : "l",
+    msg: "Contract closed — " + dbotLabel(r.type) + (r.virtual ? " (virtual)" : "") + " · " +
+         (r.won ? "WON " : "LOST ") + fmtS(r.profit) + " " + dbotCur() + (r.exit ? " · exit " + r.exit : "") }));
+  rows.sort((x, y) => y.t - x.t);
+  return rows.slice(0, 40);
+}
+function dbotCsv(b){
+  const rows = [["time", "type", "entry_spot", "exit_spot", "buy_price", "payout", "result", "profit", "currency"]];
+  (b.results || []).forEach(r => rows.push([new Date(r.t).toISOString(), r.type, r.entry, r.exit, r.stake,
+    r.won ? r.payout : 0, r.won ? "WON" : "LOST", r.profit, dbotCur()]));
+  return rows.map(r => r.map(x => '"' + String(x === undefined || x === null ? "" : x).replace(/"/g, '""') + '"').join(",")).join("\n");
+}
+function dbotDownload(b){
+  if (!(b.results || []).length){ toast("Nothing to download yet — " + b.name + " has not settled a contract", "info"); return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([dbotCsv(b)], { type: "text/csv" }));
+  a.download = b.id + "-transactions.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(b.results.length + " transaction(s) downloaded for " + b.name, "ok");
+}
+/* Deriv's Reset is greyed out while a bot runs — same rule here, and it never touches Deriv */
+async function dbotReset(b){
+  if (b.running || b.busy || b.restartAt){ toast("Reset is disabled while " + b.name + " is running or an order is settling", "warn"); return; }
+  const n = (b.results || []).length;
+  const ok = await confirmDialog("RESET " + b.name.toUpperCase(),
+    "Clears this bot's <b>Summary</b> (total stake, total payout, runs, wins, losses, profit/loss), its " +
+    "<b>" + n + "</b> transaction" + (n === 1 ? "" : "s") + " and its <b>Journal</b> — the same thing Deriv Bot's Reset does." +
+    "<div class='warnstrip' style='margin:10px 0 0'>Nothing on Deriv is touched: no contract is bought, sold or cancelled and your balance stays where it is. The <b>Activity Log</b> keeps its own copy of every trade. The take-profit target starts counting again from 0.</div>",
+    "RESET PANEL");
+  if (!ok) return;
+  b.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 };
+  b.results = []; b.syslog = []; b.runEquity = [0]; b.winStreak = 0; b.streakHeld = false;
+  b.startPl = 0; b.sessionPl = 0;
+  b.sys("Run panel reset — summary, transactions and journal cleared");
+  renderBot(b); drawBotChart(b);
+  toast(b.name + "'s panel is back to zero — the bot is still stopped and nothing was bought", "info");
+}
+function buildRunPanels(){
+  if (window.__dbotBuilt) return;
+  window.__dbotBuilt = true;
+  BOTS.forEach(b => {
+    const p = b.id;
+    const card = $("#card_" + p), runbar = $("#" + p + "_runbar");
+    if (!card || !runbar || $("#" + p + "_panel")) return;
+    DBOT_UI[p] = { pane: "summary", detail: false };
+    const wrap = document.createElement("div");
+    wrap.className = "dbot";
+    wrap.id = p + "_panel";
+    wrap.innerHTML =
+      '<div class="dbar">' +
+        '<div class="dstrip"><span class="dstripmsg" id="' + p + '_strip">Idle — press RUN and this strip reports what the bot is doing.</span><span class="dpill" id="' + p + '_pill"></span></div>' +
+        '<button class="btn btn-ghost btn-mini" id="' + p + '_reset" title="Clears this bot\u2019s Summary, Transactions and Journal, like Deriv Bot\u2019s Reset. Greyed out while the bot runs or an order is settling, so it can never hide a live trade.">Reset</button>' +
+      '</div>' +
+      '<div class="dsub">' +
+        '<button data-pane="summary" class="on">Summary</button>' +
+        '<button data-pane="tx">Transactions</button>' +
+        '<button data-pane="journal">Journal</button>' +
+      '</div>' +
+      '<div class="dpane on" data-pane="summary">' +
+        '<div class="dgrid-slot"></div><div class="dchips-slot"></div><div class="dchart-slot"></div>' +
+      '</div>' +
+      '<div class="dpane" data-pane="tx">' +
+        '<div class="drow">' +
+          '<button class="btn btn-ghost btn-mini" id="' + p + '_dl" title="Download this bot\u2019s settled contracts as a CSV file">Download</button>' +
+          '<button class="btn btn-ghost btn-mini" id="' + p + '_detail" title="Show the full columns too — time, buy price, payout, result, exit and P/L, one row per contract">View Detail</button>' +
+          '<span class="dhint" id="' + p + '_txhint"></span>' +
+        '</div>' +
+        '<div class="scrollx"><table class="tbl dtx"><thead><tr><th>Type</th><th>Entry/Exit spot</th><th>Buy price and P/L</th></tr></thead><tbody id="' + p + '_tx"></tbody></table></div>' +
+        '<div class="dfull" id="' + p + '_full" style="display:none"></div>' +
+      '</div>' +
+      '<div class="dpane" data-pane="journal">' +
+        '<div class="drow"><span class="dhint">Every message this bot logs — entries, holds, locks, resets and errors — newest first, like Deriv Bot\u2019s Journal.</span></div>' +
+        '<div class="djournal" id="' + p + '_journal"></div>' +
+      '</div>';
+    runbar.parentNode.insertBefore(wrap, runbar.nextSibling);
+    const bar = wrap.querySelector(".dbar");
+    /* the real START/STOP button moves in — its click handler is on the node, so it travels with it */
+    const tgl = $("#" + p + "_toggle");
+    if (tgl){
+      bar.insertBefore(tgl, bar.firstChild);
+      /* the markup's first paint reads START/blue; Deriv's bar is RUN/green until renderBot agrees */
+      if (!b.running){ tgl.textContent = "▶ RUN"; tgl.className = "btn btn-big btn-green"; }
+    }
+    /* the existing stat tiles BECOME Deriv's summary grid: relabelled, reordered, one new cell */
+    const tradesEl = $("#" + p + "_trades");
+    const grid = tradesEl && tradesEl.closest ? tradesEl.closest(".stats") : null;
+    if (grid){
+      grid.classList.add("dgrid");
+      const tiles = {};
+      Array.from(grid.querySelectorAll(".stat")).forEach(t => {
+        const v = t.querySelector(".v");
+        if (v && v.id && v.id.indexOf(p + "_") === 0) tiles[v.id.slice(p.length + 1)] = t;
+      });
+      if (!tiles.paid){
+        const cell = document.createElement("div");
+        cell.className = "stat";
+        cell.innerHTML = '<div class="k">Total payout</div><div class="v" id="' + p + '_paid">0.00</div>';
+        grid.appendChild(cell);
+        tiles.paid = cell;
+      }
+      const LABELS = { staked: "Total stake", paid: "Total payout", trades: "No. of runs", losses: "Contracts lost",
+        wins: "Contracts won", pl: "Total profit/loss", wr: "Win rate", next: "Next stake", roi: "ROI" };
+      const ORDER = ["staked", "paid", "trades", "losses", "wins", "pl", "wr", "next", "roi"];
+      ORDER.concat(Object.keys(tiles).filter(k => ORDER.indexOf(k) < 0)).forEach(k => {
+        const t = tiles[k];
+        if (!t) return;
+        const key = t.querySelector(".k");
+        if (key) key.textContent = LABELS[k] || k;
+        t.classList.toggle("alt", k === "wr" || k === "next" || k === "roi");
+        if (key && k === "trades" && !key.querySelector(".dwhat")){
+          const w = document.createElement("span");
+          w.className = "dwhat"; w.title = DBOT_RUNS_HELP; w.textContent = "What's this?";
+          key.appendChild(w);
+        }
+        grid.appendChild(t);                       // appendChild MOVES it, which is the reordering
+      });
+      wrap.querySelector(".dgrid-slot").appendChild(grid);
+    }
+    const chips = $("#" + p + "_chips");
+    if (chips) wrap.querySelector(".dchips-slot").appendChild(chips);
+    const cv = $("#" + p + "_chart"), chartwrap = cv && cv.closest ? cv.closest(".chartwrap") : null;
+    if (chartwrap) wrap.querySelector(".dchart-slot").appendChild(chartwrap);
+    const recent = $("#" + p + "_recent"), full = recent && recent.closest ? recent.closest(".scrollx") : null;
+    if (full) $("#" + p + "_full").appendChild(full);
+    /* the three sub-tabs */
+    Array.from(wrap.querySelectorAll(".dsub button")).forEach(btn => btn.addEventListener("click", () => {
+      const pane = btn.dataset.pane;
+      DBOT_UI[p].pane = pane;
+      Array.from(wrap.querySelectorAll(".dsub button")).forEach(x => x.classList.toggle("on", x === btn));
+      Array.from(wrap.querySelectorAll(".dpane")).forEach(x => x.classList.toggle("on", x.dataset.pane === pane));
+      if (pane === "summary") drawBotChart(b);     // the canvas has no width while its pane is hidden
+    }));
+    $("#" + p + "_dl").addEventListener("click", () => dbotDownload(b));
+    $("#" + p + "_reset").addEventListener("click", () => dbotReset(b));
+    $("#" + p + "_detail").addEventListener("click", () => {
+      const ui = DBOT_UI[p];
+      ui.detail = !ui.detail;
+      $("#" + p + "_full").style.display = ui.detail ? "" : "none";
+      $("#" + p + "_detail").classList.toggle("on", ui.detail);
+      renderDbot(b);
+    });
+    if (grid) grid.addEventListener("click", e => { if (e.target.closest(".dwhat")) toast(DBOT_RUNS_HELP, "info", 7000); });
+  });
+}
+/* Paints the panel from bot state. Read-only: it never calls start/stop/plan. */
+function renderDbot(b){
+  const p = b.id;
+  const tx = $("#" + p + "_tx");
+  if (!tx) return;                                  // panel not built for this card
+  const ui = DBOT_UI[p] || (DBOT_UI[p] = { pane: "summary", detail: false });
+  const cur = dbotCur(), n = (b.results || []).length;
+  const paid = $("#" + p + "_paid"); if (paid) paid.textContent = fmt(b.stats.paid || 0);
+  const rows = (b.results || []).slice(-15).reverse();
+  tx.innerHTML = rows.length ? rows.map(r => {
+    const ic = dbotIco(r.type);
+    const dg = r.digit && r.digit !== "—" && !/^(CALL|PUT|RISE|FALL)/.test(r.type) ? " · digit " + r.digit : "";
+    return "<tr>" +
+      "<td><span class='dico " + ic.c + "'>" + ic.g + "</span> <span class='dlab'>" + dbotLabel(r.type) + "</span>" +
+        (r.virtual ? "<span class='dmeta'>VIRTUAL</span>" : "") + "</td>" +
+      "<td><div class='dspot'><i class='dring'></i>" + (r.entry === undefined || r.entry === null ? "—" : r.entry) + "</div>" +
+        "<div class='dspot x'><i class='dring'></i>" + (r.exit === undefined || r.exit === null ? "—" : r.exit) + dg + "</div></td>" +
+      "<td><div>" + fmt(r.stake) + " " + cur + "</div><div class='" + (r.profit >= 0 ? "up" : "down") + "'>" + fmtS(r.profit) + " " + cur + "</div></td>" +
+      "</tr>";
+  }).join("") : "<tr><td colspan='3' class='dempty'>No transactions yet — press RUN and every contract this bot buys lands here with its entry and exit spot, buy price and P/L.</td></tr>";
+  const jrows = dbotJournal(b);
+  const jr = $("#" + p + "_journal");
+  if (jr) jr.innerHTML = jrows.length ? jrows.map(r =>
+    "<div class='jrow " + r.cls + "'><span class='jt'>" + new Date(r.t).toLocaleTimeString() + "</span><span class='jm'>" + dbotEsc(r.msg) + "</span></div>").join("")
+    : "<div class='dempty'>Nothing logged yet — the bot writes here as it reads the market, locks a campaign, buys and settles.</div>";
+  const strip = $("#" + p + "_strip");
+  if (strip){
+    const msg = jrows.length ? jrows[0].msg
+      : (b.running ? "Bot is running — waiting for the first contract" : "Idle — press RUN and this strip reports what the bot is doing.");
+    strip.textContent = msg; strip.title = msg;
+  }
+  const pill = $("#" + p + "_pill");
+  if (pill){
+    const lr = n ? b.results[b.results.length - 1] : null;
+    pill.className = "dpill" + (lr ? " on " + (lr.won ? "w" : "l") : "");
+    pill.textContent = lr ? (lr.won ? "Won ✓" : "Lost ✕") : "";
+  }
+  const hint = $("#" + p + "_txhint");
+  if (hint) hint.textContent = n + " transaction" + (n === 1 ? "" : "s") + " in this panel" + (ui.detail ? " · full detail shown" : "") + (n > 15 ? " (newest 15 listed, Download takes all " + n + ")" : "");
+  const dl = $("#" + p + "_dl"); if (dl) dl.disabled = !n;
+  const rs = $("#" + p + "_reset"); if (rs) rs.disabled = !!(b.running || b.busy || b.restartAt);
+}
 function renderBot(b){
   const p = b.id;
   const tgl = $("#" + p + "_toggle");
-  tgl.textContent = b.running ? "STOP" : "START";
-  tgl.className = "btn btn-big " + (b.running ? "btn-red" : "btn-blue");   // Round 75: Deriv's RUN is brand blue
+  tgl.textContent = b.running ? "■ STOP" : "▶ RUN";
+  tgl.className = "btn btn-big " + (b.running ? "btn-red" : "btn-green");   // Round 79: Deriv Bot's bar — green RUN, red STOP
   const pv = b.preview();
   const mb = $("#" + p + "_mode");
   mb.textContent = pv.label; mb.className = "mode-badge " + pv.cls;
@@ -6927,6 +7194,7 @@ function renderBot(b){
       "<span>NET P/L <b class='" + (b.stats.pl >= 0 ? "up" : "down") + "'>" + fmtS(b.stats.pl) + " " + cur + "</b></span>" +
       (lc.tp > 0 || lc.sl > 0 ? "<span>TP / SL <b>" + (lc.tp > 0 ? "+" + fmt(lc.tp) : "off") + " · " + (lc.sl > 0 ? "−" + fmt(lc.sl) : "off") + "</b></span>" : "");
   }
+  renderDbot(b);   // Round 79 — Deriv Bot's Summary / Transactions / Journal panel under that strip
   $("#" + p + "_chips").innerHTML = b.results.slice(-24).map(r =>
     "<span class='rchip " + (r.won ? "w" : "l") + "' title='" + r.type + " · " + fmtS(r.profit) + "'>" + (r.won ? "W" : "L") + "</span>").join("");
   /* Trade information, in Deriv's columns: buy price, payout, result and the exit it settled on. */
@@ -8176,6 +8444,10 @@ function showTab(name){
   if (b) b.click();
 }
 function init(){
+  /* Round 79 — every bot card gets Deriv Bot's own run panel (Run/Stop bar + Summary | Transactions |
+     Journal). Built before anything renders, and it only MOVES elements the cards already had, so no
+     id, listener or stored setting is duplicated anywhere.                              */
+  buildRunPanels();
   // tabs
   $$(".tabbtn").forEach(b => b.addEventListener("click", () => {
     const nav = b.closest("nav.tabs");
