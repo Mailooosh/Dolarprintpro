@@ -684,7 +684,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <h3>BOT 10 · Over/Under Strategy <span class="mode"><span class="mode-badge mode-wait" id="b10_mode">IDLE · STRATEGY</span></span></h3>
       <div style="margin:4px 0 14px;display:flex;align-items:center;gap:10px">
         <button class="btn btn-blue btn-big" id="eoTradeBtn">TRADE AI NOW</button>
-        <span class="sub" id="eoScanStatus" style="flex:1">AI CORE STANDBY · press TRADE AI NOW and the robot face reads every volatility market once, finds the one whose RED digits name an OVER or UNDER campaign, moves the desk there and starts Bot 10 on it.</span>
+        <span class="sub" id="eoScanStatus" style="flex:1">AI CORE STANDBY · press TRADE AI NOW and the robot face reads every volatility market once, finds the one the <b>AI Signal Center</b> is signalling an OVER or UNDER campaign on, moves the desk there and starts Bot 10 on it.</span>
       </div>
       <div class="scanwrap" id="eoScanwrap" style="display:none">
         <div class="robotface">
@@ -701,7 +701,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="runbar" id="b10_runbar"><span class="rdot"></span><span class="rstate" id="b10_state">Bot stopped</span><span class="rmeta" id="b10_runmeta"></span></div>
       <div class="botrun">
         <button class="btn btn-blue btn-big" id="b10_toggle">START</button>
-        <span class="sub" id="b10_sub">Reads the last 100 ticks of the market in the header, ranks the ten digits by percentage and takes the <b>3 highest</b> — exactly like the AI Signal Center. <b>Two campaigns are scored:</b> OVER 3, which recovers at OVER 4, and UNDER 7, which recovers at UNDER 6. A campaign is ready only when its RED leaders all win that side, the rival side holds no RED digit of its own and the winning side covers more of the window. <b>It picks one campaign and stays on it:</b> the first entry locks OVER or UNDER for the whole session, so it never flips mid-run. <b>Buy every tick after lock</b> is on by default: the heat rule decides only that FIRST entry, and from then on the bot buys the locked campaign <b>every tick</b> — untick it on the card if you want every entry gated again. <b>The recovery rung is always the harder barrier:</b> a loss moves you to OVER 4 / UNDER 6, which pays more, and the first win returns you to the main barrier. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press and then chooses a new campaign from scratch. The stop-loss level no longer halts the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out.</span>
+        <span class="sub" id="b10_sub"><b>Your rule of 27 Oct — this bot trades the AI Signal Center's signals.</b> Every second it asks the center what it is calling on the market in the header, using the center's own read (the <b>3 highest digits of its last 100 ticks</b>, all <b>RED bars</b>) and taking the <b>OVER / UNDER</b> row of that same table — including a signal already sitting on the Signal card. An <b>EVEN/ODD</b> call, or no call, means <b>HOLD</b>. The side it names becomes the campaign: <b>OVER 3 recovering at OVER 4</b>, or <b>UNDER 7 recovering at UNDER 6</b> — your barriers, stakes and ladder stay on this card. The center measures UNDER at <b>UNDER 6</b> (digits 0–5) and this card buys <b>UNDER 7</b>, which covers every one of them. <b>It picks one campaign and stays on it:</b> the first entry locks OVER or UNDER for the whole session, so it never flips mid-run. <b>Buy every tick after lock</b> is on by default: the signal decides only that FIRST entry, and from then on the bot buys the locked campaign <b>every tick</b> — untick it if you want every entry gated again. <b>The recovery rung is always the harder barrier:</b> a loss moves you to OVER 4 / UNDER 6, which pays more, and the first win returns you to the main barrier. <b>Only take profit ends it:</b> reaching your TP stops the session for good with the green win popup and the amount spoken — nothing resumes it, a new run needs a fresh START press and then chooses a new campaign from scratch. The stop-loss level no longer halts the bot at all: it says the number once and keeps trading. STOP, a market switch or a logout are the other ways out. Prefer the old behaviour? Set <b>Signal source</b> to <b>this card's own RED-digit read</b> and the bot runs the Round 77 competition on this card's own window instead.</span>
       </div>
       <div class="cfg">
         <label>Stake<input type="number" id="b10_stake" value="1.00" min="0.35" step="0.05" title="Base stake — multiplied by ×2.1 after each loss up to the recovery-step limit"></label>
@@ -712,6 +712,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
         <label>Window (ticks)<input type="number" id="b10_win" value="100" min="30" max="200" step="10" title="How many recent ticks the digit heat is measured over (default 100, like the AI Signal Center)"></label>
         <label>Leaders counted<input type="number" id="b10_top" value="3" min="3" max="4" step="1" title="How many of the highest-percentage digits must all be RED and all win the campaign side (3 = the AI Signal Center's own rule, 4 = stricter)"></label>
         <label>Buy every tick after lock<input type="checkbox" id="b10_every" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="ONCE the session is locked on a campaign, buy EVERY TICK on it instead of waiting for the heat rule to agree again. The rule still picks the FIRST entry — that is what decides OVER or UNDER — after that the bot only stops when it hits TP, when the recovery-step limit or stake cap cuts the ladder, or when you press STOP. Untick it to go back to gated entries only"></label>
+        <label>Signal source<select id="b10_src" title="Round 78 (your rule): where the OVER/UNDER side comes from. AI Signal Center = this bot buys the SAME signal the Signal card pops — its 100-tick read, its 3 highest RED digits, its OVER 3 / UNDER 6 rows, including a signal already sitting on the card; no center call (or an EVEN/ODD one) means HOLD. This card's own read = the Round 77 behaviour: the campaign competition run on THIS card's window and leaders. The barriers, stakes and ladder on this card stay yours either way"><option value="signal" selected>AI Signal Center signal</option><option value="own">this card's own RED-digit read</option></select></label>
         <label>Over · main barrier<input type="number" id="b10_ovmain" value="3" min="0" max="8" step="1" title="Main OVER campaign: win when the closing digit is above this (digits 4-9 for the default 3)"></label>
         <label>Over · recovery barrier<input type="number" id="b10_ovrec" value="4" min="1" max="8" step="1" title="Recovery rung after a loss. Always forced HARDER than the main barrier (at least main + 1), so the payout climbs to cover the ladder — OVER 4 needs digits 5-9"></label>
         <label>Under · main barrier<input type="number" id="b10_unmain" value="7" min="1" max="9" step="1" title="Main UNDER campaign: win when the closing digit is below this (digits 0-6 for the default 7)"></label>
@@ -735,7 +736,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
-      <div class="note"><b>Strategy (your rule of 27 Oct — the AI Signal Center's read, now run as a trade):</b> the Even/Odd bot is gone from this desk. It plays two <b>over/under campaigns</b> — <b>OVER 3, recovering at OVER 4</b>, and <b>UNDER 7, recovering at UNDER 6</b> — and chooses between them exactly the way the dashboard's signal center chooses a signal: over the last <b>100 ticks</b> the <b>3 highest-percentage digits</b> must all be <b>RED bars (≥11.5% — what the dashboard paints red)</b>, they must <b>all win</b> the side being bought, the other side must hold <b>no RED digit of its own</b>, and the bought side must <b>cover more of the window</b> than the rival. Whichever campaign answers yes with the better expected value is traded; if neither does, the bot holds.<br><b>ONE campaign per session:</b> the family of the <b>first entry</b> — OVER or UNDER — is LOCKED for the rest of the run. The bot does not hop to the other side because the hottest digit moved: it re-reads the same campaign every second and, with <b>Buy every tick after lock</b> on (your rule, on by default), keeps buying it <b>every tick</b> until TP. Untick the box to gate every entry again.<br><b>The recovery rung is always the harder barrier:</b> a win stays on the main barrier at base stake; a loss moves to <b>OVER 4</b> (needs digits 5–9) or <b>UNDER 6</b> (needs 0–5) with the stake multiplied ×2.1 per consecutive loss, cut off by the recovery-step limit or the stake cap and then back to main at base. The recovery barrier is forced harder than the main one on the card for exactly that reason — its payout is bigger, so one win can cover the run. <b>Every tick means the ladder moves fast:</b> four straight losses reach the top step in four seconds.<br><b>How often it opens:</b> 20,000 random 100-tick windows through the same algorithm the bot runs — OVER 3 clears on <b>8.7%</b>, UNDER 7 on <b>16.9%</b>, at least one of them on <b>25.2%</b> (both on 0.4%). Real tick streams are lumpier than random ones, so read it as the order of magnitude: the bot does reach entry often (the six-rule stack it replaces opened on 7.6%).<br><b>Honesty:</b> this is a timing filter, not an edge. At this terminal's measured hold (a payout ≈ <b>0.93×</b> of the fair share) OVER 3 quotes ≈ <b>1.55×</b> and needs <b>64.5%</b> of ticks in 4–9, UNDER 7 ≈ <b>1.33×</b> and needs <b>75.2%</b> in 0–6, while their fair shares are 60% and 70% — so on a flat market all four barriers are worth about <b>−0.07 per 1.00</b> staked. The card quotes the <b>real payout for your market with read-only proposals</b> (nothing is bought to quote) and shows each barrier's measured share against its break-even; where a quote is missing it falls back to the theoretical number, which is labelled as such. No gate here lifts that −7% — they decide WHEN a contract is bought, not whether it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> is an announcement only — the AI says the number once and the bot keeps buying the same campaign, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
+      <div class="note"><b>Strategy (your rules of 27 Oct — the AI Signal Center's signals, traded as a bot):</b> the Even/Odd bot is gone from this desk. It plays two <b>over/under campaigns</b> — <b>OVER 3, recovering at OVER 4</b>, and <b>UNDER 7, recovering at UNDER 6</b>. Your second rule of 27 Oct is on this card: <b>the side it buys comes from the AI Signal Center itself</b>, not from a second opinion computed here. Once a second the bot runs the center's own rule on the market in the header — over its <b>100 ticks</b> the <b>3 highest-percentage digits</b> must all be <b>RED bars (≥11.5%)</b> and all sit in one group — and takes the <b>OVER 3 / UNDER 6</b> row of that table, including a signal the center has already popped and is holding on its card. So: center says <b>OVER</b> → Bot 10 buys its OVER campaign; center says <b>UNDER</b> → it buys its UNDER campaign; center says <b>EVEN/ODD</b> or nothing → it <b>holds</b>. The center calls UNDER at <b>UNDER 6</b> (digits 0–5) while this card's campaign is <b>UNDER 7</b> (digits 0–6) — every digit 0–5 wins UNDER 7 as well, so a center UNDER signal always covers the buy. <b>Signal source</b> on this card switches back to the Round 77 behaviour (<b>this card's own RED-digit competition</b> over its own window and leaders) whenever you want the bot to read for itself.<br><b>The campaign numbers below are still scored on the card either way</b> — coverage, break-even, live payout and EV for both campaigns and both rungs — so you can see what the signalled side is actually worth before it buys.<br><b>ONE campaign per session:</b> the family of the <b>first entry</b> — OVER or UNDER — is LOCKED for the rest of the run. The bot does not hop to the other side because the hottest digit moved: it re-reads the same campaign every second and, with <b>Buy every tick after lock</b> on (your rule, on by default), keeps buying it <b>every tick</b> until TP. Untick the box to gate every entry again.<br><b>The recovery rung is always the harder barrier:</b> a win stays on the main barrier at base stake; a loss moves to <b>OVER 4</b> (needs digits 5–9) or <b>UNDER 6</b> (needs 0–5) with the stake multiplied ×2.1 per consecutive loss, cut off by the recovery-step limit or the stake cap and then back to main at base. The recovery barrier is forced harder than the main one on the card for exactly that reason — its payout is bigger, so one win can cover the run. <b>Every tick means the ladder moves fast:</b> four straight losses reach the top step in four seconds.<br><b>How often it opens:</b> those numbers are the <b>own-read</b> rule — 20,000 random 100-tick windows through the campaign competition this card runs when "this card's own RED-digit read" is selected: OVER 3 clears on <b>8.7%</b>, UNDER 7 on <b>16.9%</b>, at least one of them on <b>25.2%</b> (both on 0.4%). On the <b>AI Signal Center</b> source the entry is the center's own call, which is <b>stricter</b> — it demands all 3 leaders in one group at its own 100-tick window, and its UNDER row is measured at <b>UNDER 6</b> rather than your UNDER 7 — so expect <b>fewer, not more</b> first entries; with <b>Buy every tick after lock</b> on, the ones it does take then run every tick until TP. Real tick streams are lumpier than random ones, so read all of it as the order of magnitude.<br><b>Honesty:</b> this is a timing filter, not an edge. At this terminal's measured hold (a payout ≈ <b>0.93×</b> of the fair share) OVER 3 quotes ≈ <b>1.55×</b> and needs <b>64.5%</b> of ticks in 4–9, UNDER 7 ≈ <b>1.33×</b> and needs <b>75.2%</b> in 0–6, while their fair shares are 60% and 70% — so on a flat market all four barriers are worth about <b>−0.07 per 1.00</b> staked. The card quotes the <b>real payout for your market with read-only proposals</b> (nothing is bought to quote) and shows each barrier's measured share against its break-even; where a quote is missing it falls back to the theoretical number, which is labelled as such. No gate here lifts that −7% — they decide WHEN a contract is bought, not whether it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> is an announcement only — the AI says the number once and the bot keeps buying the same campaign, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
     </div>
   </div>
 </section>
@@ -2167,9 +2168,15 @@ function digitHeatOf(src, win, topN){
   };
 }
 function digitHeat(win){ return digitHeatOf(state.digits, win); }
-function digitSignalPlanFor(digs){
+/* Round 78: the AI Signal Center's candidate table, exposed in full so Bot 10 can trade IT.
+   digitSignalPlanFor() still returns the FIRST candidate exactly as before — an EVEN/ODD claim still
+   shadows OVER/UNDER on the Signal card — but the table is now built once and every qualifying side
+   keeps its own label, group, confidence and reason. Nothing about the Signal Center's own behaviour
+   changed: it is the same filter, the same 100-tick window and the same 3 RED leaders. */
+function signalPlansFor(digs){
   const h = digitHeatOf(digs);
-  if (!h || h.top.length < SIG_TOP_N || !h.topRed) return null;   // the highest digits must all be RED
+  const out = { h, plans: [] };
+  if (!h || h.top.length < SIG_TOP_N || !h.topRed) return out;
   const digits = h.topDigits;
   const sum = h.top.reduce((a, t) => a + t.p, 0);   // 30 = three perfectly flat 10% digits
   const cands = [
@@ -2178,20 +2185,52 @@ function digitSignalPlanFor(digs){
     { g: "low",  type: "DIGITUNDER", barrier: 6,   label: "UNDER 6" },
     { g: "high", type: "DIGITOVER",  barrier: 3,   label: "OVER 3" }
   ].filter(c => h.topIn[c.g] === SIG_TOP_N);        // ALL the highest digits must be in this group
-  if (!cands.length) return null;
-  /* even/odd only has 5 slots, so it is the stronger claim when the same digits also fit low/high */
-  const b = cands[0];
-  return {
-    type: b.type, barrier: b.barrier, label: b.label,
-    conf: Math.max(50, Math.min(95, Math.round(50 + (sum - 30) * 3))),
-    hot: digits.slice(),
-    n: h.n,
+  const conf = Math.max(50, Math.min(95, Math.round(50 + (sum - 30) * 3)));
+  out.plans = cands.map(b => ({
+    type: b.type, barrier: b.barrier, label: b.label, g: b.g, conf,
+    hot: digits.slice(), n: h.n,
     reason: "the " + SIG_TOP_N + " highest RED digits over the last " + h.n + " ticks [" +
             digits.map(d => d + " " + fmt(h.pcts[d], 1) + "%").join(", ") +
             "] all sit in the " + b.g + " group"
-  };
+  }));
+  return out;
 }
+function digitSignalPlanFor(digs){ return signalPlansFor(digs).plans[0] || null; }
 function digitSignalPlan(){ return digitSignalPlanFor(state.digits); }
+/* ---- Round 78: reading that table the way Bot 10 needs it. The Signal Center's card shows only
+   cands[0], so a set of leaders that is all-even AND all-high pops EVEN and never says OVER 3. Bot 10
+   trades over/under, so it asks the same question of the OVER/UNDER rows of the SAME table. ---- */
+function signalOuPlanFor(digs){
+  const r = signalPlansFor(digs);
+  const ou = r.plans.filter(p => p.type === "DIGITOVER" || p.type === "DIGITUNDER")[0] || null;
+  return { h: r.h, plans: r.plans, ou, fam: ou ? (ou.type === "DIGITOVER" ? "OVER" : "UNDER") : null };
+}
+/* A signal the center already popped counts first: it is the same rule, and it is what is on the card. */
+function signalOuLive(sym){
+  const s = signal.active;
+  if (!s || s.state !== "pending") return null;
+  if (s.type !== "DIGITOVER" && s.type !== "DIGITUNDER") return null;
+  if ((s.sym || state.symbol) !== sym) return null;
+  return { type: s.type, barrier: s.barrier, label: s.label, conf: s.conf, hot: (s.plan && s.plan.hot) || [],
+    n: (s.plan && s.plan.n) || 0, reason: (s.plan && s.plan.reason) || "the AI Signal Center is holding this signal",
+    live: true, id: s.id, left: Math.max(0, Math.ceil((s.validUntil - Date.now()) / 1000)) };
+}
+/* The one call Bot 10 makes every second in signal mode. It never buys — it only names the side. */
+function signalReadFor10(digs, sym){
+  const s = sym || state.symbol;
+  const r = signalOuPlanFor(digs);
+  const ou = signalOuLive(s) || r.ou;
+  if (!ou){
+    return { ou: null, fam: null, plans: r.plans, n: r.h ? r.h.n : 0, sym: s,
+      why: r.plans.length
+        ? "the AI Signal Center reads " + r.plans.map(p => p.label).join(" / ") + " on these digits — that is a parity signal, not an OVER or UNDER one, so Bot 10 holds"
+        : "no AI Signal Center signal on " + s + ": its " + SIG_TOP_N + " highest of the last " + (r.h ? r.h.n : 0) +
+          " ticks" + (r.h && !r.h.topRed ? " are not all RED" : r.h && r.h.top.length < SIG_TOP_N ? " are not counted yet" : " do not all sit on one OVER/UNDER side") };
+  }
+  return { ou, fam: ou.type === "DIGITOVER" ? "OVER" : "UNDER", plans: r.plans, n: ou.n, sym: s,
+    why: (ou.live ? "ACTIVE SIGNAL " + (ou.id || "") + " (" + ou.left + "s left) — the AI Signal Center says"
+                  : "the AI Signal Center says") + " <b>" + ou.label + "</b> on " + s + " at " + ou.conf + "% confidence — " + ou.reason };
+}
 /* ---- the SAME rule the AI Signal Center pops on, generalized to any pair of sides — this is what the
    Synchronization desk now enters on: the TOP highest digits of the window must ALL be RED bars
    (>= DIGIT_HOT_PCT, the dashboard's red), ALL win for the side being bought, the losing side must hold
@@ -3299,7 +3338,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
   "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
   "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_gate","b9_tp","b9_sl",
-  "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
+  "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","virtCount","winStreak","cashSound","aiVoice"];
 function loadSettings(){
@@ -5379,13 +5418,17 @@ const bot6 = new Under7Bot();
 /* ================= OVER / UNDER STRATEGY · BOT 10 (your rule of 27 Oct) =================
    The Even/Odd Strategy Bot is deleted from this card. It now runs the two recovery campaigns you
    named — OVER 3 recovering at OVER 4, and UNDER 7 recovering at UNDER 6.
-   WHICH campaign is chosen exactly the way the AI Signal Center chooses a signal: over the last `win`
-   ticks the TOP `top` digits must ALL be RED bars (>= DIGIT_HOT_PCT — what the dashboard paints red),
-   ALL win the side being bought, and the other side must hold no RED digit of its own. That is
-   heatSetupG above, the same competition the Synchronization desk enters on, run here for both
-   campaigns at once and ranked by expected value.
-   The campaign that clears it becomes the session and then LOCKS (your rule of 24 Oct — one market
-   until TP): nothing else is bought for the rest of the run.
+   Round 78 (your rule "i want over under strategy to use signals in signal ai center signals"): WHICH
+   campaign is bought now comes from the AI Signal Center's OWN signal for that market — signalReadFor10
+   reads the same signalPlansFor table the Signal card pops from (its 100-tick window, its 3 highest
+   digits all RED) and takes the DIGITOVER / DIGITUNDER row of it. A center call of EVEN/ODD, or no call
+   at all, means Bot 10 holds. The card's own red-digit competition (heatSetupG over the card's `win`
+   and `top`) is still computed every second — it is what paints the campaign table, the coverage and
+   the EV — and the "own read" option on the card puts it back in charge of the entry (Round 77).
+   The Signal Center's UNDER signal is measured at UNDER 6 (digits 0-5); this card's UNDER campaign is
+   your UNDER 7 (digits 0-6), which contains it, so a center UNDER signal always covers the buy.
+   The campaign that the signal names becomes the session and then LOCKS (your rule of 24 Oct — one
+   market until TP): nothing else is bought for the rest of the run.
    THE LADDER: a win keeps the bot on its MAIN barrier at base stake; a loss moves it to that
    campaign's RECOVERY barrier — the harder, higher-paying one — with the stake multiplied ×mult per
    consecutive loss, cut off by the recovery-step limit or the stake cap and then back to MAIN at base.
@@ -5443,14 +5486,32 @@ function ouRead(digs, c, sym, lockFam){
   if (!h) return null;
   const s = sym || state.symbol;
   const cands = [ouCampaign(h, c, s, "OVER"), ouCampaign(h, c, s, "UNDER")];
-  const ready = cands.filter(x => x.ok);
-  ready.sort((a, b) => b.main.ev - a.main.ev || b.main.sigma - a.main.sigma);
-  /* The session keeps the campaign its FIRST entry chose — your rule of 24 Oct, one market until TP.
-     With "buy every tick" on, a campaign whose rule has since closed is still traded. */
-  const pick = lockFam ? (cands.find(x => x.fam === lockFam) || ready[0] || cands[0]) : (ready[0] || null);
+  const byFam = f => cands.filter(x => x.fam === f)[0] || null;
+  /* Round 78 (your rule): the SIDE comes from the AI Signal Center's signal, not from this card's own
+     red-digit competition — the campaign table below is still scored on the card's barriers so the EV,
+     coverage and payout numbers stay honest, but nothing is bought unless the Signal Center is calling
+     OVER or UNDER on that market. "own read" puts the Round 77 behaviour back on the card. */
+  const useSig = c.src !== "own";
+  const sig = useSig ? signalReadFor10(src, s) : null;
+  let ready, pick;
+  if (useSig){
+    ready = sig.fam ? cands.filter(x => x.fam === sig.fam) : [];
+    /* the locked campaign always keeps a readable candidate object; the signal decides whether it is traded */
+    pick = lockFam ? (byFam(lockFam) || ready[0] || byFam(sig.fam) || cands[0]) : (ready[0] || null);
+  } else {
+    ready = cands.filter(x => x.ok);
+    ready.sort((a, b) => b.main.ev - a.main.ev || b.main.sigma - a.main.sigma);
+    pick = lockFam ? (byFam(lockFam) || ready[0] || cands[0]) : (ready[0] || null);
+  }
+  const ok = useSig ? !!(pick && sig.fam && pick.fam === sig.fam) : !!(pick && pick.ok);
+  const reasons = useSig
+    ? (ok ? [] : [sig.ou ? "THE SIGNAL IS ON THE " + sig.fam + " SIDE, THIS SESSION IS LOCKED TO " + pick.fam
+                   : (sig.plans.length ? "SIGNAL CENTER CALLS " + sig.plans.map(p => p.label).join("/") + ", NOT OVER/UNDER"
+                                      : "NO AI SIGNAL CENTER SIGNAL ON THIS MARKET")])
+    : (pick ? pick.reasons : ["NEITHER CAMPAIGN CLEARS THE RED-DIGIT RULE"]);
   return { sym: s, win: c.win, topN: c.top, n: h.n, pcts: h.pcts, rank: h.rank, hot: h.hot,
     top: h.top, cands, ready, pick, locked: !!(lockFam && pick && lockFam === pick.fam),
-    ok: !!pick && pick.ok, reasons: pick ? pick.reasons : ["NEITHER CAMPAIGN CLEARS THE RED-DIGIT RULE"] };
+    src: useSig ? "signal" : "own", sig, ok, reasons };
 }
 function ouAnalyze(lockFam){
   const c = cfg10();
@@ -5467,6 +5528,9 @@ function cfg10(){
     /* Round 69 kept, in the new shape: once the session locks a campaign, buy on EVERY tick instead of
        holding. The red-digit rule still chooses the FIRST entry — that read names the campaign. */
     every: !!$("#b10_every").checked,
+    /* Round 78 (your rule): which read names the SIDE. "signal" = the AI Signal Center's own
+       digit-heat signal for that market; "own" = this card's Round-77 red-digit competition. */
+    src: $("#b10_src") ? ($("#b10_src").value === "own" ? "own" : "signal") : "signal",
     mult: clampFloat($("#b10_mult").value, 1.5, 4, 2.1),
     steps: clampInt($("#b10_steps").value, 1, 8, 4),
     maxstake: Math.max(0, +$("#b10_maxstake").value || 0),
@@ -5501,6 +5565,15 @@ class OverUnderStratBot extends BaseBot {
   stopKinds(){ return ["tp"]; }                                        // TP ends the session; SL and win streaks do not
   famTxt(fam, c){ return fam === "OVER" ? "OVER " + c.ovMain + " → recovery OVER " + c.ovRec
                                         : "UNDER " + c.unMain + " → recovery UNDER " + c.unRec; }
+  /* Round 78: what names the side, in one line — used by the log, the toast and the card copy. */
+  srcTxt(a, c){
+    const src = (a && a.src) || (c.src === "own" ? "own" : "signal");
+    if (src === "own") return "its own RED-digit read";
+    const sig = a && a.sig;
+    if (sig && sig.ou) return "the AI Signal Center's " + sig.ou.label + " signal at " + sig.ou.conf + "%" +
+      (sig.ou.live ? " (the signal on the card, " + sig.ou.left + "s left)" : "");
+    return "the AI Signal Center — which is calling nothing tradable here right now";
+  }
   candOf(a){
     if (!a) return null;
     return (this.lockFam && a.cands.find(x => x.fam === this.lockFam)) || a.pick || a.cands[0] || null;
@@ -5508,6 +5581,10 @@ class OverUnderStratBot extends BaseBot {
   onStart(){
     this.lockFam = null; this.lastWhy = ""; this.lossStreak = 0; this.runLossAmt = 0; this.rung = "MAIN";
     const c = cfg10();
+    this.sys("Entry source: " + (c.src === "own"
+      ? "this card's own RED-digit competition over the last " + c.win + " ticks (" + c.top + " leaders)"
+      : "the AI Signal Center's own signal — " + SIG_TOP_N + " highest RED digits over its last " + SIG_DIGIT_WIN +
+        " ticks; an EVEN/ODD or empty center call means HOLD"));
     /* payouts differ per market, so the four barriers are quoted for real (read-only proposals).
        Throttled: the loop may restart the bot often, and a stale cache is only a fallback number. */
     if (Date.now() - this.quoteAt > 20000){
@@ -5532,8 +5609,9 @@ class OverUnderStratBot extends BaseBot {
     const c = cfg10(), a = this.analysis();
     this.play = a;
     if (!a) return null;
-    /* The red-digit rule picks the campaign; once it is locked, "buy every tick" means a closed rule
-       no longer holds the bot — it keeps buying the SAME campaign on the SAME market every second. */
+    /* Round 78: the Signal Center's signal names the campaign (or its own read, if the card switched);
+       once it is locked, "buy every tick" means a signal that has since closed no longer holds the bot
+       — it keeps buying the SAME campaign on the SAME market every second. */
     const freeRun = this.lockFam && c.every;
     if (!a.ok && !freeRun){
       const why = a.reasons.join(" + ");
@@ -5544,9 +5622,10 @@ class OverUnderStratBot extends BaseBot {
     if (!this.lockFam){
       this.lockFam = a.pick.fam;
       const cand = this.candOf(a);
-      this.sys("Locked on " + this.famTxt(this.lockFam, c) + " — this session buys only " + cand.label +
-        " on " + state.symbol + (c.every ? " EVERY TICK until it hits its target" : " until it hits its target"));
-      toast(this.name + ": locked on " + this.famTxt(this.lockFam, c) +
+      this.sys("Locked on " + this.famTxt(this.lockFam, c) + " — chosen by " + this.srcTxt(a, c) +
+        "; this session buys only " + cand.label + " on " + state.symbol +
+        (c.every ? " EVERY TICK until it hits its target" : " until it hits its target"));
+      toast(this.name + ": " + (a.src !== "own" ? "AI Signal Center → " : "") + "locked on " + this.famTxt(this.lockFam, c) +
         (c.every ? " — now buying it every tick until TP" : " for the rest of this session"), "info", 6000);
       ouQuoteSym(state.symbol, c.dur, c).then(() => renderBot(this)).catch(() => {});
     }
@@ -5599,7 +5678,8 @@ class OverUnderStratBot extends BaseBot {
     if (!a) return { label: "WAITING · NO TICKS YET", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
     if (!cand) return { label: "WAITING · NOTHING COUNTED YET", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
     if (!a.ok && !(this.lockFam && c.every))
-      return { label: "WAITING · RED-DIGIT RULE CLOSED", cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
+      return { label: "WAITING · " + (a.src === "own" ? "RED-DIGIT RULE CLOSED" : "NO OVER/UNDER SIGNAL FROM THE AI CENTER"),
+        cls: "mode-wait", stake: this.stakeFor(this.lossStreak) };
     const leg = this.lossStreak > 0 ? cand.rec : cand.main;
     return { label: (this.lossStreak ? "RECOVERY RUNG " + this.lossStreak + "/" + c.steps + " · " : "MAIN · ") +
       leg.label + (this.lockFam ? (c.every ? " (LOCKED · EVERY TICK)" : " (LOCKED)") : "") + " · " + state.symbol,
@@ -5612,7 +5692,7 @@ class OverUnderStratBot extends BaseBot {
     const leg = this.lossStreak > 0 ? cand.rec : cand.main;
     return "OVER/UNDER STRATEGY · " +
       (this.lockFam ? "LOCKED to " + this.famTxt(this.lockFam, c) + " since its first entry"
-                    : "the " + a.topN + " highest RED digits name the campaign") +
+                    : "the side comes from " + this.srcTxt(a, c)) +
       " · buys " + leg.label + (this.lossStreak ? " (rung " + this.lossStreak + "/" + c.steps + ")" : "") +
       " at " + fmt(st) + " · " + fmt(leg.p, 1) + "% of the last " + a.n + " ticks vs " + fmt(leg.be, 2) +
       "% break-even ⇒ EV " + fmtS(leg.ev) + " per 1.00" +
@@ -5628,11 +5708,23 @@ class OverUnderStratBot extends BaseBot {
     while (s <= (c.maxstake || Infinity) && steps <= c.steps + 1 && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
     const ov = a ? a.cands.find(x => x.fam === "OVER") : null;
     const un = a ? a.cands.find(x => x.fam === "UNDER") : null;
+    const sigMode = a ? a.src !== "own" : c.src !== "own";
     return "<div class='note' style='margin:0'><b>Your rule of 27 Oct:</b> the Even/Odd Strategy bot is off this card — it now plays <b>OVER " +
       c.ovMain + " recovering at OVER " + c.ovRec + "</b> and <b>UNDER " + c.unMain + " recovering at UNDER " + c.unRec +
-      "</b>, the same two campaigns the AI Signal Center names.<br><b>Play:</b> once a second it reads the last <b>" + c.win +
-      " ticks</b> of " + state.symbol + ", paints the digits exactly like the dashboard and asks the Signal Center's question of BOTH campaigns: are the <b>" +
-      c.top + " highest digits all RED bars (≥" + fmt(DIGIT_HOT_PCT,1) + "%)</b>, do they <b>all win</b> the side being bought, and does the other side hold <b>no RED digit of its own</b>? Whichever campaign answers yes with the better expected value is traded; if neither does, the bot holds.<br>" +
+      "</b>, the same two campaigns the AI Signal Center names.<br>" +
+      "<b>SIGNAL SOURCE (" + (sigMode ? "AI SIGNAL CENTER — your rule of 27 Oct" : "this card's own read") + "):</b> " +
+      (sigMode
+        ? ("this bot does NOT run its own opinion to decide when to buy — it buys what the <b>AI Signal Center</b> signals. Once a second it reads the center's own table (" +
+           SIG_TOP_N + " highest digits, all RED bars over its " + SIG_DIGIT_WIN + "-tick window) for " + state.symbol +
+           " and takes the <b>OVER / UNDER</b> row of it — the exact signal the Signal card pops, including a signal that is <b>already active on the card</b>. " +
+           "Right now it reads: " + (a && a.sig ? a.sig.why : "waiting for ticks…") + "<br>" +
+           "<b>What that means for the barriers:</b> the center's UNDER signal is measured at <b>UNDER 6</b> (digits 0–5) while your UNDER campaign on this card is <b>UNDER " + c.unMain +
+           "</b>, and every digit 0–5 wins UNDER " + c.unMain + " too, so a center UNDER call always covers the buy. The center's OVER signal is <b>OVER 3</b> — the same barrier as this card's default. " +
+           "The barriers you type on this card stay yours: the signal names the <b>side</b>, the card keeps the <b>barriers, stakes and ladder</b>.<br>" +
+           "<b>EVEN/ODD signals are ignored here</b> — the center can call EVEN or ODD (its parity row wins the tie), and neither is an over/under trade, so the bot holds instead of guessing a side.")
+        : "the <b>own read</b> option is on: this card runs its own RED-digit competition over the last <b>" + c.win + " ticks</b> of " + state.symbol +
+          " — are the <b>" + c.top + " highest digits all RED bars (≥" + fmt(DIGIT_HOT_PCT,1) + "%)</b>, do they all win the side being bought, and does the other side hold no RED digit of its own? That is the Round-77 behaviour, independent of the Signal Center.<br>") +
+      "<b>The campaign table below is the card's own scoring either way</b> — coverage, break-even, payout and EV for both campaigns and both rungs — so you can see what the side is worth before it buys. Whichever side is traded, the numbers are the honest ones.<br>" +
       "<b>ONE CAMPAIGN PER SESSION:</b> the campaign of the <b>first entry</b> locks for the rest of the run" +
       (this.lockFam ? " — this run is locked on <b>" + this.famTxt(this.lockFam, c) + "</b>" : "") +
       ", so the bot never hops between OVER and UNDER because the hottest digit moved. <b>Buy every tick after lock</b> is " +
@@ -6542,10 +6634,12 @@ async function runAllInOneAI(){
 }
 
 /* ================= OVER UNDER STRATEGY — TRADE AI NOW =================
-   Scans every volatility index with ouRead — the AI Signal Center's RED-digit competition, run for
-   BOTH campaigns at once (OVER main → OVER recovery, UNDER main → UNDER recovery) — ranks the markets
-   that clear by their gap over break-even, then by expected value, moves the desk onto the best one
-   and starts Bot 10 on it. The robot face is on screen and talking for the whole read. */
+   Round 78: this scan reads the SAME source Bot 10 is set to, so what the robot face calls is exactly
+   what the bot would buy. With the AI Signal Center selected it asks the center for its OVER/UNDER
+   signal on every volatility index (signalPlansFor — its 100-tick window, its 3 highest RED digits);
+   with "own read" it runs the card's own campaign competition instead. Markets are ranked ready-first,
+   then by their gap over break-even and expected value, the desk moves onto the best one and Bot 10
+   starts there. The robot face is on screen and talking for the whole read. */
 function eoSay(text, animate){
   const el = $("#eoSay"); if (!el) return;
   if (eoScan.sayTimer){ clearInterval(eoScan.sayTimer); eoScan.sayTimer = null; }
@@ -6567,7 +6661,10 @@ async function runEoTradeAI(){
   scanPopOpen("eo");
   const btn = $("#eoTradeBtn"), status = $("#eoScanStatus"), verdict = $("#eoVerdict");
   if (btn){ btn.disabled = true; btn.textContent = "SCANNING…"; }
-  if (status) status.textContent = "Reading every volatility market over the last " + cfg10().win + " ticks…";
+  const srcNow = cfg10().src;
+  if (status) status.textContent = srcNow === "own"
+      ? "Reading every volatility market over the last " + cfg10().win + " ticks…"
+      : "Asking the AI Signal Center what it signals on every volatility market…";
   if (verdict) verdict.innerHTML = "";
   const wrap = $("#eoScanwrap"); if (wrap) wrap.style.display = "grid";
   eoSay("Analysing every volatility market for you", true);
@@ -6584,7 +6681,9 @@ async function runEoTradeAI(){
       eoScan.bars.set(sym, row);
     }
     speak("Analysing every volatility market for the Over Under Strategy.", { force: true, interrupt: true, now: true });
-    bot10.sys("AI scan started — " + syms.length + " markets, RED-digit competition for OVER " + c.ovMain + " and UNDER " + c.unMain + " over the last " + win + " ticks");
+    bot10.sys("AI scan started — " + syms.length + " markets, " + (c.src === "own"
+      ? "this card's own RED-digit competition for OVER " + c.ovMain + " and UNDER " + c.unMain + " over the last " + win + " ticks"
+      : "the AI SIGNAL CENTER's OVER/UNDER signal (its " + SIG_TOP_N + " highest RED digits over " + SIG_DIGIT_WIN + " ticks) for OVER " + c.ovMain + " and UNDER " + c.unMain));
     sweepSync();
     const t0 = Date.now();
     let rows = [];
@@ -6614,22 +6713,33 @@ async function runEoTradeAI(){
     const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
     const famCount = {};
     cleared.forEach(r => { famCount[r.fam] = (famCount[r.fam] || 0) + 1; });
-    const head1 = "<b>" + plural(rows.length, "market") + " read over the last " + win + " ticks.</b> " +
-      "<b>" + cleared.length + " of " + plural(rows.length, "market") + " had a campaign the RED leaders all win</b>" +
+    const sigSrc = c.src !== "own";
+    const head1 = "<b>" + plural(rows.length, "market") + " " + (sigSrc
+        ? "asked for the AI Signal Center's signal (its own read: the " + SIG_TOP_N + " highest digits of its last " + SIG_DIGIT_WIN + " ticks)"
+        : "read over the last " + win + " ticks") + ".</b> " +
+      "<b>" + cleared.length + " of " + plural(rows.length, "market") + (sigSrc ? " had an OVER/UNDER signal from the center"
+        : " had a campaign the RED leaders all win") + "</b>" +
       (cleared.length ? " (" + Object.keys(famCount).map(k => famCount[k] + "× " + k).join(", ") + ")" : "") +
-      ". Best of the list: " + (lead && lead.ok ? symLabel(lead.sym) + " · " + lead.label + " · " + fmt(lead.gap, 1) +
+      ". Best of the list: " + (lead && lead.ok ? symLabel(lead.sym) + " · " + lead.label + (sigSrc ? " · center calls " + lead.sigLab + " at " + fmt(lead.conf, 0) + "%" : "") + " · " + fmt(lead.gap, 1) +
         " pts over break-even · EV " + fmtS(lead.ev) + " per 1.00" : "none");
     if (!cleared.length){
-      eoSay("Danger zone detected — no market had a campaign its RED leaders all win", false);
-      if (status) status.textContent = "DANGER ZONE DETECTED — no market won the digit competition.";
+      eoSay(sigSrc ? "Danger zone detected — the AI Signal Center has no OVER or UNDER signal on any market"
+                   : "Danger zone detected — no market had a campaign its RED leaders all win", false);
+      if (status) status.textContent = sigSrc
+        ? "DANGER ZONE DETECTED — the AI Signal Center is not signalling OVER or UNDER on any market."
+        : "DANGER ZONE DETECTED — no market won the digit competition.";
       if (verdict) verdict.innerHTML = head1 +
-        "<br><b style='color:var(--red)'>DANGER ZONE DETECTED</b> — in none of these markets do the " + c.top +
-        " highest digits all sit on one side of an OVER or UNDER barrier.<br>" +
+        "<br><b style='color:var(--red)'>DANGER ZONE DETECTED</b> — " + (sigSrc
+          ? "in none of these markets does the AI Signal Center have an OVER or UNDER call. " + ouPlain(lead.reasons[0] || "") +
+            " (an EVEN or ODD call is not a side this bot can buy)"
+          : "in none of these markets do the " + c.top + " highest digits all sit on one side of an OVER or UNDER barrier") + ".<br>" +
         "The least-bad was <b>" + symLabel(lead.sym) + "</b>: leaders " + lead.leaders.join(", ") + " — " +
         lead.reasons.slice(0, 2).join(" + ") + ".<br><b>No symbol was changed and no contract was bought.</b>";
-      bot10.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets rejected (0 with a clean campaign) · best read was " + symLabel(lead.sym) + " · " + lead.leaders.join(", "));
-      toast("DANGER ZONE DETECTED — no market cleared the RED-digit rule, nothing was bought", "warn", 9000);
-      speak("Danger zone detected. I read " + rows.length + " markets and in none of them did the highest digits all win one over or under campaign. Nothing is bought and your market has not been changed.", { force: true, interrupt: true });
+      bot10.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets rejected (" + (sigSrc ? "no OVER/UNDER signal from the AI Signal Center" : "0 with a clean campaign") + ") · best read was " + symLabel(lead.sym) + " · " + lead.leaders.join(", "));
+      toast("DANGER ZONE DETECTED — " + (sigSrc ? "the AI Signal Center has no OVER/UNDER signal anywhere" : "no market cleared the RED-digit rule") + ", nothing was bought", "warn", 9000);
+      speak("Danger zone detected. I read " + rows.length + " markets and in none of them " + (sigSrc
+        ? "did the AI Signal Center have an over or under signal for this bot. "
+        : "did the highest digits all win one over or under campaign. ") + "Nothing is bought and your market has not been changed.", { force: true, interrupt: true });
       return;
     }
     const best = cleared[0];
@@ -6637,7 +6747,7 @@ async function runEoTradeAI(){
     if (status) status.textContent = "Best: " + symLabel(best.sym) + " — " + best.label + " recovering at " + best.rec + ", " + fmt(best.gap, 1) + " pts over break-even, EV " + fmtS(best.ev);
     if (verdict) verdict.innerHTML = head1 +
       "<br>The AI takes <b>" + symLabel(best.sym) + "</b>: " + best.why +
-      "<br><b>Campaign:</b> buy <b>" + best.label + "</b> — a win needs the closing digit " +
+      "<br><b>Campaign:</b> buy <b>" + best.label + "</b>" + (sigSrc ? " on the center's " + best.sigLab + " signal (" + fmt(best.conf, 0) + "%)" : "") + " — a win needs the closing digit " +
       (best.fam === "OVER" ? "ABOVE " + best.main.barrier + " (digits " + (best.main.barrier + 1) + "–9)"
                             : "BELOW " + best.main.barrier + " (digits 0–" + (best.main.barrier - 1) + ")") +
       " — recovering at <b>" + best.rec + "</b> (" + fmt(best.main.pay) + "× → " + fmt(best.rec.pay) + "×) with your " +
@@ -6646,10 +6756,14 @@ async function runEoTradeAI(){
       "<br><b>Measured over " + best.n + " ticks:</b> " + best.label + " covered " + fmt(best.main.p, 1) + "% against a " +
       fmt(best.main.be, 2) + "% break-even" + (quoted.length ? " (payouts quoted live on " + plural(quoted.length, "market") + ")" : " (measured default payout)") +
       " ⇒ EV " + fmtS(best.ev) + " per 1.00." +
-      "<br>A digit competition over " + best.n + " ticks is still a <b>small sample</b> — the leaders move as new ticks arrive, and this does not turn a " + fmtS(best.ev) + "-per-1.00 structure into a proven edge." +
+      "<br>" + (sigSrc ? "A Signal Center call is read over " + best.n + " ticks and the leaders move as new ticks arrive"
+                       : "A digit competition over " + best.n + " ticks is still a <b>small sample</b> — the leaders move as new ticks arrive") +
+      ", and this does not turn a " + fmtS(best.ev) + "-per-1.00 structure into a proven edge." +
       "<br><b style='color:var(--amber)'>Changing the market stops every other bot</b> — that is how the header symbol works, same as the sync desk.";
-    bot10.sys("AI scan done — " + rows.length + " markets · " + cleared.length + " with a clean campaign · chose " + symLabel(best.sym) + " · " + best.label + " (recovers " + best.rec + ") · " + fmt(best.main.p, 1) + "% vs " + fmt(best.main.be, 2) + "% break-even · EV " + fmtS(best.ev) + (quoted.length ? " · quoted live on " + plural(quoted.length, "market") : " · measured default payout"));
-    speak("Analysing every volatility market for the Over Under Strategy. Done. The best setup is on " + symLabel(best.sym) + ": the highest red digits all win " + best.label + ". Trading now.", { force: true, interrupt: true });
+    bot10.sys("AI scan done — " + rows.length + " markets · " + cleared.length + (sigSrc ? " with an OVER/UNDER signal from the AI Signal Center" : " with a clean campaign") + " · chose " + symLabel(best.sym) + " · " + best.label + (sigSrc ? " on the center's " + best.sigLab + " signal at " + fmt(best.conf, 0) + "%" : "") + " (recovers " + best.rec + ") · " + fmt(best.main.p, 1) + "% vs " + fmt(best.main.be, 2) + "% break-even · EV " + fmtS(best.ev) + (quoted.length ? " · quoted live on " + plural(quoted.length, "market") : " · measured default payout"));
+    speak("Analysing every volatility market for the Over Under Strategy. Done. " + (sigSrc
+      ? "The AI Signal Center signals " + best.sigLab + " on " + symLabel(best.sym) + ", so this bot takes its " + best.label + " campaign."
+      : "The best setup is on " + symLabel(best.sym) + ": the highest red digits all win " + best.label + ".") + " Trading now.", { force: true, interrupt: true });
     if (best.sym !== state.symbol) await changeSymbol(best.sym);
     await bot10.start({ skipConfirm: true });
     if (bot10.running) showTab("eostrat");
@@ -6666,8 +6780,10 @@ async function runEoTradeAI(){
   }
 }
 
-/* One row per market: both campaigns scored on that market's own last `win` ticks, the pick being the
-   campaign the Signal Center rule clears with the better numbers. ouRead never buys — it only reads. */
+/* One row per market. Round 78: with the Signal Center as the source (your rule) a market only counts
+   as READY when the center itself is calling OVER or UNDER on it — the same signalPlansFor table the
+   Signal card pops, read on that market's own ticks. The campaign's own numbers (coverage, break-even,
+   payout, EV) are still scored here so the ranking stays honest about what the side is worth. */
 function ouSurvey(c){
   const rows = [];
   for (const sym of scanSymbols()){
@@ -6682,12 +6798,15 @@ function ouSurvey(c){
     rows.push({ sym, n: a.n, topN: a.topN, ok: !!a.ok, leaders: a.top.map(t => t.d + " " + fmt(t.p, 1) + "%"),
       hot: a.hot.slice(), fam: p ? p.fam : null, label: p ? p.label : "—", rec: p ? p.rec.label : "—",
       main: p ? p.main : null, recLeg: p ? p.rec : null,
+      src: a.src, sig: a.sig, conf: a.sig && a.sig.ou ? a.sig.ou.conf : 0,
+      sigLab: a.sig && a.sig.ou ? a.sig.ou.label : (a.sig && a.sig.plans.length ? a.sig.plans.map(x => x.label).join("/") : "no signal"),
       ev: p ? p.main.ev : -1, gap: p ? p.main.gap : round2(-100 / Math.max(1, c.top) - 99),
-      sigma: p ? p.main.sigma : 0, reasons: a.reasons, why: p ? p.why : a.reasons.join(" + ") });
+      sigma: p ? p.main.sigma : 0, reasons: a.reasons, why: p ? (a.src === "own" ? p.why : a.sig.why + " · " + p.why) : a.reasons.join(" + ") });
   }
   return rows;
 }
 /* the top 3 markets get their four barriers quoted for real (read-only proposals, nothing is bought) */
+function ouPlain(html){ return String(html || "").replace(/<[^>]*>/g, ""); }
 async function ouQuoteLeaders(rows, dur, c){
   const leads = rows.slice(0, 3), out = [];
   for (const r of leads){
@@ -6704,8 +6823,9 @@ function ouBarsUpdate(rows, ranked){
     const row = eoScan.bars.get(r.sym); if (!row) return;
     row.querySelector(".fill").style.width = Math.max(3, Math.min(100, (r.gap - lo) / ((hi - lo) || 1) * 100)) + "%";
     row.querySelector(".pc").textContent = (r.ok ? "READY " : "hold ") + r.label + (r.ok ? " → " + r.rec : "") +
+      (r.src === "own" ? "" : " [" + r.sigLab + "]") +
       " · " + fmt(r.gap, 1) + " pts vs break-even · " + symLabel(r.sym);
-    row.title = r.ok ? r.why : r.reasons.slice(0, 3).join(" + ");
+    row.title = r.ok ? ouPlain(r.why) : r.reasons.slice(0, 3).join(" + ");
     row.classList.toggle("dz", !r.ok);
     row.classList.toggle("best", !!(ranked && r.sym === rows[0].sym));
   });
@@ -7033,17 +7153,29 @@ function renderBot(b){
       const cand = b.candOf(a);
       const legLab = cand ? (b.lossStreak > 0 ? cand.rec.label + " (recovery rung " + b.lossStreak + ")" : cand.main.label) : "";
       const leaders = a.top.map(t => t.d + " " + fmt(t.p, 1) + "%").join(" · ");
-      if (entry) entry.innerHTML = "<b>Entry read:</b> " +
+      /* Round 78: the first line of the card says WHO named the side — the AI Signal Center, or this card */
+      const srcLine = "<b>Side named by:</b> " + (a.src === "own"
+          ? "<b>this card's own RED-digit read</b> (the Round 77 competition over the last " + c.win + " ticks)"
+          : (a.sig && a.sig.ou
+              ? "<b style='color:var(--green)'>AI SIGNAL CENTER → " + a.sig.ou.label + " at " + a.sig.ou.conf + "%</b>" +
+                (a.sig.ou.live ? " — the signal sitting on the Signal card right now (" + a.sig.ou.left + "s left)" : " — the signal the Signal card pops")
+              : "<b style='color:var(--red)'>AI SIGNAL CENTER → nothing tradable</b> — " + (a.sig ? a.sig.why : "no read yet"))) +
+        "<br>";
+      if (entry) entry.innerHTML = srcLine + "<b>Entry read:</b> " +
         (a.locked
           ? "<b style='color:var(--green)'>LOCKED TO " + cand.fam + "</b> (" + b.famTxt(cand.fam, c) +
             ") since this session's first entry — its next buy is " + legLab + " on " + a.sym +
             (c.every ? " <b>every tick</b> " : " ") + "until it hits TP."
           : a.pick
-            ? "the " + a.topN + " highest digits all win <b>" + a.pick.label + "</b> on " + a.sym + " — that campaign is the one to trade."
-            : "the leaders split between the two campaigns, so neither is tradable yet.") +
+            ? (a.src === "own"
+                ? "the " + a.topN + " highest digits all win <b>" + a.pick.label + "</b> on " + a.sym + " — that campaign is the one to trade."
+                : "the AI Signal Center calls <b>" + (a.sig && a.sig.ou ? a.sig.ou.label : "—") + "</b> on " + a.sym + ", so the <b>" + a.pick.label + "</b> campaign is the one to trade.")
+            : (a.src === "own"
+                ? "the leaders split between the two campaigns, so neither is tradable yet."
+                : "no OVER/UNDER signal from the center on " + a.sym + " yet, so there is no campaign to trade.")) +
         " The " + a.topN + " highest of the last " + a.n + " ticks: <b>" + leaders + "</b> (a bar is red at ≥" + fmt(DIGIT_HOT_PCT, 1) + "%)." +
         (a.ok
-          ? " <b style='color:var(--green)'>RULE CLEAR — one " + legLab + " contract at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
+          ? " <b style='color:var(--green)'>ENTRY CLEAR — one " + legLab + " contract at " + fmt(b.stakeFor(b.lossStreak)) + " " + cur + ".</b>"
           : (a.locked && c.every)
             ? " <b style='color:var(--amber)'>" + a.reasons.length + " condition" + (a.reasons.length === 1 ? "" : "s") +
               " closed, but the campaign is locked and every-tick is ON — it still buys " + legLab +
@@ -7054,8 +7186,11 @@ function renderBot(b){
         const leg = (k, l) => "<div class='eorow " + (l.ok ? "ok" : "no") + "'><span>" + (l.ok ? "✅" : "▫") + "</span><b>" +
           k + " · " + l.label + " (" + l.rival + ") ×" + fmt(l.pay) + "</b><i>" + fmt(l.p, 1) + "% covered vs " +
           fmt(l.be, 2) + "% break-even ⇒ EV " + fmtS(l.ev) + (l.ok ? "" : " · " + l.reasons.join(" + ")) + "</i></div>";
+        const named = a.src !== "own" && a.sig && a.sig.fam === x.fam;
         return "<div class='note' style='margin:8px 0 0'>" + (x.ok ? "✅ " : "▫ ") + "<b>" + x.fam + " campaign — " + x.label +
           ", recovering at " + x.rec.label + "</b>" +
+          (named ? " <b style='color:var(--green)'>◀ the AI Signal Center's " + a.sig.ou.label + " signal points here</b>"
+                 : (a.src !== "own" ? " <span class='sub'>(no center signal on this side)</span>" : "")) +
           "<div style='margin-top:5px'>" + leg("MAIN", x.main) + leg("RECOVERY", x.rec) + "</div>" +
           "<div class='sub' style='margin-top:5px'>" + x.why + "</div></div>";
       }).join("");
@@ -8208,13 +8343,17 @@ function init(){
    "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
-   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl"]
+   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl"]
     .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
   /* the every-tick switch is a checkbox: re-render the card so its label shows the new mode at once */
   $("#b10_every").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b10_every").checked
     ? "Bot 10 will buy EVERY TICK once it locks a campaign (the RED-digit rule still picks the first entry)"
     : "Bot 10 is back to gated entries — it buys only when the RED-digit rule clears a campaign", "info", 7000); });
+  /* Bot 10's source switch — the card re-renders and says which read names the side now */
+  $("#b10_src").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b10_src").value === "own"
+    ? "Bot 10 is back to its OWN RED-digit read — it trades whichever campaign clears the competition on this card's " + cfg10().win + "-tick window"
+    : "Bot 10 now trades the AI SIGNAL CENTER's signal — it buys only when the center calls OVER or UNDER on that market; an EVEN/ODD or empty call means HOLD", "info", 8000); });
   /* Bot 3 entry-rule switch — the card re-renders and says which rule names the direction now */
   $("#b3_entry").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b3_entry").value === "ai"
     ? "Bot 3 is on the 5-model AI ensemble — it names RISE or FALL every tick and buys that call"
