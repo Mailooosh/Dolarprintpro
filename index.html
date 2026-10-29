@@ -722,6 +722,44 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   input,select,textarea{font-size:16px}
   .cmdspace{font-size:12px}
 }
+
+/* ============ Round 81 — COPY TRADING. Its own tab, so it inherits the shell's .panel / .tbl / .cfg
+   geometry and needs only five things of its own: the switch bar, the broadcast feed, the payload
+   preview, the per-client row actions and the status dot. None of it lives inside a bot card, so no
+   bot id, config field or stored setting is touched anywhere. */
+.cpybar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(120deg,rgba(18,117,255,.14),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.cpybar .cpytitle{font-size:13.5px;font-weight:800;letter-spacing:.02em}
+.cpybar .cpysub{font-size:11.5px;color:var(--muted);margin-top:3px;max-width:620px}
+.cpybar .cpychips{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cpytxt{font:11px/1.5 var(--mono);color:var(--dim)}
+.cpyfeed{max-height:250px;overflow-y:auto;font:11px/1.55 var(--mono);color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.cpyfeed div{border-bottom:1px dashed rgba(255,255,255,.05);padding:3px 0;word-break:break-all}
+.cpyfeed .ok{color:var(--green)}
+.cpyfeed .bad{color:var(--red)}
+.cpyfeed .dim{color:var(--dim)}
+.cpypreview{white-space:pre-wrap;word-break:break-all;font:11px/1.5 var(--mono);color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin:0;max-height:230px;overflow:auto}
+.tbl td.cp{max-width:330px;word-break:break-all}
+.copyact{display:flex;gap:5px;flex-wrap:wrap}
+.copyact .btn-mini{padding:5px 9px}
+.cpyempty{color:var(--dim);font-family:var(--font);font-size:12px;padding:12px 4px}
+.cpydot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dim);margin-right:6px;vertical-align:1px}
+.cpydot.ok{background:var(--green);box-shadow:0 0 7px var(--green)}
+.cpydot.err{background:var(--red);box-shadow:0 0 7px var(--red)}
+.cpydot.wait{background:var(--amber);box-shadow:0 0 7px var(--amber)}
+.cpydot.idle{background:var(--dim)}
+@media (max-width:560px){
+  .cpybar{padding:10px 11px;gap:10px}
+  /* the switch is the one thing a phone user must be able to hit with a thumb */
+  .cpybar > .btn-big{flex:1 1 100%;min-width:0}
+  .cpybar .cpychips{margin-left:0}
+  .cpybar .cpysub{max-width:none}
+  .cpyfeed{max-height:190px}
+  .cpypreview{max-height:180px;font-size:10.5px}
+  .tbl td.cp{max-width:none;font-size:10.5px}
+  /* paths get pasted here on a phone, and iOS zooms the page on any focused field under 16px —
+     so this one box is allowed to be big while the dense command space keeps its 12px. */
+  #copy_url{font-size:16px}
+}
 </style>
 </head>
 <body>
@@ -761,6 +799,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   <button class="tabbtn" data-tab="signals">AI Signal Center</button>
   <button class="tabbtn" data-tab="allinone">ALL IN ONE</button>
   <button class="tabbtn" data-tab="activity">Activity Log</button>
+  <!-- Round 81: the trader asked for a "copy trading header next to activity log where i can paste
+       clients path to copy my trades" — so the tab sits in the very next slot after Activity Log. -->
+  <button class="tabbtn" data-tab="copy">COPY TRADING</button>
 </nav>
 
 <div class="wrap">
@@ -1594,6 +1635,58 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
   <div class="panel">
     <h3>Trade log — every contract this session</h3>
     <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Source</th><th>Type</th><th>Stake</th><th>Entry → Exit</th><th>Digit</th><th>Result</th><th>P/L</th><th>ID</th></tr></thead><tbody id="actBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ============ COPY TRADING (Round 81) ============
+     "paste clients path to copy my trades": one panel that takes the client endpoints, one that lists
+     them with their live delivery state, one that shows the exact JSON leaving the browser, and a feed
+     of what happened. The master switch lives at the very top and defaults to OFF.               -->
+<section class="tabpanel" id="tab_copy">
+  <div class="cpybar">
+    <button class="btn btn-big btn-red" id="copy_on" title="On: every contract your bots open and settle is sent to the client paths below. Off: nothing leaves this browser.">COPY OFF</button>
+    <div>
+      <div class="cpytitle">Broadcast your fills to your clients</div>
+      <div class="cpysub" id="copy_status">Switch off — nothing leaves this browser. Paste a client path below and press START BROADCASTING when you want trades to flow.</div>
+    </div>
+    <div class="cpychips">
+      <span class="pill d" id="copyTargets">0 clients</span>
+      <span class="pill o" id="copySent">0 sent</span>
+      <span class="pill" id="copyFail" style="background:rgba(255,255,255,.06);color:var(--dim)">0 failed</span>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <h3>Client paths <span class="r">one per line · https:// webhook or wss:// socket</span></h3>
+    <textarea class="cmdspace" id="copy_url" spellcheck="false" rows="4" placeholder="https://client-one.example.com/copy-webhook&#10;wss://client-two.example.com/trade-socket&#10;https://relay.example.com/ingest?token=their-own-key"></textarea>
+    <div class="cfg">
+      <label>Your tag<input id="copy_tag" type="text" spellcheck="false" placeholder="shown to clients"></label>
+      <label>Shared key<input id="copy_key" type="text" spellcheck="false" placeholder="a secret YOU both know"></label>
+      <label>Delivery mode<select id="copy_mode"><option value="blind">Blind — send and move on</option><option value="confirm">Confirm — wait for a reply</option></select></label>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+      <button class="btn btn-blue" id="copy_add" title="Adds every path in the box above. Duplicates are ignored.">ADD / UPDATE CLIENTS</button>
+      <button class="btn btn-ghost" id="copyTestAll" title="Sends one TEST message to every client so you can see which paths work">TEST ALL CLIENTS</button>
+      <button class="btn btn-red" id="copyClearAll" title="Removes every client and closes every open socket">REMOVE ALL</button>
+    </div>
+    <div class="note"><b>What a client path is:</b> the web address your client (or their copier) gave you to receive trades. A <b>https://</b> address gets one HTTP POST per event; a <b>wss://</b> address gets one WebSocket message per event. <b>Blind</b> mode is the one that works against an ordinary endpoint: the browser sends the data and never reads a reply, so the client's server does not have to allow this site in its CORS headers. <b>Confirm</b> mode waits for a real reply and marks the client green or red — use it only when the endpoint is built to answer, otherwise every send looks like a failure.<br>
+    <b style="color:var(--amber)">Nothing private is ever sent.</b> The payload is built field by field from the trade — market, contract, stake, entry, exit, digit, result, profit, your tag and the shared key. Your Deriv API token, your login id and your account balance are not in it and cannot be added to it. Clients receive your <i>decisions</i>; they get no access to your account. Anyone who gives you a path is choosing to trust your stream — the same way you would trust a signal provider.<br>
+    <b>Execution is not guaranteed.</b> This pushes what <i>you</i> bought on Deriv. A client's copier decides its own stake and may fill at a different price, on a different account type, or not at all. Nothing here places orders for anybody else.</div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <h3>Your clients <span class="r" id="copyListMeta">none yet</span></h3>
+    <div class="scrollx"><table class="tbl"><thead><tr><th>Client</th><th>Path</th><th>Via</th><th>Last event</th><th>Sent / failed</th><th>State</th><th>Actions</th></tr></thead><tbody id="copy_list"></tbody></table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <h3>Exactly what leaves this browser <span class="r">the last payload, field for field</span></h3>
+    <pre class="cpypreview" id="copy_preview">—</pre>
+  </div>
+
+  <div class="panel">
+    <h3>Broadcast feed <span class="r" id="copyFeedMeta">nothing sent yet</span></h3>
+    <div class="cpyfeed" id="copy_feed"></div>
   </div>
 </section>
 
@@ -3159,7 +3252,11 @@ async function openPosition(plan){
     type: plan.type + (plan.barrier !== undefined && plan.barrier !== null ? " " + plan.barrier : ""),
     stake: num(pr.ask_price), entry: "", exit: "", digit: "—", result: "OPEN", profit: 0, id: buy.contract_id
   };
-  activity.push(entry); renderActivity(); renderSummary();
+  activity.push(entry);
+  /* Round 81: ENTRY fires the moment the contract exists, before the log even repaints — a copier that
+     waits for settlement is a copier that buys the entry late. */
+  copyBroadcast(entry, "ENTRY", plan);
+  renderActivity(); renderSummary();
   return { plan, entry, contractId: buy.contract_id, stake: num(pr.ask_price),
     ratio: num(pr.payout) / Math.max(num(pr.ask_price), 0.01) };
 }
@@ -3168,6 +3265,9 @@ async function settlePosition(pos){
   pos.entry.entry = c.entry; pos.entry.exit = c.exit;
   pos.entry.digit = (plan.type.startsWith("DIGIT") ? lastDigitChar(c.exit) : "—");
   pos.entry.result = c.won ? "WON" : "LOST"; pos.entry.profit = c.profit;
+  /* Round 81: the settled leg is the moment a copier needs. Broadcast first, render after — a slow or
+     broken client must never delay the trader's own log. */
+  copyBroadcast(pos.entry, "EXIT", plan);
   renderActivity(); renderSummary();
   return { won: c.won, profit: c.profit, payout: c.payout, entry: c.entry, exit: c.exit,
     balanceAfter: c.balanceAfter,
@@ -3189,6 +3289,363 @@ async function executeLegs(plans){
   const out = [];
   for (const h of opened) out.push({ plan: h.plan, res: await settlePosition(h) });
   return out;
+}
+/* ================= Round 81: COPY TRADING — push your fills to your clients =================
+   The trader pastes the endpoints their clients handed them (an https:// webhook or a wss:// socket)
+   and flips the switch. From then on the two trade hooks — openPosition (ENTRY) and settlePosition
+   (EXIT) — pass this engine the same entry the Activity Log shows, and it broadcasts to every client.
+
+   PRIVACY BY CONSTRUCTION: copyPayload() is a whitelist, not a dump of the trade object. It copies
+   named fields only; the token, the login id and the balance live on objects this code never reads, so
+   a mistyped path cannot leak them.
+
+   DELIVERY: blind mode (the default) POSTs with mode:"no-cors" and gets an opaque response — the data
+   arrives, and the client's server never has to whitelist this site. Confirm mode sends a normal CORS
+   request and turns a client green only when it actually answers. Sockets are opened lazily, one per
+   client; anything sent while one is still handshaking goes into a short queue instead of being lost. */
+const COPY = { on: false, tag: "", key: "", confirm: false, targets: [], feed: [], sent: 0, fails: 0, seq: 0, last: "" };
+const COPY_FEED_MAX = 80;
+const COPY_QUEUE_MAX = 50;
+const COPY_STORE_KEY = "dt_copy";
+const COPY_APP = "DolarPrintPro";
+const COPY_VER = 81;
+
+const copyEsc = s => String(s === undefined || s === null ? "" : s)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function copyKind(url){
+  const s = String(url || "").trim().toLowerCase();
+  if (/^https?:\/\//.test(s)) return "http";
+  if (/^wss?:\/\//.test(s)) return "ws";
+  return "";
+}
+/* An https page cannot post to http:// or open ws:// — the browser kills mixed content in silence, so
+   refusing it here with a message is the only way the trader learns their client gave a bare URL. */
+function copyBlocked(url){
+  return location.protocol === "https:" && (/^http:\/\//.test(url) || /^ws:\/\//.test(url));
+}
+/* A bare hostname is useless once two clients sit behind one relay, so the label keeps the first path
+   segment too — "127.0.0.1/copy" reads differently from "127.0.0.1/ws" in the list. */
+function copyHostOf(url){
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean)[0];
+    return (u.hostname.replace(/^www\./, "") + (seg ? "/" + seg.slice(0, 18) : "")).slice(0, 34);
+  } catch(e){ return String(url).slice(0, 24); }
+}
+function copyNewTarget(url){
+  return { id: "c" + (++COPY.seq), url: url, kind: copyKind(url), label: copyHostOf(url),
+    confirm: COPY.confirm, sent: 0, fails: 0, last: 0, state: "idle", info: "never sent", q: [], sock: null };
+}
+function copySave(){
+  store.set(COPY_STORE_KEY, JSON.stringify({ on: COPY.on, tag: COPY.tag, key: COPY.key, confirm: COPY.confirm,
+    targets: COPY.targets.map(t => ({ url: t.url, label: t.label, confirm: t.confirm })) }));
+}
+function copyLoad(){
+  const raw = store.get(COPY_STORE_KEY);
+  if (!raw) return;
+  let o = null;
+  try { o = JSON.parse(raw); } catch(e){ return; }
+  if (!o || typeof o !== "object") return;
+  COPY.tag = String(o.tag || "").slice(0, 40);
+  COPY.key = String(o.key || "").slice(0, 80);
+  COPY.confirm = !!o.confirm;
+  COPY.on = !!o.on;
+  COPY.targets = (Array.isArray(o.targets) ? o.targets : []).map(t => {
+    const url = String((t && t.url) || "").trim();
+    if (!copyKind(url) || copyBlocked(url)) return null;
+    const nt = copyNewTarget(url);
+    nt.confirm = !!(t && t.confirm);
+    return nt;
+  }).filter(Boolean);
+  /* an ON with nobody to talk to is meaningless, and a switch the trader did not just press is worse */
+  if (!COPY.targets.length) COPY.on = false;
+}
+function copyPayload(entry, event, plan){
+  const e = entry || {};
+  /* whitelist — see the header note; add a field here and it is the ONLY place it can be sent from */
+  const p = {
+    app: COPY_APP, ver: COPY_VER, event: String(event || "TRADE").toUpperCase(), ts: Date.now(),
+    tag: COPY.tag, key: COPY.key,
+    bot: String(e.source || ""), symbol: String(e.symbol || ""), contract: String(e.type || ""),
+    stake: num(e.stake), contract_id: (e.id === undefined || e.id === null) ? null : e.id,
+    result: String(e.result || ""), profit: round2(num(e.profit)),
+    currency: (state.account && state.account.currency) || ""
+  };
+  if (plan && plan.duration) p.duration = plan.duration;
+  if (plan && plan.barrier !== undefined && plan.barrier !== null) p.barrier = plan.barrier;
+  if (e.entry) p.entry_spot = e.entry;
+  if (e.exit) p.exit_spot = e.exit;
+  if (e.digit && e.digit !== "—") p.digit = e.digit;
+  return p;
+}
+function copyMark(t, ok, info){
+  t.last = Date.now(); t.info = String(info || "");
+  if (ok){ t.state = "ok"; t.sent++; COPY.sent++; }
+  else { t.state = "err"; t.fails++; COPY.fails++; }
+}
+async function copySendHttp(t, p){
+  const body = JSON.stringify(p);
+  const needReply = !!t.confirm;
+  const ctrl = (typeof AbortController === "function") ? new AbortController() : null;
+  const to = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch(e){} }, 8000) : null;
+  try {
+    const res = await fetch(t.url, { method: "POST", body: body, cache: "no-store",
+      headers: { "Content-Type": "text/plain" },      /* the one safelisted type — no preflight */
+      mode: needReply ? "cors" : "no-cors", signal: ctrl ? ctrl.signal : undefined });
+    /* blind mode always returns an opaque response with status 0: the send succeeded, nothing is readable */
+    const good = needReply ? !!res.ok : (res.type === "opaque" || !!res.ok);
+    copyMark(t, good, needReply ? (good ? "replied " + res.status : "rejected " + res.status)
+      : (good ? "delivered blind" : "not delivered"));
+    copyFeedLine(t.label + " · " + p.event + " · " + (good ? "ok" : "failed") + " — " + t.info, good ? "ok" : "bad");
+  } catch(err){
+    copyMark(t, false, (needReply ? "no reply: " : "blocked: ") + (err && err.message ? err.message : String(err)));
+    copyFeedLine(t.label + " · " + p.event + " · FAILED — " + t.info, "bad");
+  } finally {
+    if (to) clearTimeout(to);
+    renderCopyList(); copyStatus();
+  }
+}
+function copySock(t){
+  if (t.sock && (t.sock.readyState === 0 || t.sock.readyState === 1)) return t.sock;
+  if (t.sock){ try { t.sock.close(); } catch(e){} t.sock = null; }
+  let s = null;
+  try { s = new WebSocket(t.url); }
+  catch(e){ copyMark(t, false, "socket refused: " + (e && e.message ? e.message : e)); renderCopyList(); copyStatus(); return null; }
+  t.sock = s; t.state = "wait"; t.info = "connecting…";
+  s.onopen = () => {
+    /* the queue is what makes a socket usable from a page that was not sitting there waiting: everything
+       sent while it was still handshaking goes out the instant it opens, and each one is booked like a
+       real send so "Last event" and the counters stay honest */
+    const q = t.q.splice(0);
+    let bad = 0;
+    q.forEach(m => { try { s.send(m); } catch(e){ bad++; } });
+    if (q.length){
+      if (q.length - bad > 0) copyMark(t, true, "live · " + (q.length - bad) + " queued sent");
+      if (bad) copyMark(t, false, "queued send failed");
+    } else copyMark(t, true, "live");
+    copyFeedLine(t.label + " · socket open" + (q.length ? " · " + (q.length - bad) + " queued sent" : ""), bad ? "bad" : "ok");
+    renderCopyList(); copyStatus();
+  };
+  s.onclose = () => { t.sock = null; if (t.state !== "err"){ t.state = "idle"; t.info = "closed"; }
+    renderCopyList(); copyStatus(); };
+  s.onerror = () => { copyMark(t, false, "socket error"); copyFeedLine(t.label + " · socket error", "bad"); };
+  s.onmessage = ev => copyFeedLine(t.label + " replied: " + String(ev && ev.data).slice(0, 90), "dim");
+  renderCopyList(); copyStatus();
+  return s;
+}
+function copySendWs(t, p){
+  const msg = JSON.stringify(p);
+  const s = copySock(t);
+  if (s && s.readyState === 1){
+    try { s.send(msg); copyMark(t, true, "live"); copyFeedLine(t.label + " · " + p.event + " · sent", "ok"); }
+    catch(e){ copyMark(t, false, "send failed: " + e.message); copyFeedLine(t.label + " · " + p.event + " · FAILED", "bad"); }
+    renderCopyList(); copyStatus();
+    return;
+  }
+  t.q.push(msg);
+  while (t.q.length > COPY_QUEUE_MAX) t.q.shift();
+  t.info = "queued " + t.q.length;
+  renderCopyList();
+}
+function copySend(t, p){ if (t.kind === "ws") copySendWs(t, p); else copySendHttp(t, p); }
+/* THE ONE OUTLET. Every trade event goes through here, so the switch and the client list are the only
+   things that can stop a message — no bot knows copy trading exists. */
+function copyBroadcast(entry, event, plan){
+  if (!COPY.on || !entry || !COPY.targets.length) return;
+  const p = copyPayload(entry, event, plan);
+  COPY.last = JSON.stringify(p, null, 1);
+  copyFeedLine("TRADE " + p.event + " · " + p.symbol + " " + p.contract + " · stake " + fmt(p.stake)
+    + " → " + COPY.targets.length + " client" + (COPY.targets.length === 1 ? "" : "s"), "dim");
+  COPY.targets.forEach(t => copySend(t, p));
+  renderCopyPreview(); renderCopyList(); copyStatus();
+}
+function copyTest(t){
+  const p = copyPayload({ source: "TEST", symbol: state.symbol, type: "TEST", stake: 0,
+    entry: "", exit: "", digit: "—", result: "TEST", profit: 0, id: null }, "TEST", null);
+  copyFeedLine("TEST → " + t.label + " (" + (t.confirm ? "waiting for a reply" : "blind") + ")", "dim");
+  copySend(t, p);
+  renderCopyPreview();
+}
+/* Paths arrive in bulk — the trader pastes a whole list — so this reports what it accepted, what was
+   already there, and what it refused, instead of silently filtering. */
+function copyAddFromText(text){
+  const toks = String(text || "").split(/[\s,;]+/).filter(Boolean);
+  let added = 0, dup = 0, bad = 0, blocked = 0;
+  toks.forEach(raw => {
+    const url = raw.trim();
+    if (!url) return;
+    if (!copyKind(url)){ bad++; copyFeedLine("refused (not an https/http/wss/ws URL): " + url, "bad"); return; }
+    if (copyBlocked(url)){ blocked++; copyFeedLine("refused (this page is https, " + url.slice(0, 40) + " is not secure)", "bad"); return; }
+    if (COPY.targets.some(t => t.url === url)){ dup++; return; }
+    COPY.targets.push(copyNewTarget(url));
+    added++;
+  });
+  copySave(); renderCopyList(); copyStatus();
+  const parts = [];
+  if (added) parts.push(added + " added");
+  if (dup) parts.push(dup + " already listed");
+  if (bad) parts.push(bad + " not a URL");
+  if (blocked) parts.push(blocked + " refused (http/ws on an https page)");
+  const line = parts.length ? parts.join(" · ") : "Nothing to add";
+  toast(line, added ? "success" : (bad || blocked ? "warn" : "info"), 6000);
+  copyFeedLine("CLIENTS: " + line, added ? "ok" : "dim");
+  return { added: added, dup: dup, bad: bad, blocked: blocked };
+}
+function copyCloseSock(t){
+  if (!t.sock) return;
+  try { t.sock.onclose = null; t.sock.onerror = null; t.sock.onmessage = null; t.sock.close(); } catch(e){}
+  t.sock = null;
+}
+function copyRemove(t){
+  copyCloseSock(t);
+  const i = COPY.targets.indexOf(t);
+  if (i >= 0) COPY.targets.splice(i, 1);
+  copySave(); renderCopyList(); copyStatus();
+  toast("Removed " + t.label + " — it gets nothing from now on", "info", 5000);
+  copyFeedLine("client removed: " + t.label, "dim");
+}
+function renderCopyList(){
+  const body = $("#copy_list");
+  if (!body) return;
+  if (!COPY.targets.length){
+    body.innerHTML = "<tr><td colspan='7' class='cpyempty'>No clients yet — paste a path above and press ADD / UPDATE CLIENTS.</td></tr>";
+  } else {
+    body.innerHTML = COPY.targets.map(t => {
+      const ago = t.last ? Math.max(0, Math.round((Date.now() - t.last) / 1000)) + "s ago" : "never";
+      return "<tr class='copyrow'" + (t.state === "err" ? " style='background:rgba(255,68,79,.05)'" : "") + ">"
+        + "<td class='src'>" + copyEsc(t.label) + "</td>"
+        + "<td class='cp' title='" + copyEsc(t.url) + "'>" + copyEsc(t.url) + "</td>"
+        + "<td>" + (t.kind === "ws" ? "socket" : "webhook" + (t.confirm ? " · confirm" : "")) + "</td>"
+        + "<td>" + ago + "</td>"
+        + "<td>" + t.sent + " / " + t.fails + "</td>"
+        + "<td><span class='cpydot " + t.state + "'></span>" + copyEsc(t.info) + "</td>"
+        + "<td><span class='copyact'>"
+        + "<button class='btn btn-ghost btn-mini' data-copyact='test' data-copyid='" + t.id + "'>TEST</button>"
+        /* a socket is either open or it is not — CORS never enters into it, so the mode button would be
+           a control with no effect. Only webhooks get to choose blind vs confirm. */
+        + (t.kind === "ws" ? "" : "<button class='btn btn-ghost btn-mini' data-copyact='mode' data-copyid='" + t.id + "' title='Blind sends and never reads a reply; confirm waits for one'>" + (t.confirm ? "CONFIRM" : "BLIND") + "</button>")
+        + "<button class='btn btn-red btn-mini' data-copyact='del' data-copyid='" + t.id + "'>REMOVE</button>"
+        + "</span></td></tr>";
+    }).join("");
+  }
+  const meta = $("#copyListMeta");
+  if (meta) meta.textContent = COPY.targets.length
+    ? COPY.targets.length + " client path" + (COPY.targets.length === 1 ? "" : "s") + (COPY.on ? " · LIVE" : " · waiting for the switch")
+    : "none yet";
+}
+function renderCopyFeed(){
+  const el = $("#copy_feed");
+  if (!el) return;
+  el.innerHTML = COPY.feed.length
+    ? COPY.feed.map(f => "<div class='" + f.c + "'>" + new Date(f.t).toLocaleTimeString() + " · " + copyEsc(f.m) + "</div>").join("")
+    : "<div class='dim'>Nothing broadcast yet. Add a client path, press TEST ALL CLIENTS to check it, then turn the switch on.</div>";
+  const meta = $("#copyFeedMeta");
+  if (meta) meta.textContent = COPY.feed.length ? COPY.feed.length + " event" + (COPY.feed.length === 1 ? "" : "s") + " this session" : "nothing sent yet";
+}
+function copyFeedLine(msg, cls){
+  COPY.feed.unshift({ t: Date.now(), m: String(msg), c: cls || "dim" });
+  while (COPY.feed.length > COPY_FEED_MAX) COPY.feed.pop();
+  renderCopyFeed();
+}
+function renderCopyPreview(){
+  const el = $("#copy_preview");
+  if (!el) return;
+  if (COPY.last){ el.textContent = COPY.last; return; }
+  el.textContent = JSON.stringify(copyPayload({ source: "Over/Under Recovery", symbol: state.symbol,
+    type: "DIGITOVER 6", stake: 1, entry: "", exit: "", digit: "—", result: "OPEN", profit: 0, id: 12345678 },
+    "ENTRY", { duration: 1, barrier: 6 }), null, 1);
+}
+function copyStatus(){
+  const btn = $("#copy_on");
+  if (btn){
+    btn.textContent = COPY.on ? "STOP BROADCASTING" : "START BROADCASTING";
+    btn.className = "btn btn-big " + (COPY.on ? "btn-green" : "btn-red");
+  }
+  const sub = $("#copy_status");
+  if (sub){
+    const n = COPY.targets.length;
+    sub.innerHTML = !n ? "No client paths yet — paste one or more addresses above and press ADD / UPDATE CLIENTS."
+      : COPY.on ? "<b style='color:var(--green)'>LIVE</b> — every contract your bots open and settle is sent to " + n
+          + " client path" + (n === 1 ? "" : "s") + ". Nothing about your account is included."
+        : "Switch off — nothing leaves this browser, even while the bots trade.";
+  }
+  const tg = $("#copyTargets"), sn = $("#copySent"), fl = $("#copyFail");
+  if (tg) tg.textContent = COPY.targets.length + " client" + (COPY.targets.length === 1 ? "" : "s");
+  if (sn) sn.textContent = COPY.sent + " sent";
+  if (fl){ fl.textContent = COPY.fails + " failed"; fl.className = "pill " + (COPY.fails ? "l" : "d"); }
+}
+function copyApplyMode(){
+  /* the dropdown is deliberately global — one switch for the whole list is easier to reason about than
+     twelve clients in twelve different modes — and each row can then be flipped back by hand */
+  COPY.confirm = $("#copy_mode") && $("#copy_mode").value === "confirm";
+  COPY.targets.forEach(t => { t.confirm = COPY.confirm; });
+  copySave(); renderCopyList();
+}
+function initCopyUI(){
+  if (!$("#copy_on") || !$("#copy_list")) return;   // never let a missing node take init() down with it
+  copyLoad();
+  const tag = $("#copy_tag"), key = $("#copy_key"), mode = $("#copy_mode"), ta = $("#copy_url");
+  if (tag) tag.value = COPY.tag;
+  if (key) key.value = COPY.key;
+  if (mode) mode.value = COPY.confirm ? "confirm" : "blind";
+  if (tag) tag.addEventListener("input", () => { COPY.tag = tag.value.slice(0, 40); copySave(); renderCopyPreview(); });
+  if (key) key.addEventListener("input", () => { COPY.key = key.value.slice(0, 80); copySave(); renderCopyPreview(); });
+  if (mode) mode.addEventListener("change", copyApplyMode);
+  if (ta) ta.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); copyAddFromText(ta.value); ta.value = ""; }
+  });
+  $("#copy_on").addEventListener("click", () => {
+    if (!COPY.on && !COPY.targets.length){
+      toast("Add a client path first — there is nobody to send to", "warn", 6000);
+      if (ta) ta.focus();
+      return;
+    }
+    COPY.on = !COPY.on;
+    copySave(); renderCopyList(); renderCopyPreview(); copyStatus();
+    toast(COPY.on ? "COPY LIVE — every fill goes to " + COPY.targets.length + " client path(s)"
+      : "COPY OFF — nothing leaves this browser", COPY.on ? "success" : "info", 7000);
+    copyFeedLine(COPY.on ? "broadcast ON · " + COPY.targets.length + " client(s)" : "broadcast OFF", COPY.on ? "ok" : "bad");
+    if (!COPY.on) COPY.targets.forEach(t => copyCloseSock(t));
+  });
+  $("#copy_add").addEventListener("click", () => {
+    if (!ta || !ta.value.trim()){ toast("Nothing pasted in the box", "warn", 5000); return; }
+    copyAddFromText(ta.value);
+    ta.value = "";
+  });
+  $("#copyTestAll").addEventListener("click", () => {
+    if (!COPY.targets.length){ toast("No clients to test", "warn", 5000); return; }
+    COPY.targets.forEach(t => copyTest(t));
+    toast("TEST sent to " + COPY.targets.length + " client(s) — watch the feed", "info", 6000);
+  });
+  $("#copyClearAll").addEventListener("click", async () => {
+    if (!COPY.targets.length){ toast("No clients listed", "info", 4000); return; }
+    const ok = await confirmDialog("Remove every client",
+      "Deletes all <b>" + COPY.targets.length + "</b> client path" + (COPY.targets.length === 1 ? "" : "s")
+      + " and closes any open socket. Your bots keep trading — they just send to nobody." +
+      "<div class='warnstrip' style='margin:10px 0 0'>Clients already receiving your stream keep the trades you sent them; this only stops new ones.</div>",
+      "REMOVE ALL");
+    if (!ok) return;
+    COPY.targets.forEach(t => copyCloseSock(t));
+    COPY.targets = []; COPY.on = false;
+    copySave(); renderCopyList(); copyStatus(); renderCopyPreview();
+    toast("All clients removed — copy trading is off", "success", 6000);
+    copyFeedLine("all clients removed", "bad");
+  });
+  $("#copy_list").addEventListener("click", e => {
+    const b = e.target.closest ? e.target.closest("button[data-copyact]") : null;
+    if (!b) return;
+    const t = COPY.targets.find(x => x.id === b.dataset.copyid);
+    if (!t) return;
+    const act = b.dataset.copyact;
+    if (act === "test") copyTest(t);
+    else if (act === "del") copyRemove(t);
+    else if (act === "mode"){
+      t.confirm = !t.confirm;
+      copySave(); renderCopyList();
+      toast(t.label + " is now " + (t.confirm ? "CONFIRM — it must reply" : "BLIND — send and move on"), "info", 5000);
+    }
+  });
+  renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus();
 }
 function waitTicks(n){
   return new Promise(resolve => {
@@ -8591,6 +9048,8 @@ function init(){
     if (b.dataset.tab === "rf") renderBot(bot3);   // the moved card + the desk header (renderRf runs from that branch)
     if (b.dataset.tab === "allinone"){ renderBot(bot5); renderAio(); aioStartTimer(); }
     else aioStopTimer();
+    /* Round 81: the copy tab repaints its own relative times ("12s ago") and dot states on entry. */
+    if (b.dataset.tab === "copy"){ renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus(); }
   }));
   loadSettings();
   state.fastExec = $("#fastExec").checked;
@@ -8906,6 +9365,9 @@ function init(){
     speak(running.length || queued.length ? "Stopped. Nothing more is bought." : "An order is still in flight — it will settle on its own.", { force: true, interrupt: true });
   });
   renderBots(); renderAiStats(); renderSignalHistory(); renderActivity(); renderSummary(); renderAccount(); renderSignalCard();
+  /* Round 81: copy trading reads its own localStorage key, so it loads after the CFG_IDS blob and never
+     enters that safety net. */
+  initCopyUI();
   /* The robot-face popup only ever lowers the curtain — CLOSE, the backdrop and Esc all leave the scan,
      the feeds and every bot exactly as they are. */
   const spCloseBtn = $("#spClose"), spPop = $("#aiScanPop");
@@ -8917,7 +9379,9 @@ function init(){
             redirect: oauthRedirectUri, env: oauthEnvProblem, refresh: oauthRefreshUi, expire: oauthExpired,
             clientId: oauthClientId, scopes: oauthScopes,
             authorize: authorizeWithToken },
-    scanPop: { open: scanPopOpen, close: scanPopClose, render: scanPopRender, state: scanPop, defs: SCAN_POP } };
+    scanPop: { open: scanPopOpen, close: scanPopClose, render: scanPopRender, state: scanPop, defs: SCAN_POP },
+    copy: { state: COPY, add: copyAddFromText, broadcast: copyBroadcast, test: copyTest, payload: copyPayload,
+            render: () => { renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus(); } } };
   setConn("connecting");
   api.connect().catch(() => toast("Could not reach Deriv — will keep retrying", "error"));
   /* If Deriv just redirected a client back here with an authorization code, finish that sign-in.
