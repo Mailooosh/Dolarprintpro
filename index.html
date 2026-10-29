@@ -2020,7 +2020,17 @@ function themeApply(t, save){
   if (save) store.set(THEME_KEY, THEME.now);
   themePaintCharts();
 }
-function initThemeUI(){ themeApply(THEME.now, false); }
+function initThemeUI(){
+  themeApply(THEME.now, false);
+  /* The switch itself. Without this listener the label and the persisted choice work but the button
+     does nothing, so it is wired here — once, guarded, next to the rest of the theme engine.
+     Clicking flips the theme, writes dt_theme, and repaints every canvas with the new ink. */
+  const btn = $("#themeBtn");
+  if (btn && !btn.dataset.wired){
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => themeApply(THEME.now === "light" ? "dark" : "light", true));
+  }
+}
 /* the maximum number of toasts allowed on screen at once — see toast() */
 const TOAST_MS = 3000;
 const TOAST_MAX = 4;
