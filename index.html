@@ -4457,8 +4457,12 @@ const fastMode = () => !!state.fastExec;
    The real floor per order is still Deriv's own settlement of the 1-tick contract plus that market's tick
    rate — this halves the WAITING time between two decisions, not the life of a contract. */
 const BOT_STEP_MS = 500;
+/* Round 87: "run after every 0s" — the hold between a contract SETTLING and the next order going out.
+   This is not a request flood: the previous order is always fully settled before this timer even starts,
+   so the real cadence is still set by Deriv's own settlement of the contract. */
+const BOT_TRADE_GAP_MS = 0;
 async function waitGap(ms){
-  const total = ms || BOT_STEP_MS;
+  const total = ms == null ? BOT_STEP_MS : ms;   // `||` here used to turn an explicit 0 back into 500
   const target = Date.now() + total;
   if (!fastMode()){ await sleep(total); return; }
   let left = target - Date.now();
@@ -4645,7 +4649,7 @@ class BaseBot {
         if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + e.message, "error"); break; }
         await sleep(e.code === "RateLimit" ? 30000 : 2500);
       } finally { this.busy = false; }
-      await waitGap();   // ~0.5s between a settled contract and the next order, in both execution modes
+      await waitGap(BOT_TRADE_GAP_MS);   // Round 87: the next order leaves the moment this one settles
     }
     renderBot(this);
   }
@@ -5038,7 +5042,7 @@ class MatchesBot extends BaseBot {
         await sleep(e.code === "RateLimit" ? 30000 : 2500);
       } finally { this.busy = false; }
       renderBot(this);
-      await waitGap();
+      await waitGap(BOT_TRADE_GAP_MS);   // Round 87: same zero gap after a multi-leg cycle
     }
     renderBot(this);
   }
@@ -6996,8 +7000,8 @@ function runPopTxHtml(b){
   }).join("");
 }
 function runPopGridHtml(b){
-  const s = b.stats, done = s.wins + s.losses;
-  return [["Total stake", fmt(s.staked || 0), ""], ["Total payout", fmt(s.paid || 0), ""],
+  const s = b.stats, done = s.wins + s.losses, sess = round2(s.pl - (b.sessionPl || 0));
+  return [["Session P/L", fmtS(sess), sess > 0 ? "up" : (sess < 0 ? "down" : "")], ["Total payout", fmt(s.paid || 0), ""],
     ["No. of runs", String(s.trades), ""], ["Contracts won", String(s.wins), s.wins ? "up" : ""],
     ["Contracts lost", String(s.losses), s.losses ? "down" : ""],
     ["Win rate", done ? fmt(s.wins / done * 100, 1) + "%" : "—", ""]]
@@ -7038,7 +7042,7 @@ function openRunPop(b){
   RUN_POP.b = b;
   $("#runPop").classList.remove("hidden");
   renderRunPop();
-  if (!RUN_POP.timer) RUN_POP.timer = setInterval(renderRunPop, 400);
+  if (!RUN_POP.timer) RUN_POP.timer = setInterval(renderRunPop, 150);   // Round 87: tracks the open-contract clock closely
 }
 function closeRunPop(){
   RUN_POP.b = null;
