@@ -195,6 +195,19 @@ nav.tabs::-webkit-scrollbar{display:none}
 .botcard.blkstyle .tbl td{color:var(--text);border-color:var(--line)}
 .botcard.blkstyle .note{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-top:1px solid var(--line);border-radius:8px;margin:10px 14px}
 .botcard.blkstyle .note:first-of-type{margin-top:12px}
+/* Round 83: BOT 11 · CUSTOM RUN lives on the Dashboard under the digit circles, so it needs its own
+   create-run bar and a locked-run read-out. Everything else reuses the Deriv bot-card rules above. */
+.b11bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:11px 14px;background:var(--panel2);border-top:1px solid var(--line)}
+.b11bar .btn{flex:0 0 auto}
+.b11bar .sub{flex:1 1 260px;min-width:0;color:var(--muted);font-size:12px;line-height:1.45}
+.b11run{margin:10px 14px;padding:10px 12px;border:1px solid var(--line2);border-left:3px solid var(--dv);border-radius:8px;background:var(--well);font-size:12.5px;color:var(--muted)}
+.b11run.locked{border-left-color:var(--green)}
+.b11run .b11kv{display:flex;flex-wrap:wrap;gap:3px 16px;margin:6px 0 2px}
+.b11run .b11kv span{white-space:nowrap;font-size:11px;letter-spacing:.02em;color:var(--dim)}
+.b11run .b11kv b{font:600 12px var(--mono);color:var(--text)}
+.b11run .b11kv .up{color:var(--green)}
+.b11run .b11kv .down{color:var(--red)}
+.b11run .b11tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--dv-soft);border:1px solid var(--dv-line);color:var(--dv-hi);font-size:10px;letter-spacing:.06em}
 /* ---------- strategy command space (Bot 4) ---------- */
 .cmdspace{width:100%;min-height:132px;resize:vertical;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;color:var(--text);font:11px/1.55 var(--mono);padding:9px 10px;box-sizing:border-box;outline:none}
 .cmdspace:focus{border-color:var(--muted)}
@@ -685,6 +698,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .cfg label{font-size:9.5px}
   .note{font-size:11.5px;padding:8px 10px}
   .cmdspace{min-height:112px;font-size:10.5px;padding:8px}
+  /* The locked run prints one nowrap fact per field ("TAKE PROFIT +5.00"), and the longest of them is
+     wider than a 360px card's content box, so on phone widths each fact is allowed to break its own line. */
+  .b11run{margin:9px 11px;padding:9px 10px;font-size:12px}
+  .b11run .b11kv{gap:2px 12px}
+  .b11run .b11kv span{white-space:normal}
   .drunbar{padding:8px;gap:8px}
   /* RUN/STOP takes the row, Reset rides beside it, the status strip drops to its own line below */
   .drunbar .btn-big{flex:1 1 auto;min-width:0;padding:12px 14px;font-size:13.5px}
@@ -804,6 +822,10 @@ html[data-theme="light"] header{border-bottom-color:var(--line);box-shadow:0 1px
 html[data-theme="light"] nav.tabs{box-shadow:0 1px 0 rgba(24,36,54,.05)}
 html[data-theme="light"] .mcard{box-shadow:0 18px 50px rgba(24,36,54,.25)}
 html[data-theme="light"] .modal{background:rgba(40,50,66,.42)}
+/* Every bot card's title bar is a solid blue gradient, so the mode badge's translucent grey chip and
+   its --muted text dissolve into it on white. A near-white fill keeps the semantic colour (green main /
+   amber recovery / grey waiting) and lifts it to ~7:1 against the bar. */
+html[data-theme="light"] .botcard.blkstyle>h3 .mode-badge{background:rgba(255,255,255,.88);border-color:rgba(255,255,255,.95)}
 /* the desk robot is a dark metal cut-out on charcoal; on white it has to read as light metal with a
    dark visor, otherwise it looks like a hole punched in the page */
 html[data-theme="light"] .robot .head,
@@ -947,6 +969,59 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     </div>
   </div>
 
+  <!-- ============ BOT 11 · CUSTOM RUN (Round 83) ============
+       Sits on the Dashboard directly under the digit circles because its contract type is read off those
+       same last-100-ticks digits. One bar of settings, one "CREATE RUN", one RUN button — no dialogs. -->
+  <div class="panel botcard blkstyle" id="card_b11" style="margin-top:14px">
+    <h3>BOT 11 · Custom Run <span class="mode"><span class="mode-badge mode-wait" id="b11_mode">NO RUN YET</span></span></h3>
+    <div class="runbar" id="b11_runbar"><span class="rdot"></span><span class="rstate" id="b11_state">Bot stopped</span><span class="rmeta" id="b11_runmeta"></span></div>
+    <div class="botrun">
+      <button class="btn btn-blue btn-big" id="b11_toggle">RUN</button>
+      <span class="sub" id="b11_sub">Pick the trade type, contract, SL, TP, stake and martingale below, then press RUN — it creates the run and starts trading it immediately. Nothing else is asked.</span>
+    </div>
+    <div class="cfg">
+      <label>Trade type
+        <select id="b11_trade" title="Which contract family this bot buys">
+          <option value="eo">Digits — Even / Odd</option>
+          <option value="rf">Rise / Fall</option>
+          <option value="ou">Digits — Over / Under</option>
+          <option value="match">Digit Matches</option>
+        </select>
+      </label>
+      <label>Contract type (from last ticks)
+        <select id="b11_contract" title="AUTO = the bot reads the window you set below and takes the side that has covered MORE of the last ticks, re-decided every 0.5 second. Picking a side manually locks that side for the run"></select>
+      </label>
+      <label>Window (ticks)<input type="number" id="b11_win" value="100" min="30" max="500" step="10" title="How many recent ticks the contract type is named from — 'the last 100 ticks' by default"></label>
+      <label>Barrier / digit<input type="number" id="b11_barrier" value="3" min="0" max="9" step="1" title="OVER n wins on digits above n, UNDER n wins on digits below n, MATCH n wins when the tick lands exactly on n. Ignored by Even/Odd and Rise/Fall"></label>
+      <label>Duration (ticks)<input type="number" id="b11_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks"></label>
+      <label>Stake<input type="number" id="b11_stake" value="0.35" min="0.35" step="0.05" title="Base stake per contract"></label>
+      <label>Martingale ×<input type="number" id="b11_mult" value="2.10" min="1" max="3" step="0.05" title="Stake multiplier after each loss (1.00 = flat stakes)"></label>
+      <label>Stake cap<input type="number" id="b11_maxstake" value="10" min="1" step="1" title="Martingale stake never exceeds this — the ladder resets to base stake instead"></label>
+      <label>Take profit<input type="number" id="b11_tp" value="5" min="0" step="0.5" title="Stop the bot once run P/L reaches +this (0 = off)"></label>
+      <label>Stop loss<input type="number" id="b11_sl" value="10" min="0" step="0.5" title="Stop the bot once run P/L falls to −this (0 = off)"></label>
+    </div>
+    <div class="b11bar">
+      <button class="btn" id="b11_create">CREATE RUN</button>
+      <span class="sub" id="b11_createSub">Names the contract from the current window and locks it. RUN would have done this for you — press it only to see the read-out first.</span>
+    </div>
+    <div class="b11run" id="b11_run">No run created yet.</div>
+    <div class="stats">
+      <div class="stat"><div class="k">Trades</div><div class="v" id="b11_trades">0</div></div>
+      <div class="stat"><div class="k">Wins</div><div class="v" id="b11_wins">0</div></div>
+      <div class="stat"><div class="k">Losses</div><div class="v" id="b11_losses">0</div></div>
+      <div class="stat"><div class="k">Win rate</div><div class="v" id="b11_wr">—</div></div>
+      <div class="stat"><div class="k">Net P/L</div><div class="v" id="b11_pl">0.00</div></div>
+      <div class="stat"><div class="k">Next stake</div><div class="v" id="b11_next">0.35</div></div>
+      <div class="stat"><div class="k">Total stake</div><div class="v" id="b11_staked">0.00</div></div>
+      <div class="stat"><div class="k">ROI</div><div class="v" id="b11_roi">—</div></div>
+    </div>
+    <div class="chips" id="b11_chips"></div>
+    <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b11_chart"></canvas></div>
+    <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b11_recent"></tbody></table></div>
+    <div class="note" id="b11_expo"></div>
+    <div class="note"><b>What this bot is:</b> your own contract, no strategy opinions. It buys the trade type and contract type you set, on this market, at your stake, and keeps buying one contract per ~0.5 second decision while the run is live — a loss steps the stake by the martingale factor, a win banks it and drops back to base. <b>Take profit and stop loss both genuinely stop it.</b> With the contract type on <b>AUTO</b> the side is re-read from the last <i>window</i> ticks on every decision, so it can flip between EVEN and ODD (or OVER and UNDER) as the window moves; lock a side in that dropdown if you want it fixed for the run. <b style="color:var(--amber)">AUTO is a description of the ticks that already happened, not a prediction of the next one — over the long run every digit family pays below its own break-even coverage, so martingale sizing can lose a full ladder. The exposure figure above is the real worst case.</b></div>
+  </div>
+
   <div class="panel" style="margin-top:14px">
     <h3>Price chart — live <span class="r" id="priceMeta">—</span></h3>
     <div class="wbtns" id="candleBtns" style="margin:2px 0 8px">
@@ -1046,7 +1121,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
         <div class="stat"><div class="k">Total stake</div><div class="v" id="b10_staked">0.00</div></div>
         <div class="stat"><div class="k">ROI</div><div class="v" id="b10_roi">—</div></div>
       </div>
-      <div class="note" id="b10_entry">Not started — the RED-digit heat rule is checked once a second while the bot runs.</div>
+      <div class="note" id="b10_entry">Not started — the RED-digit heat rule is checked twice a second while the bot runs.</div>
       <div id="b10_gates"></div>
       <div class="chips" id="b10_chips"></div>
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
@@ -1153,7 +1228,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b1_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b1_recent"></tbody></table></div>
       <div class="note" id="b1_expo"></div>
-      <div class="note"><b>Strategy:</b> main trade = DIGIT OVER 3 (wins on digits 4–9, ~60% probability). After any loss the bot switches to <b>DIGIT UNDER 6</b> (wins on 0–5) and multiplies the stake by the <b>martingale factor</b> for each consecutive loss. UNDER 6 pays about 1.65×, so the ladder wins back short losing runs in full; deeper runs are cut off by the limits below. It resets to base after a recovery win, after the max recovery steps, or when the next stake would exceed the cap. <b>After every loss it also holds 3s</b>, analyses every market it has data for, and will not place the next trade until the digits that just beat it (0–3 after an OVER 3 loss, 6–9 after an UNDER 6 loss) have been touched <b>3 or more times in the last 100 ticks</b> — the analysis only informs the entry, the bot always keeps trading the market you selected. Decisions run on a ~1 second heartbeat.</div>
+      <div class="note"><b>Strategy:</b> main trade = DIGIT OVER 3 (wins on digits 4–9, ~60% probability). After any loss the bot switches to <b>DIGIT UNDER 6</b> (wins on 0–5) and multiplies the stake by the <b>martingale factor</b> for each consecutive loss. UNDER 6 pays about 1.65×, so the ladder wins back short losing runs in full; deeper runs are cut off by the limits below. It resets to base after a recovery win, after the max recovery steps, or when the next stake would exceed the cap. <b>After every loss it also holds 3s</b>, analyses every market it has data for, and will not place the next trade until the digits that just beat it (0–3 after an OVER 3 loss, 6–9 after an UNDER 6 loss) have been touched <b>3 or more times in the last 100 ticks</b> — the analysis only informs the entry, the bot always keeps trading the market you selected. Decisions run on a ~0.5 second heartbeat.</div>
     </div>
 
     <div class="panel botcard blkstyle" id="card_b2">
@@ -1355,7 +1430,7 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
     <button class="btn btn-ghost" id="stopAll">STOP ALL BOTS</button>
     <label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-size:12px;cursor:pointer;user-select:none">
       <input type="checkbox" id="fastExec" checked style="accent-color:var(--red);width:15px;height:15px;cursor:pointer">
-      <b style="color:var(--text)">Fast execution</b>&nbsp;— snap the 1s bot heartbeat onto every tick (untick to sleep the full second between decisions)
+      <b style="color:var(--text)">Fast execution</b>&nbsp;— snap the 0.5s bot heartbeat onto every tick (untick to sleep the full half second between decisions)
     </label>
     <label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-size:12px">
       <b style="color:var(--text)">Virtual trades before live</b>
@@ -1462,7 +1537,7 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
         <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b8_chart"></canvas></div>
         <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b8_recent"></tbody></table></div>
         <div class="note" id="b8_expo"></div>
-        <div class="note"><b>Strategy:</b> once a second it reads the last <b>50–100 ticks</b> of the market in the header and counts <b>EVEN</b> against <b>ODD</b> on the closing digit, then buys <b>one contract on whichever parity covers more of the window</b>. <b>Measured on this terminal</b> (read-only proposals): EVEN and ODD both pay <b>1.82×</b> the stake. So the side it picks needs <b>54.95%</b> of the window just to break even, while a coin flip covers <b>50%</b> — at that quote each trade is worth roughly <b>−0.09 per 1.00 staked</b>. <b style="color:var(--red)">A 55–58% reading over only 50–100 ticks is 1–2σ — sampling noise, not a proven bias — and digit parity has no known durable edge. Stakes stay flat on purpose: a martingale on a negative-expectancy side only accelerates the drawdown. Use a small stake, keep a real stop loss, and treat it as a demonstration.</b><br><b>Danger zone:</b> before buying it checks that entry against the <b>Danger gate (σ)</b> field — the parity must be above break-even <i>and</i> at least that many σ above a coin flip (1.5σ over a 100-tick window = 50 + 1.5×5 = <b>≥57.5%</b> coverage; the card prints the live number for your window). Measured over <b>7,208 rolling 100-tick windows across 8 volatility markets</b> of this terminal's own tick streams: the stronger of EVEN/ODD was above break-even on only <b>41.4%</b> of steps, cleared 1.5σ on <b>13.6%</b> and 2σ on <b>6.3%</b>. So when the market is bad or there is no good entry point the AI says <b style="color:var(--red)">DANGER ZONE DETECTED</b>, logs the reason and <b>buys nothing</b> — waiting is the normal state, not a fault. Set the gate to <b>0</b> to trade every cycle instead. Clearing the gate only rejects readings a fair coin explains; it does not create an edge.</div>
+        <div class="note"><b>Strategy:</b> twice a second it reads the last <b>50–100 ticks</b> of the market in the header and counts <b>EVEN</b> against <b>ODD</b> on the closing digit, then buys <b>one contract on whichever parity covers more of the window</b>. <b>Measured on this terminal</b> (read-only proposals): EVEN and ODD both pay <b>1.82×</b> the stake. So the side it picks needs <b>54.95%</b> of the window just to break even, while a coin flip covers <b>50%</b> — at that quote each trade is worth roughly <b>−0.09 per 1.00 staked</b>. <b style="color:var(--red)">A 55–58% reading over only 50–100 ticks is 1–2σ — sampling noise, not a proven bias — and digit parity has no known durable edge. Stakes stay flat on purpose: a martingale on a negative-expectancy side only accelerates the drawdown. Use a small stake, keep a real stop loss, and treat it as a demonstration.</b><br><b>Danger zone:</b> before buying it checks that entry against the <b>Danger gate (σ)</b> field — the parity must be above break-even <i>and</i> at least that many σ above a coin flip (1.5σ over a 100-tick window = 50 + 1.5×5 = <b>≥57.5%</b> coverage; the card prints the live number for your window). Measured over <b>7,208 rolling 100-tick windows across 8 volatility markets</b> of this terminal's own tick streams: the stronger of EVEN/ODD was above break-even on only <b>41.4%</b> of steps, cleared 1.5σ on <b>13.6%</b> and 2σ on <b>6.3%</b>. So when the market is bad or there is no good entry point the AI says <b style="color:var(--red)">DANGER ZONE DETECTED</b>, logs the reason and <b>buys nothing</b> — waiting is the normal state, not a fault. Set the gate to <b>0</b> to trade every cycle instead. Clearing the gate only rejects readings a fair coin explains; it does not create an edge.</div>
       </div>
 
       <div class="panel botcard" id="card_b9" style="margin-top:12px;border-color:rgba(37,255,154,.28)">
@@ -1818,7 +1893,7 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
         <summary>Owner settings — Deriv OAuth app, scopes and redirect URL</summary>
         <div class="note" style="margin-top:0">Only the person who owns this site needs this panel. Clients just press the button above: the app ID below is already built into the page, so it is only here to switch the site to a different Deriv app. A <b>Client ID is public by design</b> — it travels in the browser address to Deriv and grants nothing on its own; the secret half is the list of redirect URLs registered on the app plus the client's own login.</div>
         <div class="steps">
-          <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → <b>Get started</b> → your app) and put its <b>App ID / Client ID</b> below. Deriv answers an unknown id with <code>invalid_client</code> — a Deriv error page, not this one.</span>
+          <span>1. Register an <b>OAuth app</b> on Deriv (developers.deriv.com → sign in → <b>Dashboard</b> → <b>Application Manager</b>) and put its <b>App ID / Client ID</b> below. The app for this site is named <b>DolarPrintPro</b> — editing that name only changes the label on Deriv's approval page, the App ID and the redirect URLs below stay exactly as they are. Deriv answers an unknown id with <code>invalid_client</code> — a Deriv error page, not this one.</span>
           <span>2. Add the <b>Redirect URI</b> shown below to that app's registered redirect URLs, character for character — Deriv refuses a mismatch, including a missing trailing slash or a different host, and answers <code>redirect_uri does not match</code>.</span>
           <span>3. Press <b>LOG IN WITH DERIV</b>. Deriv opens its own sign-in page and asks the client to approve the scopes listed. No token is typed in here.</span>
           <span>4. The token Deriv returns is short-lived (about an hour) and is kept in this browser tab only — not on any server and not in long-term storage. When it lapses, the page asks the client to sign in again.</span>
@@ -2224,7 +2299,7 @@ const state = {
   tickSubId: null, tickReqId: null, subBusy: false, subAgain: false,
   tickRetryTimer: null, tickRetryDelay: 0, symbolsLoaded: false,
   winSel: 100,
-  fastExec: true,          // fast execution: snap the bots' ~1s heartbeat onto the next tick instead of sleeping it
+  fastExec: true,          // fast execution: snap the bots' ~0.5s heartbeat onto the next tick instead of sleeping it
   candleTicks: 5,          // ticks aggregated into one candlestick
   account: null, token: "", balanceSubId: null, balanceReqId: null, balancePollId: null,
   authMode: null, authBusy: false
@@ -4151,6 +4226,9 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
   "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_gate","b9_tp","b9_sl",
   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
+  /* b11_contract is NOT here on purpose: its option list is rebuilt when the family changes, and a
+     restored stale value would leave an empty select. It persists as its own dt_b11_contract key. */
+  "b11_trade","b11_win","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","virtCount","winStreak","cashSound","aiVoice"];
 function loadSettings(){
@@ -4315,10 +4393,13 @@ function waitTick(maxMs){
   });
 }
 const fastMode = () => !!state.fastExec;
-/* ---- the bots' heartbeat: every running bot decides ~once per second ----
+/* ---- the bots' heartbeat: every running bot decides ~twice per second ----
    waitGap always holds for at least `ms`, so no two actions happen faster than that;
-   in fast execution mode the remaining time is snapped onto tick pulses instead of a blind sleep. */
-const BOT_STEP_MS = 1000;
+   in fast execution mode the remaining time is snapped onto tick pulses instead of a blind sleep.
+   Round 83: 1000 → 500 on the user's request ("my bots are very slow … faster after every 0.5 second").
+   The real floor per order is still Deriv's own settlement of the 1-tick contract plus that market's tick
+   rate — this halves the WAITING time between two decisions, not the life of a contract. */
+const BOT_STEP_MS = 500;
 async function waitGap(ms){
   const total = ms || BOT_STEP_MS;
   const target = Date.now() + total;
@@ -4355,7 +4436,7 @@ class BaseBot {
     renderBot(this);
     this.loop();
     if (resume) return;                      // an automatic restart: leave the user's tab and ears alone
-    if (!state.fastExec) toast("⚡ Fast execution is OFF for " + this.name + " — it still decides on the ~1s heartbeat, but sleeps the whole second instead of lining the next decision up on the very next tick. Tick 'Fast execution' under the bot desk to snap entries to ticks.", "warn", 9000);
+    if (!state.fastExec) toast("⚡ Fast execution is OFF for " + this.name + " — it still decides on the ~0.5s heartbeat, but sleeps the whole half second instead of lining the next decision up on the very next tick. Tick 'Fast execution' under the bot desk to snap entries to ticks.", "warn", 9000);
     showTab("activity");   // the user asked to land on the trade log the moment a bot runs
   }
   startedTxt(){ return "Bot started on " + state.symbol; }
@@ -4467,7 +4548,7 @@ class BaseBot {
       if (!state.account){ this.stop("account logged out"); break; }
       try {
         const plan = this.planNext();
-        if (!plan){ renderBot(this); await waitGap(); continue; }   // waiting for the entry condition — re-checked on the 1s heartbeat
+        if (!plan){ renderBot(this); await waitGap(); continue; }   // waiting for the entry condition — re-checked on the 0.5s heartbeat
         const lim = this.cfg();
         if (this.stopsOnKind("sl") && lim.sl > 0 && this.limitPl() - plan.stake < -lim.sl - 1e-9){
           this.stop("next stake " + fmt(plan.stake) + " would breach stop loss " + fmt(lim.sl), { limit: true, kind: "sl" });
@@ -4505,7 +4586,7 @@ class BaseBot {
         if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + e.message, "error"); break; }
         await sleep(e.code === "RateLimit" ? 30000 : 2500);
       } finally { this.busy = false; }
-      await waitGap();   // ~1s between a settled contract and the next order, in both execution modes
+      await waitGap();   // ~0.5s between a settled contract and the next order, in both execution modes
     }
     renderBot(this);
   }
@@ -4648,7 +4729,7 @@ class Over3Bot extends BaseBot {
   describe(){
     const c = cfg1();
     const ladder = Array.from({ length: Math.min(4, c.steps) }, (_, i) => fmt(round2(c.stake * Math.pow(c.mult, i + 1)))).join(" → ");
-    return "<div class='note' style='margin:0'><b>Main:</b> DIGITOVER 3 on " + state.symbol + " — stake " + fmt(c.stake) + ", " + c.dur + " tick(s).<br><b>On loss:</b> switch to DIGITUNDER 6 and multiply the stake by <b>×" + fmt(c.mult) + "</b> for each consecutive loss (from " + fmt(c.stake) + ": " + ladder + "), max " + c.steps + " recovery steps, stake cap " + fmt(c.maxStake) + ". UNDER 6 pays about 1.65×, so a ladder needs ≈2.54 to win back a deep losing run in full — at ×" + fmt(c.mult) + " short runs are recovered outright and deeper ones are cut off by the steps/cap limits.<br><b>After every loss:</b> hold " + (B1_HOLD_MS / 1000) + "s, analyse all the markets, then re-enter only once the digits that just beat it (" + (this.hold ? this.hold.label : "0–3 after an OVER 3 loss, 6–9 after an UNDER 6 loss") + ") have been touched " + B1_TOUCH_MIN + "+ times in the last " + B1_TOUCH_WIN + " ticks. It never switches market by itself.<br><b>Cadence:</b> one decision every ~1 second.<br><b>Session limits:</b> " + limitsText(c) + "</div>";
+    return "<div class='note' style='margin:0'><b>Main:</b> DIGITOVER 3 on " + state.symbol + " — stake " + fmt(c.stake) + ", " + c.dur + " tick(s).<br><b>On loss:</b> switch to DIGITUNDER 6 and multiply the stake by <b>×" + fmt(c.mult) + "</b> for each consecutive loss (from " + fmt(c.stake) + ": " + ladder + "), max " + c.steps + " recovery steps, stake cap " + fmt(c.maxStake) + ". UNDER 6 pays about 1.65×, so a ladder needs ≈2.54 to win back a deep losing run in full — at ×" + fmt(c.mult) + " short runs are recovered outright and deeper ones are cut off by the steps/cap limits.<br><b>After every loss:</b> hold " + (B1_HOLD_MS / 1000) + "s, analyse all the markets, then re-enter only once the digits that just beat it (" + (this.hold ? this.hold.label : "0–3 after an OVER 3 loss, 6–9 after an UNDER 6 loss") + ") have been touched " + B1_TOUCH_MIN + "+ times in the last " + B1_TOUCH_WIN + " ticks. It never switches market by itself.<br><b>Cadence:</b> one decision every ~0.5 second.<br><b>Session limits:</b> " + limitsText(c) + "</div>";
   }
 }
 function cfg6(){
@@ -4790,7 +4871,7 @@ class MatchesBot extends BaseBot {
     return { n: arr.length, min, half, counts, last, rank, top: rank[0], second: rank[1] };
   }
   stakeFor(c){ return round2(c.stake * Math.pow(c.mult, this.lossStreak)); }   // PER LEG
-  note(msg){   // one line per changed reason, then every 10th repeat — the loop runs once a second
+  note(msg){   // one line per changed reason, then every 10th repeat — the loop runs twice a second
     if (msg === this.note_){ if (++this.noteReps % 10) return; } else { this.note_ = msg; this.noteReps = 1; }
     this.sys(msg);
   }
@@ -5227,7 +5308,7 @@ class SyncBot extends BaseBot {
       "</b> for up to <b>" + c.steps + " steps</b> before resetting to base" +
       (c.maxstake > 0 ? ", or sooner if the next step would exceed the <b>" + fmtS(c.maxstake) + " cap</b>" : "") +
       ". At EVEN/ODD's measured <b>×" + fmt(SYN_PAY_EO) + "</b> payout, ×2.2 wins back the first loss (net +0.82 on the second rung) but needs another win to recover deeper runs — the steps limit prevents runaway exposure.<br><b>Ladder example</b> (base 1.00, ×2.2, 4 steps): 1.00 → 2.20 → 4.84 → 10.65 → 23.43, cumulative −39.12 if all four lose. A win on rung 4 returns 23.43 × " + fmt(SYN_PAY_EO) + " = " + fmtS(round2(23.43 * SYN_PAY_EO)) + ", net +0.86 on that contract but still −38.26 on the run, so recovery takes several more wins.";
-    return "<div class='note' style='margin:0'><b>Play:</b> once a second it reads the last <b>" + c.win + " ticks</b> of " + state.symbol +
+    return "<div class='note' style='margin:0'><b>Play:</b> twice a second it reads the last <b>" + c.win + " ticks</b> of " + state.symbol +
       " and counts the closing digit by <b>EVEN</b> / <b>ODD</b>, then buys <b>one contract on the side whose digits are winning</b> at " + fmt(c.stake) + " for " + c.dur + " tick" + (c.dur > 1 ? "s" : "") + "." +
       (b ? " Right now it takes <b>" + b.label + "</b>: " + fmt(b.p, 1) + "% of the window against the " + fmt(b.be, 2) +
         "% it needs, " + fmt(b.sigma, 1) + "σ away from a coin flip." : "") +
@@ -6554,11 +6635,295 @@ class OverUnderStratBot extends BaseBot {
       ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") + ").</div><br><b>Session limits:</b> " + limitsText(c, this.stopKinds()) + " The session P/L stands at <b>" + fmtS(this.limitPl()) + "</b> right now.</div>";
   }
 }
+/* ================= BOT 11 · CUSTOM RUN (Round 83) =================
+   "add a bot new bot under digit distribution circles where i can choose the trade type, last 100ticks
+   contract type, SL, TP, stake, martingale and create a run that if i click bot will run automatically
+   without any other option."
+   So this card has no strategy opinion and no entry gate: the trader names the family, the contract type
+   (read off the last N ticks — that is what AUTO means here), the stake, the martingale, TP and SL; one
+   press of RUN snapshots that into a run and starts trading it immediately, skipConfirm, no dialog.
+   TP and SL both genuinely stop it (BaseBot's default stopKinds), which is what the SL/TP fields mean. */
+const B11_KINDS = {
+  eo:    [["AUTO", "AUTO — the busier side of the last ticks"], ["EVEN", "EVEN"], ["ODD", "ODD"]],
+  rf:    [["AUTO", "AUTO — the AI's call on every decision"], ["RISE", "RISE"], ["FALL", "FALL"]],
+  ou:    [["AUTO", "AUTO — the better-paying side of the last ticks"], ["OVER", "OVER the barrier"], ["UNDER", "UNDER the barrier"]],
+  match: [["AUTO", "AUTO — the hottest digit of the last ticks"], ["FIXED", "FIXED — my digit"]],
+};
+const B11_USES_BARRIER = { ou: true, match: true, eo: false, rf: false };
+function cfg11(){
+  const trade = ($("#b11_trade") || {}).value || "eo";
+  const kinds = B11_KINDS[trade] || B11_KINDS.eo;
+  let kind = ($("#b11_contract") || {}).value || "AUTO";
+  if (!kinds.some(k => k[0] === kind)) kind = "AUTO";   // a family switch lands here before the list rebuilds
+  return {
+    trade, kind,
+    win: clampInt($("#b11_win").value, 30, 500, 100),
+    barrier: clampInt($("#b11_barrier").value, 0, 9, 3),
+    dur: clampInt($("#b11_dur").value, 1, 10, 1),
+    stake: clampFloat($("#b11_stake").value, 0.35, 100000, 0.35),
+    mult: clampFloat($("#b11_mult").value, 1, 3, 2.1),
+    maxStake: clampFloat($("#b11_maxstake").value, 1, 100000, 10),
+    tp: Math.max(0, +$("#b11_tp").value || 0),
+    sl: Math.max(0, +$("#b11_sl").value || 0)
+  };
+}
+function b11Count(arr, test){ let k = 0; for (let i = 0; i < arr.length; i++) if (test(arr[i])) k++; return k; }
+/* the whole point of the card: name the contract from the window the trader set, then price it with the
+   same live quotes the other desks use. One read, four families, and an honest EV per 1.00 staked. */
+function b11Read(c){
+  const sym = state.symbol, o = { ok: false, why: "", type: null, barrier: null, lab: "—", key: "",
+    auto: c.kind === "AUTO", p: 0, be: 0, pay: 0, ev: 0, n: 0, conf: null };
+  if (c.trade === "rf"){
+    const pts = feedPrices(sym) || [];
+    o.n = Math.max(0, Math.min(pts.length, c.win) - 1);
+    if (pts.length < 3){ o.why = "no price feed on " + sym + " yet"; return o; }
+    let side = c.kind;
+    if (c.kind === "AUTO"){
+      const ai = rfAiOf(pts);
+      if (!ai){ o.why = "the Rise/Fall AI needs ~45 ticks on " + sym + " (has " + pts.length + ")"; return o; }
+      side = ai.side; o.conf = ai.conf;
+    }
+    const mv = rfMoves(pts, c.win);
+    o.n = mv.n;
+    o.type = side === "RISE" ? "CALL" : "PUT"; o.key = o.lab = side;
+    o.pay = aioPayOf(sym, "RF"); o.be = 100 / o.pay; o.p = side === "RISE" ? mv.upPct : mv.dnPct;
+    o.ev = o.pay * o.p / 100 - 1; o.ok = true;
+    o.why = o.p + "% of the last " + o.n + " moves went " + side;
+    return o;
+  }
+  const digs = state.digits.slice(-c.win);
+  o.n = digs.length;
+  if (o.n < 20){ o.why = "waiting for " + Math.min(20, c.win) + " ticks on " + sym + " (has " + o.n + ")"; return o; }
+  if (c.trade === "eo"){
+    const even = b11Count(digs, d => d % 2 === 0), odd = o.n - even;
+    let side = c.kind;
+    if (c.kind === "AUTO"){
+      if (even === odd){ o.why = "the last " + o.n + " ticks split exactly 50/50 — pick EVEN or ODD yourself"; return o; }
+      side = even > odd ? "EVEN" : "ODD";
+    }
+    o.type = side === "EVEN" ? "DIGITEVEN" : "DIGITODD"; o.key = o.lab = side;
+    o.p = (side === "EVEN" ? even : odd) / o.n * 100;
+    o.pay = synPayOf(sym); o.be = 100 / o.pay; o.ev = o.pay * o.p / 100 - 1; o.ok = true;
+    o.why = fmt(o.p, 1) + "% of the last " + o.n + " ticks were " + side;
+    return o;
+  }
+  if (c.trade === "ou"){
+    const b = c.barrier;
+    const over = b11Count(digs, d => d > b), under = b11Count(digs, d => d < b);
+    const payO = ouPayOf(sym, "DIGITOVER", b), payU = ouPayOf(sym, "DIGITUNDER", b);
+    const evO = payO * over / o.n - 1, evU = payU * under / o.n - 1;
+    let side = c.kind;
+    if (c.kind === "AUTO"){
+      if (over === 0 && under === 0){ o.why = "every one of the last " + o.n + " ticks landed exactly on " + b; return o; }
+      side = evO === evU ? "" : (evO > evU ? "OVER" : "UNDER");
+      if (!side){ o.why = "OVER " + b + " and UNDER " + b + " price out identical on this window — pick a side"; return o; }
+    }
+    const cnt = side === "OVER" ? over : under;
+    if (cnt === 0){ o.why = side + " " + b + " has not won a single one of the last " + o.n + " ticks"; return o; }
+    o.type = side === "OVER" ? "DIGITOVER" : "DIGITUNDER";
+    o.key = side; o.lab = side + " " + b; o.barrier = b;
+    o.p = cnt / o.n * 100; o.pay = side === "OVER" ? payO : payU;
+    o.be = 100 / o.pay; o.ev = o.pay * o.p / 100 - 1; o.ok = true;
+    o.why = fmt(o.p, 1) + "% of the last " + o.n + " ticks paid " + o.lab;
+    return o;
+  }
+  let digit = c.barrier;
+  if (c.kind === "AUTO"){
+    const h = digitHeatOf(state.digits, c.win, 1);
+    if (!h){ o.why = "the digit window needs 30+ ticks on " + sym + " (has " + o.n + ")"; return o; }
+    digit = h.rank[0].d;
+  }
+  const cnt = b11Count(digs, d => d === digit);
+  o.type = "DIGITMATCH"; o.key = "MATCH " + digit; o.lab = "MATCH " + digit; o.barrier = digit;
+  o.p = cnt / o.n * 100; o.pay = B7_PAY; o.be = 100 / o.pay; o.ev = o.pay * o.p / 100 - 1;
+  if (cnt === 0){ o.why = "digit " + digit + " did not appear in the last " + o.n + " ticks"; return o; }
+  o.ok = true; o.why = fmt(o.p, 1) + "% of the last " + o.n + " ticks landed on " + digit;
+  return o;
+}
+class CustomRunBot extends BaseBot {
+  constructor(){ super("b11", "Custom Run Bot (your contract)", "Bot 11 · Custom Run");
+    this.run = null; this.lossStreak = 0; this.runLossAmt = 0; this.side = ""; this.lastWhy = ""; }
+  cfg(){ return this.run ? this.run.cfg : cfg11(); }
+  stakeRaw(c){ return round2(c.stake * Math.pow(c.mult, this.lossStreak)); }
+  nextStake(c){ const s = this.stakeRaw(c); return s > c.maxStake ? c.stake : s; }
+  startedTxt(){ const r = b11Read(this.cfg()); return "Bot started on " + state.symbol + " · " + (r.ok ? r.lab + " · stake " + fmt(this.nextStake(this.cfg())) : "waiting for a contract (" + r.why + ")"); }
+  planNext(){
+    if (!this.run) return null;                       // RUN always creates the run first; this is the belt
+    const c = this.cfg();
+    const r = b11Read(c);
+    if (!r.ok){
+      if (this.lastWhy !== r.why){ this.lastWhy = r.why; this.sys("Holding — " + r.why); renderBot(this); }
+      return null;
+    }
+    this.lastWhy = "";
+    if (r.auto && r.key !== this.side){
+      this.sys("AUTO flipped " + (this.side || "nothing") + " → " + r.key + " (" + fmt(r.p, 1) + "% of the last " + r.n +
+        " ticks) — new contract, so the ladder starts again at base stake");
+      this.lossStreak = 0; this.runLossAmt = 0;
+    }
+    this.side = r.key;
+    let stake = this.stakeRaw(c);
+    if (stake > c.maxStake){
+      this.sys("Martingale stake " + fmt(stake) + " exceeds cap " + fmt(c.maxStake) + " (−" + fmt(this.runLossAmt) +
+        ") — back to base " + fmt(c.stake));
+      this.lossStreak = 0; this.runLossAmt = 0; stake = c.stake;
+    }
+    return { type: r.type, barrier: r.barrier, stake, duration: c.dur, source: this.source };
+  }
+  onSettled(res){
+    if (res.won){
+      if (this.lossStreak) this.sys("Ladder closed at step " + this.lossStreak + " — back to base stake");
+      this.lossStreak = 0; this.runLossAmt = 0;
+    } else { this.lossStreak++; this.runLossAmt = round2(this.runLossAmt + Math.abs(res.profit)); }
+  }
+  preview(){
+    const c = this.cfg();
+    if (!this.run) return { label: "NO RUN YET", cls: "mode-wait", stake: c.stake };
+    const r = b11Read(c);
+    if (!r.ok) return { label: "WAITING · CONTRACT", cls: "mode-wait", stake: this.nextStake(c) };
+    return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + " · " : "TRADE · ") + r.lab + (r.auto ? " (AUTO)" : ""),
+      cls: this.lossStreak ? "mode-rec" : "mode-main", stake: this.nextStake(c) };
+  }
+  subText(){
+    const c = this.cfg();
+    if (!this.run) return "Choose the trade type, contract, SL, TP, stake and martingale below, then press RUN — it creates the run and starts trading, nothing else is asked";
+    const r = b11Read(c);
+    if (!r.ok) return "Contract not readable yet — " + r.why;
+    return "Buys " + r.lab + " on " + state.symbol + " · " + fmt(r.p, 1) + "% of the last " + r.n + " ticks vs " +
+      fmt(r.be, 2) + "% break-even ⇒ EV " + fmtS(r.ev) + " per 1.00 · next stake " + fmt(this.nextStake(c)) +
+      (r.conf ? " · AI conf " + fmt(r.conf, 0) + "%" : "") +
+      (this.lossStreak ? " · ladder step " + this.lossStreak + " (−" + fmt(this.runLossAmt) + ")" : "");
+  }
+  describe(){
+    const c = this.cfg(), r = b11Read(c), cur = (state.account && state.account.currency) || "USD";
+    let s = c.stake, total = 0, steps = 0;
+    while (s <= c.maxStake && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
+    return "<div class='note' style='margin:0'><b>Contract:</b> " + (r.ok ? "<b>" + r.lab + "</b> (" + B11_LAB_TXT[c.trade] +
+      ") on " + state.symbol + " — " + r.why + ", pays " + fmt(r.pay) + "× so it needs " + fmt(r.be, 2) +
+      "% and this window gives EV " + fmtS(r.ev) + " per 1.00" : "not readable yet — " + r.why) +
+      "<br><b>Play:</b> one contract every ~0.5 second decision at " + fmt(c.stake) + " " + cur + ", " + c.dur +
+      " tick" + (c.dur > 1 ? "s" : "") + ". A loss multiplies the stake ×" + fmt(c.mult) + " (cap " + fmt(c.maxStake) +
+      "), a win drops it back to base. Worst-case ladder exposure ≈ " + fmt(round2(total)) + " " + cur + ".<br><b>Limits:</b> " +
+      limitsText(c, this.stopKinds()) + "<br><b>Read this:</b> the percentages describe ticks that already happened. " +
+      "They are not a prediction of the next tick, and no window measured here makes this family's expectancy positive over the long run." +
+      "<div class='warnstrip' style='margin:10px 0 0'> This places <b>real trades</b> on account <b>" +
+      ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") + ").</div></div>";
+  }
+}
+const B11_LAB_TXT = { eo: "Even/Odd digits", rf: "Rise/Fall", ou: "Over/Under digits", match: "Digit Matches" };
+/* the contract list is rebuilt when the family changes, so this select is deliberately OUT of CFG_IDS
+   (a restored stale value would leave an empty select) and keeps its own per-family map instead:
+   OVER/UNDER stays UNDER when you look at Even/Odd and come back. */
+function b11KindMap(){ try { return JSON.parse(store.get("dt_b11_contract") || "{}") || {}; } catch(e){ return {}; } }
+function b11FillContracts(){
+  const sel = $("#b11_contract"); if (!sel) return;
+  const trade = ($("#b11_trade") || {}).value || "eo";
+  const list = B11_KINDS[trade] || B11_KINDS.eo;
+  const map = b11KindMap();
+  sel.innerHTML = list.map(k => "<option value='" + k[0] + "'>" + k[1] + "</option>").join("");
+  const keep = map[trade];
+  sel.value = keep && list.some(k => k[0] === keep) ? keep : "AUTO";
+  map[trade] = sel.value; store.set("dt_b11_contract", JSON.stringify(map));
+  const bEl = $("#b11_barrier");
+  if (bEl){ bEl.disabled = !B11_USES_BARRIER[trade]; bEl.parentElement.style.opacity = bEl.disabled ? ".45" : ""; }
+  const lab = bEl ? bEl.parentElement.firstChild : null;
+  if (lab && lab.nodeType === 3) lab.textContent = trade === "match" ? "Digit to match" : trade === "ou" ? "Barrier / digit" : "Barrier (unused)";
+}
+function b11CreateRun(opts){
+  if (bot11.running){ toast("Bot 11 is running — press STOP before you re-lock its run", "warn", 6000); return null; }
+  const c = cfg11(), r = b11Read(c);
+  bot11.run = null; bot11.lossStreak = 0; bot11.runLossAmt = 0; bot11.side = "";
+  if (!r.ok){
+    toast("Cannot create this run: " + r.why, "error", 8000);
+    renderBot(bot11);
+    return null;
+  }
+  bot11.run = { cfg: c, made: Date.now(), market: state.symbol };
+  bot11.side = r.key;
+  bot11.sys("Run created — " + r.lab + " on " + state.symbol + " · " + fmt(c.stake) + " ×" + fmt(c.mult) +
+    " cap " + fmt(c.maxStake) + " · " + c.dur + " tick(s) · " + fmt(r.pay) + "× payout (" + fmt(r.be, 2) + "% break-even, this window " + fmt(r.p, 1) + "%)");
+  if (!(opts && opts.quiet)) toast("Bot 11 run locked: " + r.lab + " on " + state.symbol, "success", 5000);
+  renderBot(bot11);
+  return bot11.run;
+}
+/* the create-run bar + the locked-run read-out, both repainted by renderBot() so they can never drift */
+function renderB11Panels(b){
+  const box = $("#b11_run"), exp = $("#b11_expo"), cs = $("#b11_createSub");
+  if (!box) return;
+  /* the exposure line describes the run that is actually in play (b.cfg()), while the CREATE RUN hint
+     describes what that button WOULD do — so it reads the live inputs, not the locked snapshot. */
+  const c = b.cfg(), live = b11Read(cfg11());
+  const cur = (state.account && state.account.currency) || "USD";
+  let s = c.stake, total = 0, steps = 0;
+  while (s <= c.maxStake && steps < 20){ total += s; s = round2(s * c.mult); steps++; }
+  if (exp) exp.innerHTML = "<b>Worst-case martingale exposure ≈ " + fmt(round2(total)) + " " + cur + "</b> — " + steps +
+    " contracts in a row (base " + fmt(c.stake) + " then ×" + fmt(c.mult) + " per loss) before the stake cap " + fmt(c.maxStake) +
+    " resets the ladder to base. " + (c.mult > 1
+      ? "Martingale amplifies losses quickly; keep the base stake small."
+      : "Flat stakes (×1) — each contract risks " + fmt(c.stake) + " " + cur + ".") +
+    (c.sl > 0 ? " Your stop loss (" + fmt(c.sl) + " " + cur + ") stops the bot before the ladder gets that deep if run P/L falls that far." : "");
+  if (!b.run){
+    box.className = "b11run";
+    box.innerHTML = "No run locked. The settings above are live — press <b>▶ RUN</b> and this card snapshots them into a run and trades it at once (no dialog, no second option). " +
+      "Press <b>CREATE RUN</b> only if you want to see the numbers first.";
+    if (cs) cs.textContent = "Names the contract from the current window and locks it. RUN would have done this for you — press it only to see the read-out first.";
+    return;
+  }
+  /* b.cfg() IS the locked snapshot, so "did the card change after locking" has to be measured against
+     cfg11() — the live inputs — or the run can never look stale and the trader edits settings that do nothing. */
+  const rc = b.run.cfg, r = b11Read(rc), same = JSON.stringify(rc) === JSON.stringify(cfg11());
+  const kv = [
+    ["MARKET", b.run.market + (b.run.market === state.symbol ? "" : " → now " + state.symbol), b.run.market === state.symbol ? "" : "down"],
+    ["FAMILY", B11_LAB_TXT[rc.trade] || rc.trade, ""],
+    ["CONTRACT", r.ok ? r.lab + (rc.kind === "AUTO" ? " (AUTO)" : " (LOCKED)") : "not readable", ""],
+    ["WINDOW", rc.win + " ticks", ""],
+    [rc.trade === "match" ? "DIGIT" : "BARRIER", B11_USES_BARRIER[rc.trade] ? rc.barrier : "n/a", ""],
+    ["DURATION", rc.dur + " tick" + (rc.dur > 1 ? "s" : ""), ""],
+    ["STAKE", fmt(rc.stake), ""],
+    ["MARTINGALE", "×" + fmt(rc.mult) + " · cap " + fmt(rc.maxStake), ""],
+    ["TAKE PROFIT", rc.tp > 0 ? "+" + fmt(rc.tp) : "off", "up"],
+    ["STOP LOSS", rc.sl > 0 ? "−" + fmt(rc.sl) : "off", "down"],
+    ["PAYOUT", r.ok ? fmt(r.pay) + "× · break-even " + fmt(r.be, 2) + "%" : "—", ""],
+    ["THIS WINDOW", r.ok ? fmt(r.p, 1) + "% ⇒ EV " + fmtS(r.ev) + " per 1.00" : r.why, r.ok ? (r.ev >= 0 ? "up" : "down") : ""]
+  ];
+  box.className = "b11run locked";
+  box.innerHTML = "<b>Locked run</b><span class=\"b11tag\">" + (b.running ? (b.busy ? "TRADING · ORDER LIVE" : "TRADING") : "STANDBY") +
+    "</span><span class=\"b11tag\">created " + new Date(b.run.made).toLocaleTimeString() + "</span>" +
+    (same ? "" : "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ The settings on this card have changed since the run was locked — the run still trades what it was created with. Press <b>CREATE RUN</b> to re-lock from the new values.</div>") +
+    "<div class=\"b11kv\">" + kv.map(x => "<span>" + x[0] + " <b class=\"" + x[2] + "\">" + x[1] + "</b></span>").join("") + "</div>" +
+    (r.ok ? "" : "<div class=\"note\" style=\"margin:6px 0 0\">It cannot place a contract right now: " + r.why + ".</div>");
+  if (cs) cs.textContent = live.ok
+    ? "Ready — " + live.lab + " on " + state.symbol + " at " + fmt(live.pay) + "× (" + fmt(live.p, 1) + "% of the last " + live.n + " ticks vs " + fmt(live.be, 2) + "% break-even)."
+    : "Not ready: " + live.why + ".";
+}
+function initB11UI(){
+  b11FillContracts();
+  $("#b11_trade").addEventListener("change", () => {
+    b11FillContracts(); saveSettings(); renderBots();
+    const c11 = cfg11();
+    toast("Bot 11 family set to " + B11_LAB_TXT[c11.trade] + " — contract type " +
+      (c11.kind === "AUTO" ? "AUTO, re-read from your window on every 0.5 second decision" : c11.kind + ", locked until you change it"), "info", 6000);
+  });
+  $("#b11_contract").addEventListener("change", () => {
+    const m = b11KindMap(); m[cfg11().trade] = $("#b11_contract").value; store.set("dt_b11_contract", JSON.stringify(m));
+    renderBots();
+  });
+  $("#b11_create").addEventListener("click", () => b11CreateRun());
+  /* ONE press. No run locked -> lock it from the live settings, then start it with skipConfirm:
+     "create a run that if i click bot will run automatically without any other option". */
+  $("#b11_toggle").addEventListener("click", () => {
+    if (bot11.running || bot11.busy){ bot11.stop("manual stop"); return; }
+    if (!bot11.run && !b11CreateRun({ quiet: true })) return;
+    bot11.start({ skipConfirm: true });
+  });
+  renderBot(bot11);
+}
 const bot7 = new MatchesBot();
 const bot8 = new SyncBot();
 const bot9 = new SyncRecoveryBot();
 const bot10 = new OverUnderStratBot();
-const BOTS = [bot1, bot2, bot3, bot4, bot5, bot6, bot7, bot8, bot9, bot10];
+const bot11 = new CustomRunBot();
+const BOTS = [bot1, bot2, bot3, bot4, bot5, bot6, bot7, bot8, bot9, bot10, bot11];
 const anyBotRunning = () => BOTS.some(b => b.running);
 const anyBotBusy = () => BOTS.some(b => b.busy);
 function stopAllBots(reason){ BOTS.forEach(b => b.stop(reason)); }
@@ -6690,7 +7055,7 @@ function renderSync(){
       : bot9.running && bot9.lossStreak ? "BOT 9 RECOVERY · " + lab9 + " step " + bot9.lossStreak + "/" + cfg9().steps +
           " at " + fmt(bot9.nextStake()) + " · run −" + fmt(bot9.runLossAmt) + " on " + state.symbol
       : bot9.running ? "BOT 9 TRADING UNDER 6 on " + state.symbol + " · " + (l9 ? syn9MatrixTxt(bot9.play) : "reading ticks")
-      : bot8.running ? "BOT 8 PLAYS " + (live ? live.label + " (" + live.why + ")" : "ANALYSING…") + " ON " + state.symbol + " · one contract per accepted entry, ~1s apart"
+      : bot8.running ? "BOT 8 PLAYS " + (live ? live.label + " (" + live.why + ")" : "ANALYSING…") + " ON " + state.symbol + " · one contract per accepted entry, ~0.5s apart"
       : p ? "AI CHOSE " + p.sym + " · " + p.side + " at " + fmt(p.pct, 1) + "% over " + p.n + " ticks" + (p.why ? " on the " + p.why : "") + " · " +
           (p.dangerText ? "STILL IN THE DANGER ZONE — press START only if you accept it" : "press START on a card to trade it")
       : "AI CORE STANDBY · the market is only chosen when you press TRADE AI NOW";
@@ -7969,6 +8334,7 @@ function renderBot(b){
       "</td><td><span class='pill " + (r.won ? "w" : "l") + "'>" + (r.won ? "WON" : "LOST") + "</span></td>" +
       "<td>" + exitTxt + "</td><td class='" + (r.profit >= 0 ? "up" : "down") + "'>" + fmtS(r.profit) + "</td></tr>";
   }).join("");
+  if (p === "b11") renderB11Panels(b);   // Round 83 — the create-run bar, the locked-run read-out and the exposure line
   if (p === "b1"){
     const c = cfg1(), cur = (state.account && state.account.currency) || "USD";
     let s = c.stake, total = 0, steps = 0;
@@ -9378,7 +9744,8 @@ function init(){
    "b7_stake","b7_dur","b7_legs","b7_lock","b7_mult","b7_maxstake","b7_win","b7_minpct","b7_maxpct","b7_tp","b7_sl",
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
-   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl"]
+   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
+   "b11_win","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl"]
     .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
   /* the every-tick switch is a checkbox: re-render the card so its label shows the new mode at once */
@@ -9548,6 +9915,9 @@ function init(){
     speak(running.length || queued.length ? "Stopped. Nothing more is bought." : "An order is still in flight — it will settle on its own.", { force: true, interrupt: true });
   });
   renderBots(); renderAiStats(); renderSignalHistory(); renderActivity(); renderSummary(); renderAccount(); renderSignalCard();
+  /* Round 83: Bot 11 lives on the Dashboard, its contract list is built from the family the settings just
+     restored, and RUN is the only press it needs — so this runs after loadSettings() and the first paint. */
+  initB11UI();
   /* Round 81: copy trading reads its own localStorage key, so it loads after the CFG_IDS blob and never
      enters that safety net. */
   initCopyUI();
