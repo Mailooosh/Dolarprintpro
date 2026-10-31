@@ -415,6 +415,29 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .djournal .jm{color:var(--muted);word-break:break-word;font-family:var(--font)}
 .djournal .jrow.w .jm{color:var(--green)}
 .djournal .jrow.l .jm{color:var(--red)}
+/* ============ Round 86 — the run monitor popup. Summary, the four newest transactions with anything
+   still on the market pinned on top, session P/L under them, then the Journal. It re-uses the run
+   panel's own .dgrid / .dtx / .djournal classes, so only the shell is new. ============ */
+.mcard.rpop{width:min(560px,94vw);padding:14px 16px}
+.rpop-head{display:flex;align-items:flex-start;gap:9px}
+.rpop-head>div{flex:1;min-width:0}
+.rpop-head h2{margin-bottom:0;font-size:15px}
+.rpop-sub{margin-top:4px;font:600 11px var(--mono);color:var(--muted);word-break:break-word}
+.rpop-x{flex:0 0 auto;background:none;border:1px solid var(--line);border-radius:7px;color:var(--dim);
+  font-size:13px;line-height:1;padding:6px 9px;cursor:pointer}
+.rpop-head .btn-xs{flex:0 0 auto;min-width:76px}
+.rpop-x:hover{color:var(--text);border-color:var(--line2)}
+.rpop-cap{margin:12px 0 5px;font:700 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.rpop-cap span{float:right;font-family:var(--font);letter-spacing:0;text-transform:none;color:var(--muted);font-weight:600}
+.rpop .dgrid{margin:10px 0 0}
+.rpop .djournal{max-height:150px}
+.rpop-sess{display:flex;align-items:baseline;gap:10px;margin-top:10px;padding:9px 11px;flex-wrap:wrap;
+  border:1px solid var(--line2);border-radius:9px;background:var(--panel2)}
+.rpop-sess span{font:700 9.5px var(--mono);letter-spacing:.14em;color:var(--dim)}
+.rpop-sess b{font:800 19px var(--mono);color:var(--muted)}
+.rpop-sess b.up{color:var(--green)}
+.rpop-sess b.down{color:var(--red)}
+.rpop-sess em{margin-left:auto;font:600 11px var(--font);font-style:normal;color:var(--muted);text-align:right}
 .chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
 .rchip{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:800 10.5px var(--mono)}
 .rchip.w{background:var(--green-soft);color:var(--green);border:1px solid rgba(0,192,118,.4)}
@@ -973,6 +996,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     <div class="runbar" id="b11_runbar"><span class="rdot"></span><span class="rstate" id="b11_state">Bot stopped</span><span class="rmeta" id="b11_runmeta"></span></div>
     <div class="botrun">
       <button class="btn btn-blue btn-big" id="b11_toggle">RUN</button>
+      <button class="btn btn-ghost btn-mini" id="b11_pop" type="button" title="Open the run monitor — summary, the 4 newest transactions with anything still on the market on top, session P/L and the journal. It lifts by itself when you press RUN; this is only for after you close it.">RUN MONITOR</button>
       <span class="sub" id="b11_sub">Pick the trade type, contract, SL, TP, stake and martingale below, then press RUN — it creates the run and starts trading it immediately. Nothing else is asked.</span>
     </div>
     <div class="cfg">
@@ -1952,6 +1976,27 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
       <button class="btn btn-ghost" id="confirmCancel">Cancel</button>
       <button class="btn btn-blue" id="confirmOk">Confirm</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ RUN MONITOR — lifted the moment BOT 11 is started (Round 86) ============ -->
+<div class="modal hidden" id="runPop">
+  <div class="mcard rpop">
+    <div class="rpop-head">
+      <div>
+        <h2 id="runPopTitle">Run monitor</h2>
+        <div class="rpop-sub" id="runPopSub">—</div>
+      </div>
+      <span class="dpill" id="runPopPill"></span>
+      <button class="btn btn-xs btn-green" id="runPopToggle" type="button" title="Start or stop this bot without closing the monitor">▶ RUN</button>
+      <button class="rpop-x" id="runPopClose" type="button" title="Close the monitor — the bot keeps running exactly as it is">✕</button>
+    </div>
+    <div class="dgrid" id="runPopGrid"></div>
+    <div class="rpop-cap">Transactions — newest first<span id="runPopCap">open contracts stay on top until they settle</span></div>
+    <div class="scrollx"><table class="tbl dtx"><thead><tr><th>Type</th><th>Entry/Exit spot</th><th>Buy price and P/L</th></tr></thead><tbody id="runPopTx"></tbody></table></div>
+    <div class="rpop-sess"><span>SESSION P/L</span><b id="runPopSess">0.00</b><em id="runPopLimits"></em></div>
+    <div class="rpop-cap">Journal<span>newest first</span></div>
+    <div class="djournal" id="runPopJournal"></div>
   </div>
 </div>
 
@@ -4449,7 +4494,9 @@ class BaseBot {
     this.loop();
     if (resume) return;                      // an automatic restart: leave the user's tab and ears alone
     if (!state.fastExec) toast("⚡ Fast execution is OFF for " + this.name + " — it still decides on the ~0.5s heartbeat, but sleeps the whole half second instead of lining the next decision up on the very next tick. Tick 'Fast execution' under the bot desk to snap entries to ticks.", "warn", 9000);
-    showTab("activity");   // the user asked to land on the trade log the moment a bot runs
+    /* Round 86: Bot 11 lifts its own live monitor instead of jumping to the trade log behind it. */
+    if (this.id === "b11") openRunPop(this);
+    else showTab("activity");   // the user asked to land on the trade log the moment a bot runs
   }
   startedTxt(){ return "Bot started on " + state.symbol; }
   runPl(){ return round2(this.stats.pl - (this.startPl || 0)); }
@@ -6908,6 +6955,97 @@ function renderB11Panels(b){
     ? "Ready — " + live.lab + " on " + state.symbol + " at " + fmt(live.pay) + "× (" + fmt(live.p, 1) + "% of the last " + live.n + " ticks vs " + fmt(live.be, 2) + "% break-even)."
     : "Not ready: " + live.why + ".";
 }
+/* ================= Round 86 — the run monitor =================
+   Bot 11 lifts this the instant it is started: Deriv Bot's Summary cells, the four newest contracts
+   with anything still on the market pinned above them, session P/L underneath, then the Journal.
+   Nothing in here starts, stops or plans a trade — it reads bot + activity state, and the 400 ms timer
+   only repaints what those two already hold. */
+const RUN_POP = { b: null, timer: 0, n: 4 };
+/* The Activity Log is the one place an UNSETTLED contract exists (results only arrive settled), so the
+   open rows come from there. The run's own lock time is the floor: a previous run's rows stay out. */
+function runPopTx(b){
+  const floor = b.run && b.run.made ? b.run.made - 2 : 0;
+  const mine = activity.filter(e => e.source === b.source && e.t >= floor);
+  const open = mine.filter(e => e.result === "OPEN").slice(-RUN_POP.n).reverse();
+  const rows = open.concat(mine.filter(e => e.result !== "OPEN").slice(-RUN_POP.n).reverse());
+  /* the few hundred ms between "busy" and "the contract exists on Deriv" has no log row yet, but an
+     order genuinely is being placed — so the placeholder is the honest state, not a guess. */
+  if (b.busy && !open.length){
+    const pv = b.preview();
+    rows.unshift({ t: Date.now(), type: b.side || pv.label, stake: pv.stake, entry: "", exit: "", digit: "—",
+      result: "OPEN", profit: 0, id: "—", placing: true });
+  }
+  return rows.slice(0, RUN_POP.n);
+}
+function runPopTxHtml(b){
+  const rows = runPopTx(b), cur = dbotCur(), now = Date.now();
+  if (!rows.length) return "<tr><td colspan='3' class='dempty'>Nothing yet — the moment this bot has a contract on the market it appears here, before it settles.</td></tr>";
+  return rows.map(r => {
+    const ic = dbotIco(r.type), open = r.result === "OPEN";
+    const badge = open
+      ? "<span class='pill o'>OPEN " + (Math.max(0, now - r.t) / 1000).toFixed(1) + "s" + (r.placing ? " · PLACING" : "") + "</span>"
+      : "<span class='pill " + (r.result === "WON" ? "w" : "l") + "'>" + r.result + "</span>";
+    return "<tr>" +
+      "<td><span class='dico " + ic.c + "'>" + ic.g + "</span> <span class='dlab'>" + dbotLabel(r.type) + "</span> " + badge +
+        (r.id && r.id !== "—" ? "<div class='dmeta'>#" + r.id + "</div>" : "") + "</td>" +
+      "<td><div class='dspot'><i class='dring'></i>" + (r.entry || "…") + "</div>" +
+        "<div class='dspot x'><i class='dring'></i>" + (open ? "settling on Deriv" : (r.exit || "—") +
+        (r.digit && r.digit !== "—" ? " · " + r.digit : "")) + "</div></td>" +
+      "<td><div>" + fmt(r.stake) + " " + cur + "</div><div class='" + (open ? "" : (r.profit >= 0 ? "up" : "down")) + "'>" +
+        (open ? "—" : fmtS(r.profit) + " " + cur) + "</div></td></tr>";
+  }).join("");
+}
+function runPopGridHtml(b){
+  const s = b.stats, done = s.wins + s.losses;
+  return [["Total stake", fmt(s.staked || 0), ""], ["Total payout", fmt(s.paid || 0), ""],
+    ["No. of runs", String(s.trades), ""], ["Contracts won", String(s.wins), s.wins ? "up" : ""],
+    ["Contracts lost", String(s.losses), s.losses ? "down" : ""],
+    ["Win rate", done ? fmt(s.wins / done * 100, 1) + "%" : "—", ""]]
+    .map(c => "<div class='stat'><div class='k'>" + c[0] + "</div><div class='v " + c[2] + "'>" + c[1] + "</div></div>").join("");
+}
+function renderRunPop(){
+  const b = RUN_POP.b;
+  if (!b) return;
+  const modal = $("#runPop");
+  if (!modal || modal.classList.contains("hidden")) return;
+  const cur = dbotCur();
+  $("#runPopTitle").textContent = b.name;
+  $("#runPopSub").textContent = b.subText();
+  const pill = $("#runPopPill");
+  pill.className = "dpill on" + (b.running && !b.busy ? " w" : "");
+  pill.textContent = b.running ? (b.busy ? "ORDER LIVE" : "RUNNING") : "STOPPED";
+  const tg = $("#runPopToggle");
+  tg.textContent = b.running || b.busy ? "■ STOP" : "▶ RUN";
+  tg.className = "btn btn-xs " + (b.running || b.busy ? "btn-red" : "btn-green");
+  $("#runPopGrid").innerHTML = runPopGridHtml(b);
+  $("#runPopTx").innerHTML = runPopTxHtml(b);
+  const sess = round2(b.stats.pl - (b.sessionPl || 0)), pl = $("#runPopSess");
+  pl.textContent = fmtS(sess) + " " + cur;
+  pl.className = sess >= 0 ? "up" : "down";
+  const c = b.cfg(), pv = b.preview();
+  $("#runPopLimits").textContent = (c.tp > 0 ? "TP +" + fmt(c.tp) : "TP off") + " · " + (c.sl > 0 ? "SL −" + fmt(c.sl) : "SL off") +
+    " · " + (sess >= 0 ? (c.tp > 0 ? fmt(round2(c.tp - sess)) + " to target" : "no target set")
+      : (c.sl > 0 ? fmt(round2(c.sl + sess)) + " to stop" : "no stop set")) +
+    " · next stake " + fmt(pv.stake);
+  const jr = dbotJournal(b).slice(0, 14);
+  $("#runPopJournal").innerHTML = jr.length ? jr.map(r =>
+    "<div class='jrow " + r.cls + "'><span class='jt'>" + new Date(r.t).toLocaleTimeString() + "</span><span class='jm'>" +
+      dbotEsc(r.msg) + "</span></div>").join("")
+    : "<div class='dempty'>Nothing logged yet — the bot writes here as it locks, buys and settles.</div>";
+  $("#runPopCap").textContent = b.run ? "run locked " + new Date(b.run.made).toLocaleTimeString() : "press RUN and the first contract lands here";
+}
+function openRunPop(b){
+  RUN_POP.b = b;
+  $("#runPop").classList.remove("hidden");
+  renderRunPop();
+  if (!RUN_POP.timer) RUN_POP.timer = setInterval(renderRunPop, 400);
+}
+function closeRunPop(){
+  RUN_POP.b = null;
+  if (RUN_POP.timer){ clearInterval(RUN_POP.timer); RUN_POP.timer = 0; }
+  const m = $("#runPop");
+  if (m) m.classList.add("hidden");
+}
 function initB11UI(){
   b11FillContracts();
   $("#b11_trade").addEventListener("change", () => {
@@ -6930,6 +7068,13 @@ function initB11UI(){
   });
   /* The small RUN in the distribution header drives the control above rather than duplicating it. */
   $("#b11_mini").addEventListener("click", () => $("#b11_toggle").click());
+  /* Round 86 — the monitor. Its own RUN/STOP delegates to the card button so one press path decides
+     everything, and the scrim covering the page is exactly why that control lives inside it. */
+  $("#b11_pop").addEventListener("click", () => openRunPop(bot11));
+  $("#runPopToggle").addEventListener("click", () => $("#b11_toggle").click());
+  $("#runPopClose").addEventListener("click", closeRunPop);
+  $("#runPop").addEventListener("click", e => { if (e.target === $("#runPop")) closeRunPop(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#runPop").classList.contains("hidden")) closeRunPop(); });
   renderBot(bot11);
 }
 const bot7 = new MatchesBot();
@@ -8341,6 +8486,7 @@ function renderBot(b){
       (lc.tp > 0 || lc.sl > 0 ? "<span>TP / SL <b>" + (lc.tp > 0 ? "+" + fmt(lc.tp) : "off") + " · " + (lc.sl > 0 ? "−" + fmt(lc.sl) : "off") + "</b></span>" : "");
   }
   renderDbot(b);   // Round 79 — Deriv Bot's Summary / Transactions / Journal panel under that strip
+  if (RUN_POP.b === b) renderRunPop();   // Round 86 — the lifted monitor is the same state, repainted with the card
   $("#" + p + "_chips").innerHTML = b.results.slice(-24).map(r =>
     "<span class='rchip " + (r.won ? "w" : "l") + "' title='" + r.type + " · " + fmtS(r.profit) + "'>" + (r.won ? "W" : "L") + "</span>").join("");
   /* Trade information, in Deriv's columns: buy price, payout, result and the exit it settled on. */
