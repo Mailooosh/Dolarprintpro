@@ -246,6 +246,8 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .wbtns{display:flex;gap:5px}
 .wbtn{padding:4px 10px;border-radius:5px;border:1px solid var(--line2);background:transparent;color:var(--muted);font:600 11px var(--mono);cursor:pointer}
 .wbtn.active{background:var(--dv-soft);border-color:var(--dv);color:var(--dv-hi)}
+/* Bot 11's RUN sits in the window-selector row — offset it so it reads as a control, not a 7th tick chip. */
+.winrun{margin-left:9px;white-space:nowrap}
 #distBars{position:relative;display:flex;gap:6px;align-items:stretch;height:170px;margin-top:14px}
 .dcol{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
 .dcol .pct{font:700 11px var(--mono);color:var(--muted);margin-bottom:4px}
@@ -304,6 +306,9 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .cov .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
 .cov .v{font:800 22px var(--mono);margin:3px 0 2px}
 .cov .d{font:600 11px var(--mono)}
+/* Coverage spent years in a 1fr column beside the distribution panel; on its own row under Bot 11 the
+   four tiles fit one line, which is how the bot compares them. */
+@media(min-width:900px){.covs{grid-template-columns:repeat(4,1fr)}}
 .hotcold{display:flex;gap:10px;margin-top:12px}
 .hotcold>div{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12px;color:var(--muted)}
 .hotcold b{font:800 17px var(--mono);margin-left:6px}
@@ -703,6 +708,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .b11run{margin:9px 11px;padding:9px 10px;font-size:12px}
   .b11run .b11kv{gap:2px 12px}
   .b11run .b11kv span{white-space:normal}
+  /* Six tick chips plus Bot 11's RUN measure ~380px, which is wider than a 360px card's content box —
+     on phone widths the group breaks onto its own line instead of pushing the page sideways. */
+  #winBtns{flex-wrap:wrap;gap:4px}
+  #winBtns .winrun{margin-left:0}
   .drunbar{padding:8px;gap:8px}
   /* RUN/STOP takes the row, Reset rides beside it, the status strip drops to its own line below */
   .drunbar .btn-big{flex:1 1 auto;min-width:0;padding:12px 14px;font-size:13.5px}
@@ -933,7 +942,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
 
 <!-- ============ DASHBOARD ============ -->
 <section class="tabpanel show" id="tab_dashboard">
-  <div class="grid g2">
+  <div class="grid">
     <div class="panel">
     <h3>Digit distribution — last digit frequency
       <span class="wbtns" id="winBtns">
@@ -943,6 +952,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
         <button class="wbtn" data-w="250">250</button>
         <button class="wbtn" data-w="500">500</button>
         <button class="wbtn" data-w="1000">1000</button>
+        <button class="btn btn-xs btn-green winrun" id="b11_mini" type="button" data-word="BOT 11" title="Start or stop BOT 11 · Custom Run below — same one press as the RUN in that card: it locks the run from the settings there and buys on the window you picked here">▶ RUN BOT 11</button>
       </span>
       <span class="r" id="distMeta"></span>
     </h3>
@@ -953,20 +963,6 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     </div>
     <div id="distBars"><div id="distBase"><span>10% expected</span></div></div>
   </div>
-    <div class="panel">
-      <h3>Strategy coverage (live %)</h3>
-      <div class="covs">
-        <div class="cov"><div class="t">Over 3 · digits 4–9</div><div class="v" id="covOver3">—</div><div class="d" id="covOver3d"></div></div>
-        <div class="cov"><div class="t">Under 6 · digits 0–5</div><div class="v" id="covUnder6">—</div><div class="d" id="covUnder6d"></div></div>
-        <div class="cov"><div class="t">Even · digits 0,2,4,6,8</div><div class="v" id="covEven">—</div><div class="d" id="covEvend"></div></div>
-        <div class="cov"><div class="t">Odd · digits 1,3,5,7,9</div><div class="v" id="covOdd">—</div><div class="d" id="covOddd"></div></div>
-      </div>
-      <div class="hotcold">
-        <div>HOTTEST DIGIT<b id="hotDigit">—</b><span class="mono" id="hotPct"></span></div>
-        <div>COLDEST DIGIT<b id="coldDigit">—</b><span class="mono" id="coldPct"></span></div>
-      </div>
-      <div class="note">Percentages are computed from the real Deriv tick stream for the selected window. Each tick is independent — a hot digit is <b>not</b> more likely to repeat.</div>
-    </div>
   </div>
 
   <!-- ============ BOT 11 · CUSTOM RUN (Round 83) ============
@@ -1020,6 +1016,22 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b11_recent"></tbody></table></div>
     <div class="note" id="b11_expo"></div>
     <div class="note"><b>What this bot is:</b> your own contract, no strategy opinions. It buys the trade type and contract type you set, on this market, at your stake, and keeps buying one contract per ~0.5 second decision while the run is live — a loss steps the stake by the martingale factor, a win banks it and drops back to base. <b>Take profit and stop loss both genuinely stop it.</b> With the contract type on <b>AUTO</b> the side is re-read from the last <i>window</i> ticks on every decision, so it can flip between EVEN and ODD (or OVER and UNDER) as the window moves; lock a side in that dropdown if you want it fixed for the run. <b style="color:var(--amber)">AUTO is a description of the ticks that already happened, not a prediction of the next one — over the long run every digit family pays below its own break-even coverage, so martingale sizing can lose a full ladder. The exposure figure above is the real worst case.</b></div>
+  </div>
+
+  <!-- Round 85: moved out of the row beside the distribution panel to sit under the bot that reads it. -->
+  <div class="panel" style="margin-top:14px">
+    <h3>Strategy coverage (live %)</h3>
+    <div class="covs">
+      <div class="cov"><div class="t">Over 3 · digits 4–9</div><div class="v" id="covOver3">—</div><div class="d" id="covOver3d"></div></div>
+      <div class="cov"><div class="t">Under 6 · digits 0–5</div><div class="v" id="covUnder6">—</div><div class="d" id="covUnder6d"></div></div>
+      <div class="cov"><div class="t">Even · digits 0,2,4,6,8</div><div class="v" id="covEven">—</div><div class="d" id="covEvend"></div></div>
+      <div class="cov"><div class="t">Odd · digits 1,3,5,7,9</div><div class="v" id="covOdd">—</div><div class="d" id="covOddd"></div></div>
+    </div>
+    <div class="hotcold">
+      <div>HOTTEST DIGIT<b id="hotDigit">—</b><span class="mono" id="hotPct"></span></div>
+      <div>COLDEST DIGIT<b id="coldDigit">—</b><span class="mono" id="coldPct"></span></div>
+    </div>
+    <div class="note">Percentages are computed from the real Deriv tick stream for the selected window. Each tick is independent — a hot digit is <b>not</b> more likely to repeat.</div>
   </div>
 
   <div class="panel" style="margin-top:14px">
@@ -6916,6 +6928,8 @@ function initB11UI(){
     if (!bot11.run && !b11CreateRun({ quiet: true })) return;
     bot11.start({ skipConfirm: true });
   });
+  /* The small RUN in the distribution header drives the control above rather than duplicating it. */
+  $("#b11_mini").addEventListener("click", () => $("#b11_toggle").click());
   renderBot(bot11);
 }
 const bot7 = new MatchesBot();
@@ -8278,6 +8292,12 @@ function renderBot(b){
   const tgl = $("#" + p + "_toggle");
   tgl.textContent = b.running ? "■ STOP" : "▶ RUN";
   tgl.className = "btn btn-big " + (b.running ? "btn-red" : "btn-green");   // Round 79: Deriv Bot's bar — green RUN, red STOP
+  /* Round 85: Bot 11 keeps a second, small RUN in the digit-distribution header — same state, same colour. */
+  const mini = $("#" + p + "_mini");
+  if (mini){
+    mini.textContent = (b.running ? "■ STOP " : "▶ RUN ") + (mini.dataset.word || "");
+    mini.className = "btn btn-xs winrun " + (b.running ? "btn-red" : "btn-green");
+  }
   const pv = b.preview();
   const mb = $("#" + p + "_mode");
   mb.textContent = pv.label; mb.className = "mode-badge " + pv.cls;
