@@ -1067,7 +1067,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <label>Contract type (from last ticks)
         <select id="b11_contract" title="AUTO = the bot reads the window you set below and takes the side that has covered MORE of the last ticks, re-decided every 0.5 second. Picking a side manually locks that side for the run"></select>
       </label>
-      <label>Min AI confidence %<input type="number" id="b11_minconf" value="80" min="50" max="95" step="1" title="Your rule of 1 Nov: no contract is opened until the AI confidence on this card reaches this value. Rise/Fall reads it from the same ensemble as the AI Signal Center (it needs ~45 ticks of price feed). Even/Odd, Over/Under and Digit Matches have no AI direction read — they are gated by their own EV/break-even window, so this field does nothing on those families and the card says so"></label>
+      <label>Min AI confidence %<input type="number" id="b11_minconf" value="80" min="50" max="95" step="1" title="Your rule of 1 Nov: Bot 11 opens no contract — on any of the four families — until the AI confidence reaches this value. It is the same market gauge the header and the AI Signal Center run on (the ensemble needs ~45 ticks of price feed, so a market that is too young holds too). 50 is effectively off, because the gauge floors at 50%"></label>
       <label>Window (ticks)<input type="number" id="b11_win" value="100" min="30" max="500" step="10" title="How many recent ticks the contract type is named from — 'the last 100 ticks' by default"></label>
       <label>Barrier / digit<input type="number" id="b11_barrier" value="3" min="0" max="9" step="1" title="OVER n wins on digits above n, UNDER n wins on digits below n, MATCH n wins when the tick lands exactly on n. Ignored by Even/Odd and Rise/Fall"></label>
       <label>Duration (ticks)<input type="number" id="b11_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks"></label>
@@ -7403,17 +7403,17 @@ function b11Count(arr, test){ let k = 0; for (let i = 0; i < arr.length; i++) if
 /* the whole point of the card: name the contract from the window the trader set, then price it with the
    same live quotes the other desks use. One read, four families, and an honest EV per 1.00 staked. */
 function b11Read(c){
-  const sym = state.symbol, o = { ok: false, why: "", type: null, barrier: null, lab: "—", key: "",
-    auto: c.kind === "AUTO", p: 0, be: 0, pay: 0, ev: 0, n: 0, conf: null, aiSide: "" };
+  const sym = state.symbol, pts = feedPrices(sym) || [], o = { ok: false, why: "", type: null, barrier: null,
+    lab: "—", key: "", auto: c.kind === "AUTO", p: 0, be: 0, pay: 0, ev: 0, n: 0, conf: null, aiSide: "" };
+  /* The AI gauge is the market's own read — the same ensemble the header gauge and Bot 3 run on — so all
+     four families have a confidence to be judged by. Round 89 (your rule of 1 Nov): below the floor,
+     nothing is bought, on any family, and a market too young for the gauge counts as "no read" = no trade. */
+  const ai = rfAiOf(pts);
+  o.conf = ai ? ai.conf : null; o.aiSide = ai ? ai.side : "";
   if (c.trade === "rf"){
-    const pts = feedPrices(sym) || [];
     o.n = Math.max(0, Math.min(pts.length, c.win) - 1);
     if (pts.length < 3){ o.why = "no price feed on " + sym + " yet"; return o; }
     let side = c.kind;
-    const ai = rfAiOf(pts);
-    /* the AI read is computed even when the side is locked, so the confidence gate has something to
-       measure and the card can say what the AI actually thinks of the side you forced. */
-    o.conf = ai ? ai.conf : null; o.aiSide = ai ? ai.side : "";
     if (c.kind === "AUTO"){
       if (!ai){ o.why = "the Rise/Fall AI needs ~45 ticks on " + sym + " (has " + pts.length + ")"; return o; }
       side = ai.side;
@@ -7490,12 +7490,17 @@ class CustomRunBot extends BaseBot {
       if (this.lastWhy !== r.why){ this.lastWhy = r.why; this.sys("Holding — " + r.why); renderBot(this); }
       return null;
     }
-    /* Round 89 (your rule of 1 Nov): no contract below the AI confidence floor. The floor can only
-       judge families that HAVE an AI read — Rise/Fall — so the digit contracts stay on their own
-       EV/break-even gate and this line never fires for them. */
-    if (r.conf != null && r.conf < c.minConf){
-      if (this.lastWhy !== "conf"){ this.lastWhy = "conf";
-        this.sys("Holding — AI confidence " + r.conf + "% is below your " + c.minConf + "% minimum"); renderBot(this); }
+    /* Round 89 (your rule of 1 Nov): no contract below the AI confidence floor — on any family. A market
+       too young for the gauge is not "80% and above" either, so it holds instead of trading blind. The
+       dedupe key is the KIND of hold, so the journal says it once and does not spam every 0.5 second. */
+    if (r.conf == null || r.conf < c.minConf){
+      const kind = r.conf == null ? "conf-none" : "conf-low";
+      if (this.lastWhy !== kind){
+        this.lastWhy = kind;
+        this.sys("Holding — " + (r.conf == null ? "the AI gauge has no read on " + state.symbol +
+          " yet (it needs ~45 ticks of price feed)" : "AI confidence " + r.conf + "% is below your " + c.minConf + "% minimum"));
+        renderBot(this);
+      }
       return null;
     }
     this.lastWhy = "";
@@ -7524,7 +7529,8 @@ class CustomRunBot extends BaseBot {
     if (!this.run) return { label: "NO RUN YET", cls: "mode-wait", stake: c.stake };
     const r = b11Read(c);
     if (!r.ok) return { label: "WAITING · CONTRACT", cls: "mode-wait", stake: this.nextStake(c) };
-    if (r.conf != null && r.conf < c.minConf)
+    if (r.conf == null) return { label: "WAITING · AI GAUGE", cls: "mode-wait", stake: this.nextStake(c) };
+    if (r.conf < c.minConf)
       return { label: "WAITING · AI CONF " + r.conf + " OF " + c.minConf, cls: "mode-wait", stake: this.nextStake(c) };
     return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + " · " : "TRADE · ") + r.lab + (r.auto ? " (AUTO)" : ""),
       cls: this.lossStreak ? "mode-rec" : "mode-main", stake: this.nextStake(c) };
@@ -7536,8 +7542,9 @@ class CustomRunBot extends BaseBot {
     if (!r.ok) return "Contract not readable yet — " + r.why;
     return "Buys " + r.lab + " on " + state.symbol + " · " + fmt(r.p, 1) + "% of the last " + r.n + " ticks vs " +
       fmt(r.be, 2) + "% break-even ⇒ EV " + fmtS(r.ev) + " per 1.00 · next stake " + fmt(this.nextStake(c)) +
-      (r.conf == null ? "" : " · AI conf " + fmt(r.conf, 0) + "% (min " + c.minConf + "%)" +
-        (r.aiSide && r.aiSide !== r.key ? " · AI says " + r.aiSide : "")) +
+      (r.conf == null ? " · AI conf no gauge read yet (min " + c.minConf + "%)"
+        : " · AI conf " + fmt(r.conf, 0) + "% (min " + c.minConf + "%)" +
+          (c.trade === "rf" && r.aiSide && r.aiSide !== r.key ? " · AI says " + r.aiSide : "")) +
       (this.lossStreak ? " · ladder step " + this.lossStreak + " (−" + fmt(this.runLossAmt) + ")" : "");
   }
   describe(){
@@ -7549,7 +7556,8 @@ class CustomRunBot extends BaseBot {
       "% and this window gives EV " + fmtS(r.ev) + " per 1.00" : "not readable yet — " + r.why) +
       "<br><b>Play:</b> one contract every ~0.5 second decision at " + fmt(c.stake) + " " + cur + ", " + c.dur +
       " tick" + (c.dur > 1 ? "s" : "") + ". A loss multiplies the stake ×" + fmt(c.mult) + " (cap " + fmt(c.maxStake) +
-      "), a win drops it back to base. " + (r.conf == null ? "" : "Nothing is bought until the AI read clears " + c.minConf + "% confidence — it is at " + r.conf + "% (" + (r.aiSide || "—") + ") right now. ") +
+      "), a win drops it back to base. " + (r.conf == null ? "The AI gauge has no read on this market yet, so nothing is bought. "
+        : "Nothing is bought until the AI gauge clears " + c.minConf + "% — it is at " + r.conf + "% (" + (r.aiSide || "—") + ") right now. ") +
       "Worst-case ladder exposure ≈ " + fmt(round2(total)) + " " + cur + ".<br><b>Limits:</b> " +
       limitsText(c, this.stopKinds()) + "<br><b>Read this:</b> the percentages describe ticks that already happened. " +
       "They are not a prediction of the next tick, and no window measured here makes this family's expectancy positive over the long run." +
@@ -7573,10 +7581,6 @@ function b11FillContracts(){
   map[trade] = sel.value; store.set("dt_b11_contract", JSON.stringify(map));
   const bEl = $("#b11_barrier");
   if (bEl){ bEl.disabled = !B11_USES_BARRIER[trade]; bEl.parentElement.style.opacity = bEl.disabled ? ".45" : ""; }
-  /* the confidence floor is an AI-read gate, and only Rise/Fall has one — dim it rather than hide it so
-     the trader can still see and set the number they will get back on the Rise/Fall desk. */
-  const mEl = $("#b11_minconf");
-  if (mEl) mEl.parentElement.style.opacity = trade === "rf" ? "" : ".45";
   const lab = bEl ? bEl.parentElement.firstChild : null;
   if (lab && lab.nodeType === 3) lab.textContent = trade === "match" ? "Digit to match" : trade === "ou" ? "Barrier / digit" : "Barrier (unused)";
 }
@@ -7628,8 +7632,8 @@ function renderB11Panels(b){
     ["MARKET", b.run.market + (b.run.market === state.symbol ? "" : " → now " + state.symbol), b.run.market === state.symbol ? "" : "down"],
     ["FAMILY", B11_LAB_TXT[rc.trade] || rc.trade, ""],
     ["CONTRACT", r.ok ? r.lab + (rc.kind === "AUTO" ? " (AUTO)" : " (LOCKED)") : "not readable", ""],
-    ["AI GATE", rc.minConf + "%" + (r.conf == null ? " · no AI read here" : " · now " + r.conf + "%"),
-      r.ok && r.conf != null && r.conf < rc.minConf ? "down" : ""],
+    ["AI GATE", rc.minConf + "%" + (r.conf == null ? " · no gauge read" : " · now " + r.conf + "%"),
+      r.ok && (r.conf == null || r.conf < rc.minConf) ? "down" : ""],
     ["WINDOW", rc.win + " ticks", ""],
     [rc.trade === "match" ? "DIGIT" : "BARRIER", B11_USES_BARRIER[rc.trade] ? rc.barrier : "n/a", ""],
     ["DURATION", rc.dur + " tick" + (rc.dur > 1 ? "s" : ""), ""],
@@ -7646,9 +7650,11 @@ function renderB11Panels(b){
     (same ? "" : "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ The settings on this card have changed since the run was locked — the run still trades what it was created with. Press <b>CREATE RUN</b> to re-lock from the new values.</div>") +
     "<div class=\"b11kv\">" + kv.map(x => "<span>" + x[0] + " <b class=\"" + x[2] + "\">" + x[1] + "</b></span>").join("") + "</div>" +
     (r.ok ? "" : "<div class=\"note\" style=\"margin:6px 0 0\">It cannot place a contract right now: " + r.why + ".</div>") +
-    (r.ok && r.conf != null && r.conf < rc.minConf
-      ? "<div class=\"note\" style=\"margin:6px 0 0\">Holding — the AI read is at <b>" + r.conf + "%</b> and your minimum is <b>" +
-        rc.minConf + "%</b>, so nothing is bought until it strengthens.</div>" : "");
+    (r.ok && (r.conf == null || r.conf < rc.minConf)
+      ? "<div class=\"note\" style=\"margin:6px 0 0\">Holding — " +
+        (r.conf == null ? "the AI gauge has no read on " + state.symbol + " yet (it needs ~45 ticks of price feed)"
+          : "the AI gauge is at <b>" + r.conf + "%</b> and your minimum is <b>" + rc.minConf + "%</b>") +
+        ", so no contract is placed.</div>" : "");
   if (cs) cs.textContent = live.ok
     ? "Ready — " + live.lab + " on " + state.symbol + " at " + fmt(live.pay) + "× (" + fmt(live.p, 1) + "% of the last " + live.n + " ticks vs " + fmt(live.be, 2) + "% break-even)."
     : "Not ready: " + live.why + ".";
