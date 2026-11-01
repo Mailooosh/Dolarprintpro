@@ -1067,6 +1067,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <label>Contract type (from last ticks)
         <select id="b11_contract" title="AUTO = the bot reads the window you set below and takes the side that has covered MORE of the last ticks, re-decided every 0.5 second. Picking a side manually locks that side for the run"></select>
       </label>
+      <label>Min AI confidence %<input type="number" id="b11_minconf" value="80" min="50" max="95" step="1" title="Your rule of 1 Nov: no contract is opened until the AI confidence on this card reaches this value. Rise/Fall reads it from the same ensemble as the AI Signal Center (it needs ~45 ticks of price feed). Even/Odd, Over/Under and Digit Matches have no AI direction read — they are gated by their own EV/break-even window, so this field does nothing on those families and the card says so"></label>
       <label>Window (ticks)<input type="number" id="b11_win" value="100" min="30" max="500" step="10" title="How many recent ticks the contract type is named from — 'the last 100 ticks' by default"></label>
       <label>Barrier / digit<input type="number" id="b11_barrier" value="3" min="0" max="9" step="1" title="OVER n wins on digits above n, UNDER n wins on digits below n, MATCH n wins when the tick lands exactly on n. Ignored by Even/Odd and Rise/Fall"></label>
       <label>Duration (ticks)<input type="number" id="b11_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks"></label>
@@ -4952,7 +4953,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
   /* b11_contract is NOT here on purpose: its option list is rebuilt when the family changes, and a
      restored stale value would leave an empty select. It persists as its own dt_b11_contract key. */
-  "b11_trade","b11_win","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
+  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","virtCount","winStreak","cashSound","aiVoice"];
 function loadSettings(){
@@ -7388,6 +7389,7 @@ function cfg11(){
   return {
     trade, kind,
     win: clampInt($("#b11_win").value, 30, 500, 100),
+    minConf: clampInt($("#b11_minconf").value, 50, 95, 80),
     barrier: clampInt($("#b11_barrier").value, 0, 9, 3),
     dur: clampInt($("#b11_dur").value, 1, 10, 1),
     stake: clampFloat($("#b11_stake").value, 0.35, 100000, 0.35),
@@ -7402,16 +7404,19 @@ function b11Count(arr, test){ let k = 0; for (let i = 0; i < arr.length; i++) if
    same live quotes the other desks use. One read, four families, and an honest EV per 1.00 staked. */
 function b11Read(c){
   const sym = state.symbol, o = { ok: false, why: "", type: null, barrier: null, lab: "—", key: "",
-    auto: c.kind === "AUTO", p: 0, be: 0, pay: 0, ev: 0, n: 0, conf: null };
+    auto: c.kind === "AUTO", p: 0, be: 0, pay: 0, ev: 0, n: 0, conf: null, aiSide: "" };
   if (c.trade === "rf"){
     const pts = feedPrices(sym) || [];
     o.n = Math.max(0, Math.min(pts.length, c.win) - 1);
     if (pts.length < 3){ o.why = "no price feed on " + sym + " yet"; return o; }
     let side = c.kind;
+    const ai = rfAiOf(pts);
+    /* the AI read is computed even when the side is locked, so the confidence gate has something to
+       measure and the card can say what the AI actually thinks of the side you forced. */
+    o.conf = ai ? ai.conf : null; o.aiSide = ai ? ai.side : "";
     if (c.kind === "AUTO"){
-      const ai = rfAiOf(pts);
       if (!ai){ o.why = "the Rise/Fall AI needs ~45 ticks on " + sym + " (has " + pts.length + ")"; return o; }
-      side = ai.side; o.conf = ai.conf;
+      side = ai.side;
     }
     const mv = rfMoves(pts, c.win);
     o.n = mv.n;
@@ -7485,6 +7490,14 @@ class CustomRunBot extends BaseBot {
       if (this.lastWhy !== r.why){ this.lastWhy = r.why; this.sys("Holding — " + r.why); renderBot(this); }
       return null;
     }
+    /* Round 89 (your rule of 1 Nov): no contract below the AI confidence floor. The floor can only
+       judge families that HAVE an AI read — Rise/Fall — so the digit contracts stay on their own
+       EV/break-even gate and this line never fires for them. */
+    if (r.conf != null && r.conf < c.minConf){
+      if (this.lastWhy !== "conf"){ this.lastWhy = "conf";
+        this.sys("Holding — AI confidence " + r.conf + "% is below your " + c.minConf + "% minimum"); renderBot(this); }
+      return null;
+    }
     this.lastWhy = "";
     if (r.auto && r.key !== this.side){
       this.sys("AUTO flipped " + (this.side || "nothing") + " → " + r.key + " (" + fmt(r.p, 1) + "% of the last " + r.n +
@@ -7511,6 +7524,8 @@ class CustomRunBot extends BaseBot {
     if (!this.run) return { label: "NO RUN YET", cls: "mode-wait", stake: c.stake };
     const r = b11Read(c);
     if (!r.ok) return { label: "WAITING · CONTRACT", cls: "mode-wait", stake: this.nextStake(c) };
+    if (r.conf != null && r.conf < c.minConf)
+      return { label: "WAITING · AI CONF " + r.conf + " OF " + c.minConf, cls: "mode-wait", stake: this.nextStake(c) };
     return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + " · " : "TRADE · ") + r.lab + (r.auto ? " (AUTO)" : ""),
       cls: this.lossStreak ? "mode-rec" : "mode-main", stake: this.nextStake(c) };
   }
@@ -7521,7 +7536,8 @@ class CustomRunBot extends BaseBot {
     if (!r.ok) return "Contract not readable yet — " + r.why;
     return "Buys " + r.lab + " on " + state.symbol + " · " + fmt(r.p, 1) + "% of the last " + r.n + " ticks vs " +
       fmt(r.be, 2) + "% break-even ⇒ EV " + fmtS(r.ev) + " per 1.00 · next stake " + fmt(this.nextStake(c)) +
-      (r.conf ? " · AI conf " + fmt(r.conf, 0) + "%" : "") +
+      (r.conf == null ? "" : " · AI conf " + fmt(r.conf, 0) + "% (min " + c.minConf + "%)" +
+        (r.aiSide && r.aiSide !== r.key ? " · AI says " + r.aiSide : "")) +
       (this.lossStreak ? " · ladder step " + this.lossStreak + " (−" + fmt(this.runLossAmt) + ")" : "");
   }
   describe(){
@@ -7533,7 +7549,8 @@ class CustomRunBot extends BaseBot {
       "% and this window gives EV " + fmtS(r.ev) + " per 1.00" : "not readable yet — " + r.why) +
       "<br><b>Play:</b> one contract every ~0.5 second decision at " + fmt(c.stake) + " " + cur + ", " + c.dur +
       " tick" + (c.dur > 1 ? "s" : "") + ". A loss multiplies the stake ×" + fmt(c.mult) + " (cap " + fmt(c.maxStake) +
-      "), a win drops it back to base. Worst-case ladder exposure ≈ " + fmt(round2(total)) + " " + cur + ".<br><b>Limits:</b> " +
+      "), a win drops it back to base. " + (r.conf == null ? "" : "Nothing is bought until the AI read clears " + c.minConf + "% confidence — it is at " + r.conf + "% (" + (r.aiSide || "—") + ") right now. ") +
+      "Worst-case ladder exposure ≈ " + fmt(round2(total)) + " " + cur + ".<br><b>Limits:</b> " +
       limitsText(c, this.stopKinds()) + "<br><b>Read this:</b> the percentages describe ticks that already happened. " +
       "They are not a prediction of the next tick, and no window measured here makes this family's expectancy positive over the long run." +
       "<div class='warnstrip' style='margin:10px 0 0'> This places <b>real trades</b> on account <b>" +
@@ -7556,6 +7573,10 @@ function b11FillContracts(){
   map[trade] = sel.value; store.set("dt_b11_contract", JSON.stringify(map));
   const bEl = $("#b11_barrier");
   if (bEl){ bEl.disabled = !B11_USES_BARRIER[trade]; bEl.parentElement.style.opacity = bEl.disabled ? ".45" : ""; }
+  /* the confidence floor is an AI-read gate, and only Rise/Fall has one — dim it rather than hide it so
+     the trader can still see and set the number they will get back on the Rise/Fall desk. */
+  const mEl = $("#b11_minconf");
+  if (mEl) mEl.parentElement.style.opacity = trade === "rf" ? "" : ".45";
   const lab = bEl ? bEl.parentElement.firstChild : null;
   if (lab && lab.nodeType === 3) lab.textContent = trade === "match" ? "Digit to match" : trade === "ou" ? "Barrier / digit" : "Barrier (unused)";
 }
@@ -7571,7 +7592,8 @@ function b11CreateRun(opts){
   bot11.run = { cfg: c, made: Date.now(), market: state.symbol };
   bot11.side = r.key;
   bot11.sys("Run created — " + r.lab + " on " + state.symbol + " · " + fmt(c.stake) + " ×" + fmt(c.mult) +
-    " cap " + fmt(c.maxStake) + " · " + c.dur + " tick(s) · " + fmt(r.pay) + "× payout (" + fmt(r.be, 2) + "% break-even, this window " + fmt(r.p, 1) + "%)");
+    " cap " + fmt(c.maxStake) + " · " + c.dur + " tick(s) · " + fmt(r.pay) + "× payout (" + fmt(r.be, 2) + "% break-even, this window " + fmt(r.p, 1) + "%)" +
+    (r.conf == null ? "" : " · AI confidence gate " + c.minConf + "%"));
   if (!(opts && opts.quiet)) toast("Bot 11 run locked: " + r.lab + " on " + state.symbol, "success", 5000);
   renderBot(bot11);
   return bot11.run;
@@ -7606,6 +7628,8 @@ function renderB11Panels(b){
     ["MARKET", b.run.market + (b.run.market === state.symbol ? "" : " → now " + state.symbol), b.run.market === state.symbol ? "" : "down"],
     ["FAMILY", B11_LAB_TXT[rc.trade] || rc.trade, ""],
     ["CONTRACT", r.ok ? r.lab + (rc.kind === "AUTO" ? " (AUTO)" : " (LOCKED)") : "not readable", ""],
+    ["AI GATE", rc.minConf + "%" + (r.conf == null ? " · no AI read here" : " · now " + r.conf + "%"),
+      r.ok && r.conf != null && r.conf < rc.minConf ? "down" : ""],
     ["WINDOW", rc.win + " ticks", ""],
     [rc.trade === "match" ? "DIGIT" : "BARRIER", B11_USES_BARRIER[rc.trade] ? rc.barrier : "n/a", ""],
     ["DURATION", rc.dur + " tick" + (rc.dur > 1 ? "s" : ""), ""],
@@ -7621,7 +7645,10 @@ function renderB11Panels(b){
     "</span><span class=\"b11tag\">created " + new Date(b.run.made).toLocaleTimeString() + "</span>" +
     (same ? "" : "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ The settings on this card have changed since the run was locked — the run still trades what it was created with. Press <b>CREATE RUN</b> to re-lock from the new values.</div>") +
     "<div class=\"b11kv\">" + kv.map(x => "<span>" + x[0] + " <b class=\"" + x[2] + "\">" + x[1] + "</b></span>").join("") + "</div>" +
-    (r.ok ? "" : "<div class=\"note\" style=\"margin:6px 0 0\">It cannot place a contract right now: " + r.why + ".</div>");
+    (r.ok ? "" : "<div class=\"note\" style=\"margin:6px 0 0\">It cannot place a contract right now: " + r.why + ".</div>") +
+    (r.ok && r.conf != null && r.conf < rc.minConf
+      ? "<div class=\"note\" style=\"margin:6px 0 0\">Holding — the AI read is at <b>" + r.conf + "%</b> and your minimum is <b>" +
+        rc.minConf + "%</b>, so nothing is bought until it strengthens.</div>" : "");
   if (cs) cs.textContent = live.ok
     ? "Ready — " + live.lab + " on " + state.symbol + " at " + fmt(live.pay) + "× (" + fmt(live.p, 1) + "% of the last " + live.n + " ticks vs " + fmt(live.be, 2) + "% break-even)."
     : "Not ready: " + live.why + ".";
@@ -10588,7 +10615,7 @@ function init(){
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
    "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
-   "b11_win","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl"]
+   "b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl"]
     .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
   /* the every-tick switch is a checkbox: re-render the card so its label shows the new mode at once */
