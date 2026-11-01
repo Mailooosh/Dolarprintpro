@@ -438,6 +438,14 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .rpop-sess b.up{color:var(--green)}
 .rpop-sess b.down{color:var(--red)}
 .rpop-sess em{margin-left:auto;font:600 11px var(--font);font-style:normal;color:var(--muted);text-align:right}
+/* Three buttons plus the state pill no longer share a line with the bot's name at phone widths, and the
+   name is the one thing that must not be squeezed to six wrapped lines. Title keeps its own row. */
+@media(max-width:640px){
+  .rpop-head{flex-wrap:wrap}
+  .rpop-head>div{flex:1 1 100%}
+  .rpop-head .btn-xs{min-width:0;flex:0 1 auto}
+  .rpop-x{margin-left:auto}
+}
 .chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
 .rchip{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:800 10.5px var(--mono)}
 .rchip.w{background:var(--green-soft);color:var(--green);border:1px solid rgba(0,192,118,.4)}
@@ -492,6 +500,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 /* ---------- modal / toast ---------- */
 .modal{position:fixed;inset:0;background:rgba(3,7,12,.74);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
 .modal.hidden{display:none}
+/* Round 91 — the run monitor's Reset raises this confirm, and #runPop is later in the DOM at the same
+   z-index, so without the bump the dialog opened invisibly behind the monitor you were standing in. */
+#confirmModal{z-index:1300}
 .hidden{display:none !important}
 .mcard{background:var(--panel);border:1px solid var(--line2);border-radius:13px;width:min(520px,94vw);max-height:92vh;overflow:auto;padding:20px}
 .mcard h2{font-size:17px;margin-bottom:12px}
@@ -1091,6 +1102,10 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <span class="sub" id="b11_createSub">Names the contract from the current window and locks it. RUN would have done this for you — press it only to see the read-out first.</span>
     </div>
     <div class="b11run" id="b11_run">No run created yet.</div>
+    <!-- Round 91: the run panel (Summary / Transactions / Journal) is built by buildRunPanels() and lands
+         after THIS marker instead of after the run bar, so Bot 11's settings sit ABOVE the panel — you set
+         the contract, then read what it did, in that order. Other bots have no anchor and keep the old spot. -->
+    <div id="b11_anchor"></div>
     <div class="stats">
       <div class="stat"><div class="k">Trades</div><div class="v" id="b11_trades">0</div></div>
       <div class="stat"><div class="k">Wins</div><div class="v" id="b11_wins">0</div></div>
@@ -2102,6 +2117,7 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
         <div class="rpop-sub" id="runPopSub">—</div>
       </div>
       <span class="dpill" id="runPopPill"></span>
+      <button class="btn btn-xs btn-ghost" id="runPopReset" type="button" title="Clear this run's summary, transactions and journal. Disabled while the bot is running or an order is settling, so it can never hide a live trade.">RESET</button>
       <button class="btn btn-xs btn-green" id="runPopToggle" type="button" title="Start or stop this bot without closing the monitor">▶ RUN</button>
       <button class="rpop-x" id="runPopClose" type="button" title="Close the monitor — the bot keeps running exactly as it is">✕</button>
     </div>
@@ -4861,12 +4877,13 @@ function denyTone(){
     });
   } catch(e){}
 }
-/* loud always-on backstop chime for the TP / SL moment (in case OS speech is unavailable) */
-function limitFanfare(win){
+/* loud always-on backstop chime for the TP / SL moment (in case OS speech is unavailable).
+   delayMs lets the AI say the amount FIRST — the chime is the backstop, not the headline. */
+function limitFanfare(win, delayMs){
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === "suspended") audioCtx.resume();
-    const t0 = audioCtx.currentTime;
+    const t0 = audioCtx.currentTime + (delayMs || 0) / 1000;
     const notes = win ? [523, 659, 784, 1047] : [440, 349, 262];
     notes.forEach((f, i) => {
       const dt = i * 0.12;
@@ -5224,22 +5241,15 @@ class BaseBot {
     if (c.tp > 0 && pl >= c.tp && this.stopsOnKind("tp")){
       this.stop("take profit reached (" + fmtS(pl) + ")", { limit: true, kind: "tp" });
       toast(this.name + ": take profit reached " + fmtS(pl), "success", 8000);
-      // the AI stays silent except here — read the result + amount out loud, as clear as Web Speech allows
-      const ccy = (state.account && state.account.currency) || "USD";
-      const tpLine = "Trade completed. Take profit executed. Plus " + fmt(Math.abs(pl)) + " " + ccy + ".";
-      speak(tpLine + " " + tpLine, { interrupt: true, sticky: true, rate: 0.85, pitch: 1.05, force: true });
-      limitFanfare(true);
-      showResultModal(this, "tp", pl);
+      showResultModal(this, "tp", pl);          // reads the P/L out loud as it lifts
+      limitFanfare(true, 900);                  // the chime follows the number instead of covering it
       return true;
     }
     if (c.sl > 0 && pl <= -c.sl && this.stopsOnKind("sl")){
       this.stop("stop loss reached (" + fmtS(pl) + ")", { limit: true, kind: "sl" });
       toast(this.name + ": stop loss reached " + fmtS(pl), "error", 8000);
-      const ccy2 = (state.account && state.account.currency) || "USD";
-      const slLine = "Trade completed. Stop loss executed. Minus " + fmt(Math.abs(pl)) + " " + ccy2 + ".";
-      speak(slLine + " " + slLine, { interrupt: true, sticky: true, rate: 0.85, pitch: 0.95, force: true });
-      limitFanfare(false);
       showResultModal(this, "sl", pl);
+      limitFanfare(false, 900);
       return true;
     }
     const N = winStreakStop();
@@ -5249,14 +5259,11 @@ class BaseBot {
          trading and stops on the first settled trade that puts the run above zero. TP and SL are
          untouched, and a manual STOP still works whenever you want out of a red run. */
       if (pl > 0){
-        const ccy3 = (state.account && state.account.currency) || "USD";
         this.streakHeld = false;
         this.stop(N + " consecutive wins — run banked at " + fmtS(pl), { limit: true, kind: "streak" });
         toast(this.name + ": " + N + " wins in a row — stopped with the run at " + fmtS(pl), "success", 8000);
-        const winLine = "Trade completed. " + N + " wins in a row. Plus " + fmt(Math.abs(pl)) + " " + ccy3 + ".";
-        speak(winLine + " " + winLine, { interrupt: true, sticky: true, rate: 0.85, pitch: 1.05, force: true });
-        limitFanfare(true);
         showResultModal(this, "streak", pl);
+        limitFanfare(true, 900);
         return true;
       }
       /* the streak is full and the run is red or flat — hold it open and say so ONCE per losing run */
@@ -5743,13 +5750,10 @@ class MatchesBot extends BaseBot {
   bankOnHit(){
     const pl = this.runPl(), up = pl >= 0;
     const hit = this.hitDigits.join(" · ") || this.exitDigit;
-    const ccy = (state.account && state.account.currency) || "USD";
     this.stop("digit " + hit + " hit — run banked at " + fmtS(pl));
     toast(this.name + ": DIGITMATCH " + hit + " hit — stopped with the run at " + fmtS(pl), "success", 8000);
-    const line = "Trade completed. Digit " + hit + " matched. " + (up ? "Plus " : "Minus ") + fmt(Math.abs(pl)) + " " + ccy + ".";
-    speak(line + " " + line, { interrupt: true, sticky: true, rate: 0.85, pitch: up ? 1.05 : 0.95, force: true });
-    limitFanfare(up);
     showResultModal(this, "hit", pl);
+    limitFanfare(up, 900);
   }
   hotLine(){
     const r = this.read(), c = r.c, h = r.h;
@@ -7675,9 +7679,10 @@ function renderB11Panels(b){
    only repaints what those two already hold. */
 const RUN_POP = { b: null, timer: 0, n: 4 };
 /* The Activity Log is the one place an UNSETTLED contract exists (results only arrive settled), so the
-   open rows come from there. The run's own lock time is the floor: a previous run's rows stay out. */
+   open rows come from there. Two floors: the run's own lock time keeps a previous run's rows out, and the
+   last Reset keeps cleared rows out — the monitor must show the same zero the Summary just went to. */
 function runPopTx(b){
-  const floor = b.run && b.run.made ? b.run.made - 2 : 0;
+  const floor = Math.max(b.run && b.run.made ? b.run.made - 2 : 0, b.clearedAt || 0);
   const mine = activity.filter(e => e.source === b.source && e.t >= floor);
   const open = mine.filter(e => e.result === "OPEN").slice(-RUN_POP.n).reverse();
   const rows = open.concat(mine.filter(e => e.result !== "OPEN").slice(-RUN_POP.n).reverse());
@@ -7730,6 +7735,12 @@ function renderRunPop(){
   const tg = $("#runPopToggle");
   tg.textContent = b.running || b.busy ? "■ STOP" : "▶ RUN";
   tg.className = "btn btn-xs " + (b.running || b.busy ? "btn-red" : "btn-green");
+  /* Deriv greys Reset out mid-run and so does this card — a live contract must never be wiped off the
+     screen while it is still on the market. The button says WHY instead of looking broken. */
+  const rs = $("#runPopReset"), locked = !!(b.running || b.busy || b.restartAt);
+  rs.disabled = locked;
+  rs.title = locked ? "Disabled while " + b.name + " is running or an order is settling — press STOP first"
+    : "Clears this run\u2019s Summary, Transactions and Journal. Nothing on Deriv is touched.";
   $("#runPopGrid").innerHTML = runPopGridHtml(b);
   $("#runPopTx").innerHTML = runPopTxHtml(b);
   const sess = round2(b.stats.pl - (b.sessionPl || 0)), pl = $("#runPopSess");
@@ -7785,9 +7796,18 @@ function initB11UI(){
      everything, and the scrim covering the page is exactly why that control lives inside it. */
   $("#b11_pop").addEventListener("click", () => openRunPop(bot11));
   $("#runPopToggle").addEventListener("click", () => $("#b11_toggle").click());
+  /* Round 91 — Reset inside the monitor is the SAME call the card's Reset button makes, so there is one
+     guard (never while a contract is live) and one confirm, whichever way you reached it. */
+  $("#runPopReset").addEventListener("click", () => { if (RUN_POP.b) dbotReset(RUN_POP.b); });
   $("#runPopClose").addEventListener("click", closeRunPop);
   $("#runPop").addEventListener("click", e => { if (e.target === $("#runPop")) closeRunPop(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#runPop").classList.contains("hidden")) closeRunPop(); });
+  document.addEventListener("keydown", e => {
+    /* one Escape dismisses the top-most card only — the confirm now paints over the monitor, so it must
+       be the thing that closes, and the monitor must not vanish behind a dialog still waiting for an answer */
+    if (e.key !== "Escape") return;
+    if (!$("#confirmModal").classList.contains("hidden")) { closeConfirm(false); return; }
+    if (!$("#runPop").classList.contains("hidden")) closeRunPop();
+  });
   renderBot(bot11);
 }
 const bot7 = new MatchesBot();
@@ -8896,6 +8916,20 @@ function resultDirTxt(type){
   return t || "—";
 }
 /* big TP / SL result popup — the neon card the user drew: green on a win, red on a stop loss */
+/* What the card is about to show, said the way the card shows it: the P/L NUMBER FIRST, because the
+   old sentences led with "Trade completed. Take profit executed." and put the amount at the very end
+   — and said the whole thing twice. "Bot 11" comes from the source label, not the long card name. */
+function resultReadOut(bot, kind, pl){
+  const cur = (state.account && state.account.currency) || "USD";
+  const who = String(bot.source || "").split(" · ")[0] || bot.name || "the bot";
+  const amt = (pl >= 0 ? "Plus " : "Minus ") + fmt(Math.abs(pl)) + " " + cur + ".";
+  const hitD = (bot.hitDigits || []).join(" and ");
+  const what = kind === "sl" ? "Stop loss executed on " + who + "."
+    : kind === "hit" ? (hitD ? "Digit " + hitD + " matched" : "A covered digit hit") + " — run banked on " + who + "."
+    : kind === "streak" ? "Wins target reached, run banked on " + who + "."
+    : "Take profit executed on " + who + " — target achieved.";
+  return amt + " " + what;
+}
 function showResultModal(bot, kind, pl){
   resultResumeBot = bot;
   const sl = kind === "sl";
@@ -8928,6 +8962,10 @@ function showResultModal(bot, kind, pl){
   $("#resultResume").textContent = bot.restartAt ? "▶ START THE NEW RUN NOW"
     : (kind === "tp" && bot.stopKinds().length < 3) ? "▶ START A NEW SESSION (TP ENDED THIS ONE)" : "Resume AI Trading";
   $("#resultModal").classList.remove("hidden");
+  /* Round 91 (your rule of 1 Nov): the card READS itself the moment it lifts. Doing it here instead of at
+     the four call sites means a popup can never paint silently — take profit, stop loss, the wins target
+     and Bot 7's first-hit bank all speak in the same tick they appear. */
+  speak(resultReadOut(bot, kind, pl), { interrupt: true, sticky: true, rate: 0.9, pitch: win ? 1.05 : 0.95, force: true });
 }
 function hideResultModal(){ $("#resultModal").classList.add("hidden"); }
 /* ================= Round 79 — every bot's run area, laid out like Deriv Bot's own runner =========
@@ -8993,6 +9031,10 @@ async function dbotReset(b){
   b.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 };
   b.results = []; b.syslog = []; b.runEquity = [0]; b.winStreak = 0; b.streakHeld = false;
   b.startPl = 0; b.sessionPl = 0;
+  /* the run monitor reads its transactions from the Activity Log (it is the only ledger with UNSETTLED
+     contracts), so clearing b.results alone would leave the old rows on screen. This timestamp is the
+     second floor in runPopTx(). */
+  b.clearedAt = Date.now();
   b.sys("Run panel reset — summary, transactions and journal cleared");
   renderBot(b); drawBotChart(b);
   toast(b.name + "'s panel is back to zero — the bot is still stopped and nothing was bought", "info");
@@ -9034,7 +9076,10 @@ function buildRunPanels(){
         '<div class="drow"><span class="dhint">Every message this bot logs — entries, holds, locks, resets and errors — newest first, like Deriv Bot\u2019s Journal.</span></div>' +
         '<div class="djournal" id="' + p + '_journal"></div>' +
       '</div>';
-    runbar.parentNode.insertBefore(wrap, runbar.nextSibling);
+    /* a card claims its own spot with an id="<bot>_anchor" element; Bot 11 puts one after the settings so
+       the panel reads below them instead of above. Without an anchor the panel stays where it always was. */
+    const anchor = $("#" + p + "_anchor");
+    runbar.parentNode.insertBefore(wrap, anchor ? anchor.nextSibling : runbar.nextSibling);
     const bar = wrap.querySelector(".drunbar");
     /* the real START/STOP button moves in — its click handler is on the node, so it travels with it */
     const tgl = $("#" + p + "_toggle");
