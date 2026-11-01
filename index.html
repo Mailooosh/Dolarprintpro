@@ -921,7 +921,16 @@ html[data-theme="light"] .robot .body{background:linear-gradient(160deg,#eef3fa,
 html[data-theme="light"] .robot .arm{background:#d5dfea}
 /* the neutral heat bar was slate on charcoal; on white a lighter slate keeps the red/blue bars the
    loud ones, which is the whole point of the panel */
+/* the neutral heat bar was slate on charcoal; on white a lighter slate keeps it quiet */
 html[data-theme="light"] .dbar{background:#b9c6d8}
+/* The digit heat bars on white. The neutral (pre-first-tick) bar is a light slate; hot/mid/cold keep
+   the same red → green → blue language the charcoal theme uses, only deepened, because their pale tops
+   (#ff6b6b, #5eadff) dissolve into a white panel. These three rules MUST repeat the html[data-theme]
+   prefix: a bare `.dbar.hot` is specificity (0,2,0) and the neutral rule above is (0,2,1), so the plain
+   bar swallows them and every digit comes out grey — which is how white mode lost the colours. */
+html[data-theme="light"] .dbar.hot{background:linear-gradient(180deg,#f2554a,#b8301f)}
+html[data-theme="light"] .dbar.mid{background:linear-gradient(180deg,#2f9c5f,#1e6b46)}
+html[data-theme="light"] .dbar.cold{background:linear-gradient(180deg,#2295cc,#15589c)}
 /* Round 82 polish: RUN/STOP were tuned for charcoal, where a pale green hover is a highlight.
    On white the same hover washes out, so the light theme keeps dark fills with white labels and a
    darker hover instead. The tab strip and panel tints follow the darkened brand blue. */
