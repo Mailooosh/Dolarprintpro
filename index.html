@@ -96,7 +96,7 @@ header{position:sticky;top:0;z-index:60;background:var(--hdr);border-bottom:1px 
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 .hfield{display:flex;align-items:center;gap:8px}
 .hfield label{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
-#symbolSelect{min-width:210px}
+#symbolSelect{min-width:150px}
 .hprice{display:flex;flex-direction:column;line-height:1.1}
 #hdrPrice{font-family:var(--mono);font-size:17px;font-weight:700}
 #hdrDelta{font-family:var(--mono);font-size:11px}
@@ -645,7 +645,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 .saybox.talk::after{content:"▮";margin-left:3px;animation:blink .28s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .bars{display:flex;flex-direction:column;gap:5px;width:100%;max-width:560px}
-.barrrow{display:grid;grid-template-columns:78px 1fr 74px;gap:8px;align-items:center;font:700 11px var(--mono);color:#9fe6c6}
+.barrrow{display:grid;grid-template-columns:84px 1fr 74px;gap:8px;align-items:center;font:700 10px var(--mono);color:#9fe6c6}
 .barrrow .track{height:9px;background:rgba(37,255,154,.1);border:1px solid rgba(37,255,154,.22);border-radius:5px;overflow:hidden}
 .barrrow .fill{height:100%;width:0;background:linear-gradient(90deg,rgba(37,255,154,.45),var(--syn-green));transition:width .18s linear;box-shadow:0 0 10px rgba(37,255,154,.5)}
 .barrrow.best{color:var(--syn-green)}
@@ -694,7 +694,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   /* ---------- header: as few sticky rows as possible, everything still reachable ---------- */
   .hrow{padding:6px 8px;gap:6px 8px}
   .logo{font-size:13px;gap:7px}
-  .logo .thin{display:none}
+  /* Round 88: "trader" used to be hidden on a phone, so the greeting read as just "Welcome".
+     It stays now — smaller and tighter, and the market dropdown gives up the width it was using. */
+  .logo .thin{font-size:10.5px;letter-spacing:.08em}
   .logo .wave{font-size:15px}
   .hsep{display:none}
   .hfield{flex:1 1 132px;min-width:0;gap:5px}
@@ -789,14 +791,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 }
 
 /* ============ Round 81 — COPY TRADING. Its own tab, so it inherits the shell's .panel / .tbl / .cfg
-   geometry and needs only five things of its own: the switch bar, the broadcast feed, the payload
-   preview, the per-client row actions and the status dot. None of it lives inside a bot card, so no
-   bot id, config field or stored setting is touched anywhere. */
-.cpybar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(120deg,rgba(18,117,255,.14),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
-.cpybar .cpytitle{font-size:13.5px;font-weight:800;letter-spacing:.02em}
-.cpybar .cpysub{font-size:11.5px;color:var(--muted);margin-top:3px;max-width:620px}
-.cpybar .cpychips{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.cpytxt{font:11px/1.5 var(--mono);color:var(--dim)}
+   geometry and needs only four things of its own: the broadcast feed, the payload preview, the
+   per-client row actions and the status dot. None of it lives inside a bot card, so no
+   bot id, config field or stored setting is touched anywhere.
+   Round 88 deleted .cpybar / .cpytitle / .cpysub / .cpychips — the switch bar became .cpyhero. */
 .cpyfeed{max-height:250px;overflow-y:auto;font:11px/1.55 var(--mono);color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .cpyfeed div{border-bottom:1px dashed var(--hair);padding:3px 0;word-break:break-all}
 .cpyfeed .ok{color:var(--green)}
@@ -813,17 +811,75 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .cpydot.wait{background:var(--amber);box-shadow:0 0 7px var(--amber)}
 .cpydot.idle{background:var(--dim)}
 @media (max-width:560px){
-  .cpybar{padding:10px 11px;gap:10px}
-  /* the switch is the one thing a phone user must be able to hit with a thumb */
-  .cpybar > .btn-big{flex:1 1 100%;min-width:0}
-  .cpybar .cpychips{margin-left:0}
-  .cpybar .cpysub{max-width:none}
   .cpyfeed{max-height:190px}
   .cpypreview{max-height:180px;font-size:10.5px}
   .tbl td.cp{max-width:none;font-size:10.5px}
   /* paths get pasted here on a phone, and iOS zooms the page on any focused field under 16px —
      so this one box is allowed to be big while the dense command space keeps its 12px. */
   #copy_url{font-size:16px}
+}
+
+/* ============ Round 88 — COPY TRADING redrawn to the layout the owner showed me.
+   Four blocks top to bottom: the green master switch, the ROT leader row, ONE card that takes a
+   follower's own token + account type + stake, and the client counter. Everything is token-driven, so
+   the white theme from Round 82 comes along for free. The Round 81 webhook panels were moved into the
+   details block at the bottom of the tab and their ids are untouched, so that engine still runs verbatim. */
+.cpyhero{margin-bottom:12px}
+.cpyhero>button{width:100%;justify-content:center;padding:15px 18px;font-size:15px}
+.cpyheronote{font-size:11.5px;color:var(--muted);text-align:center;margin:8px auto 0;max-width:660px;line-height:1.5}
+.cprot{display:flex;align-items:center;gap:10px;background:var(--well);border:1px solid var(--line);
+  border-radius:10px;padding:10px 13px;margin-bottom:12px;font:11.5px/1.4 var(--mono);color:var(--muted)}
+.cprot .k{font-weight:800;letter-spacing:.12em;color:var(--dim);flex:0 0 auto}
+.cprot .v{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cprot .m{margin-left:auto;flex:0 0 auto;letter-spacing:.3em;color:var(--dim);cursor:help}
+.cpyjoin{margin-bottom:12px}
+.cpyjoin>h3{margin-bottom:9px}
+.cpyjoin .tokrow{display:flex;gap:8px;flex-wrap:wrap}
+.cpyjoin .tokrow input{flex:1 1 300px;min-width:0;font:12px var(--mono);background:var(--field);color:var(--text);
+  border:1px solid var(--line2);border-radius:8px;padding:10px 11px}
+.cpyjoin .joinrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:9px}
+.cpyjoin .joinrow select{flex:0 0 auto;min-width:104px;background:var(--field);color:var(--text);
+  border:1px solid var(--line2);border-radius:8px;padding:9px 10px}
+.cpyjoin .joinrow .copystk{display:flex;flex-direction:column;gap:4px;flex:0 0 auto;
+  font:700 9.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cpyjoin .joinrow .copystk input{width:92px;background:var(--field);color:var(--text);border:1px solid var(--line2);
+  border-radius:8px;padding:8px 9px;font:700 12px var(--mono);text-align:right}
+.cpyjoin .joinrow .btn{flex:0 1 auto}
+.cpyjoin .cpy-go{width:100%;justify-content:center;margin-top:11px;padding:13px 18px;font-size:14px}
+/* A pat_ token is answered by the Options REST host, which refuses anything without the Deriv-App-ID it
+   was created under — so that box shows up the moment a pat_ is typed, and stays out of the way before. */
+.cpyjoin .copyappid{display:none;align-items:center;gap:7px;font:700 9.5px var(--mono);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cpyjoin.pat .copyappid{display:flex}
+.cpyjoin .tokrow .copyappid input{flex:0 0 auto;width:178px;padding:7px 9px;font:700 12px var(--mono)}
+.cpyappidin{margin-top:5px;font:700 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cpyappidin input{display:block;margin-top:2px;width:136px;font:700 11px var(--mono);background:var(--field);
+  color:var(--text);border:1px solid var(--line2);border-radius:6px;padding:3px 6px}
+.cpycount{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12.5px;color:var(--muted)}
+.cpycount b{font:800 16px var(--mono);color:var(--text)}
+.cpycount .ccchip{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.copystake{width:76px;font:700 12px var(--mono);background:var(--field);color:var(--text);
+  border:1px solid var(--line2);border-radius:6px;padding:4px 6px;text-align:right}
+.cpyadv{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 15px;margin-bottom:14px}
+.cpyadv>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;padding:12px 0;
+  font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.01em;border-bottom:1px solid transparent}
+.cpyadv>summary::-webkit-details-marker{display:none}
+.cpyadv>summary:before{content:"▸";color:var(--dv);font-size:11px}
+.cpyadv[open]>summary{border-bottom-color:var(--line)}
+.cpyadv[open]>summary:before{content:"▾"}
+.cpyadv>summary .r{margin-left:auto;font-weight:400;font-size:11px;color:var(--dim)}
+.cpyadv .panel{border:none;background:transparent;border-radius:0;padding:13px 0;margin:0!important}
+.cpyadv .panel+.panel{border-top:1px solid var(--line)}
+@media (max-width:560px){
+  .cpyhero>button{font-size:13.5px;padding:13px 14px}
+  .cpyjoin .tokrow input{flex:1 1 100%}
+  .cpyjoin .tokrow .copyappid{flex:1 1 100%}
+  .cpyjoin .tokrow .copyappid input{flex:1 1 100%;width:100%}
+  .cpyjoin .joinrow select{flex:1 1 100%}
+  .cpyjoin .joinrow .btn{flex:1 1 120px;justify-content:center}
+  .cpycount .ccchip{margin-left:0;width:100%}
+  .copystake{width:100%}
 }
 
 /* ============ Round 82 — WHITE THEME + the switch in the header.
@@ -1852,56 +1908,104 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
   </div>
 </section>
 
-<!-- ============ COPY TRADING (Round 81) ============
-     "paste clients path to copy my trades": one panel that takes the client endpoints, one that lists
-     them with their live delivery state, one that shows the exact JSON leaving the browser, and a feed
-     of what happened. The master switch lives at the very top and defaults to OFF.               -->
+<!-- ============ COPY TRADING (Round 81 engine, Round 88 layout + follower copier) ============
+     Two different ways to copy, deliberately kept apart on this tab:
+       · COPY ACCOUNTS (top, new) — a follower hands you their own Deriv API token, this page opens a
+         second WebSocket as them and buys the same contract on their account at THEIR stake.
+       · BROADCAST PATHS (bottom, Round 81, unchanged) — your fills are pushed as JSON to web addresses
+         the client gave you; their own copier does the buying.
+     The green button at the very top is the master arm for BOTH. Nothing is sent or copied until it is
+     on, and a real-money copy additionally needs START COPY TRADING plus a typed confirmation.       -->
 <section class="tabpanel" id="tab_copy">
-  <div class="cpybar">
-    <button class="btn btn-big btn-red" id="copy_on" title="On: every contract your bots open and settle is sent to the client paths below. Off: nothing leaves this browser.">COPY OFF</button>
-    <div>
-      <div class="cpytitle">Broadcast your fills to your clients</div>
-      <div class="cpysub" id="copy_status">Switch off — nothing leaves this browser. Paste a client path below and press START BROADCASTING when you want trades to flow.</div>
+  <div class="cpyhero">
+    <button class="btn btn-big btn-green" id="copy_on" title="Off: no copy of any kind leaves this browser. On: your fills can be broadcast to client paths and, if you arm the card below, mirrored onto linked follower accounts.">Start Demo to Real Copy Trading</button>
+    <div class="cpyheronote" id="copy_status">Master switch OFF — your bots trade normally and nobody receives anything.</div>
+  </div>
+
+  <div class="cprot" title="ROT = the Real Owner Token, i.e. your own Deriv account as the trade leader. Everything copied is what this account buys.">
+    <span class="k">ROT</span>
+    <span class="v" id="copy_rot_txt">— not linked yet</span>
+    <span class="m" id="copy_rot_mask" title="Your own token is never printed on this page — not here, not in a feed, not in a payload. The stars are permanent.">******</span>
+  </div>
+
+  <div class="panel cpyjoin">
+    <h3>Add a follower <span class="r">their own token — pat_ or classic v2 · Read + Trade scope</span></h3>
+    <div class="tokrow">
+      <input id="copy_tok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter follower's Deriv v2 API token (PAT, trade scope)">
+      <label class="copyappid" title="Only a pat_ token needs this: the App ID of the app the follower created the token under on developers.deriv.com. A classic v2 token ignores it.">Their App ID<input id="copy_appid" type="text" autocomplete="off" spellcheck="false" placeholder="their app id"></label>
     </div>
-    <div class="cpychips">
-      <span class="pill d" id="copyTargets">0 clients</span>
-      <span class="pill o" id="copySent">0 sent</span>
-      <span class="pill" id="copyFail" style="background:var(--chip);color:var(--dim)">0 failed</span>
+    <div class="joinrow">
+      <select id="copy_type" title="Which side of Deriv you expect this token to be. SYNC reads the truth from Deriv and flags a mismatch.">
+        <option value="real">Real</option>
+        <option value="demo">Demo</option>
+      </select>
+      <label class="copystk" title="The stake placed on the follower's account for every copied entry — never your own stake.">Their stake<input id="copy_stake" type="number" min="0.35" step="0.05" value="0.35"></label>
+      <button class="btn btn-blue" id="copy_addtok" title="Adds this follower and immediately links them. The token is held in this tab's memory only — never written to storage.">Add</button>
+      <button class="btn btn-ghost" id="copy_sync" title="Re-open the socket for every follower added here and re-read their account type. Use it after a drop, or after a page reload.">Sync ↻</button>
     </div>
+    <button class="btn btn-green cpy-go" id="copyStart" title="On: each contract your bots open is also bought on every linked follower account, at their own stake. Off: nothing is placed for anybody else.">Start Copy Trading</button>
+    <div class="note"><b style="color:var(--amber)">This places real orders on another person's account.</b> Only add a token the follower gave you themselves, with their informed permission, and only one limited to <b>Read + Trade</b> — never a Withdraw or Full-access token. Sharing trading accounts is the follower's own responsibility under Deriv's terms; ask them for it in writing.<br>
+    <b>What gets mirrored:</b> the contract your bot buys — market, type, barrier and tick duration — at the <b>stake you set for that follower</b>, in their own currency. Their contracts settle on their own account; nothing here can close or override one. Binary contracts are short, so an entry is the whole copy: there is no exit to send.<br>
+    <b>Tokens are never stored, shown or sent.</b> They live in this tab's memory only, so a page reload empties this list on purpose — press Add again after a reload. No token, login id or balance ever leaves this browser: the only outbound traffic for a follower is the standard Deriv API request to Deriv's own servers, made on their behalf.<br>
+    <b>Two token styles, two Deriv hosts.</b> A <b>pat_</b> token is answered by the new Options API: this tab asks Deriv for their account list with their App ID, then opens the single-use session socket Deriv hands back — so their row needs <b>their App ID</b>, and after any drop it takes a fresh Sync (a new session), never a silent reconnect. A <b>classic v2</b> token is answered by authorize on a v3 socket (ws.derivws.com, then ws.binaryws.com). If that host is unreachable from your network the row goes red with the reason and no copy is placed.</div>
+  </div>
+
+  <div class="cpycount">
+    Total Clients added: <b id="copyCount">0</b>
+    <span class="ccchip">
+      <span class="pill d" id="copierLinked">0 linked</span>
+      <span class="pill w" id="copierSent">0 copied</span>
+      <span class="pill l" id="copierFail">0 failed</span>
+    </span>
   </div>
 
   <div class="panel" style="margin-bottom:14px">
-    <h3>Client paths <span class="r">one per line · https:// webhook or wss:// socket</span></h3>
-    <textarea class="cmdspace" id="copy_url" spellcheck="false" rows="4" placeholder="https://client-one.example.com/copy-webhook&#10;wss://client-two.example.com/trade-socket&#10;https://relay.example.com/ingest?token=their-own-key"></textarea>
-    <div class="cfg">
-      <label>Your tag<input id="copy_tag" type="text" spellcheck="false" placeholder="shown to clients"></label>
-      <label>Shared key<input id="copy_key" type="text" spellcheck="false" placeholder="a secret YOU both know"></label>
-      <label>Delivery mode<select id="copy_mode"><option value="blind">Blind — send and move on</option><option value="confirm">Confirm — wait for a reply</option></select></label>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-      <button class="btn btn-blue" id="copy_add" title="Adds every path in the box above. Duplicates are ignored.">ADD / UPDATE CLIENTS</button>
-      <button class="btn btn-ghost" id="copyTestAll" title="Sends one TEST message to every client so you can see which paths work">TEST ALL CLIENTS</button>
-      <button class="btn btn-red" id="copyClearAll" title="Removes every client and closes every open socket">REMOVE ALL</button>
-    </div>
-    <div class="note"><b>What a client path is:</b> the web address your client (or their copier) gave you to receive trades. A <b>https://</b> address gets one HTTP POST per event; a <b>wss://</b> address gets one WebSocket message per event. <b>Blind</b> mode is the one that works against an ordinary endpoint: the browser sends the data and never reads a reply, so the client's server does not have to allow this site in its CORS headers. <b>Confirm</b> mode waits for a real reply and marks the client green or red — use it only when the endpoint is built to answer, otherwise every send looks like a failure.<br>
-    <b style="color:var(--amber)">Nothing private is ever sent.</b> The payload is built field by field from the trade — market, contract, stake, entry, exit, digit, result, profit, your tag and the shared key. Your Deriv API token, your login id and your account balance are not in it and cannot be added to it. Clients receive your <i>decisions</i>; they get no access to your account. Anyone who gives you a path is choosing to trust your stream — the same way you would trust a signal provider.<br>
-    <b>Execution is not guaranteed.</b> This pushes what <i>you</i> bought on Deriv. A client's copier decides its own stake and may fill at a different price, on a different account type, or not at all. Nothing here places orders for anybody else.</div>
+    <h3>Copied accounts <span class="r" id="copierMeta">none yet</span></h3>
+    <div class="scrollx"><table class="tbl"><thead><tr><th>Client</th><th>Side</th><th>Their stake</th><th>Last copy</th><th>Copied / failed</th><th>State</th><th>Actions</th></tr></thead><tbody id="copier_list"></tbody></table></div>
+    <div class="note"><b>Side</b> is what Deriv answered on SYNC — <b>REAL</b> or <b>DEMO</b> — not what was selected in the dropdown, so a demo token pasted under "Real" is caught before it can copy. A follower whose socket has dropped shows <b>not linked</b> and is skipped rather than retried into a half-open position.</div>
   </div>
 
   <div class="panel" style="margin-bottom:14px">
-    <h3>Your clients <span class="r" id="copyListMeta">none yet</span></h3>
-    <div class="scrollx"><table class="tbl"><thead><tr><th>Client</th><th>Path</th><th>Via</th><th>Last event</th><th>Sent / failed</th><th>State</th><th>Actions</th></tr></thead><tbody id="copy_list"></tbody></table></div>
+    <h3>Copy feed <span class="r" id="copierFeedMeta">nothing copied yet</span></h3>
+    <div class="cpyfeed" id="copier_feed"></div>
   </div>
 
-  <div class="panel" style="margin-bottom:14px">
-    <h3>Exactly what leaves this browser <span class="r">the last payload, field for field</span></h3>
-    <pre class="cpypreview" id="copy_preview">—</pre>
-  </div>
+  <details class="cpyadv">
+    <summary>Advanced — broadcast to client paths instead of copying accounts <span class="r">Round 81 · your fills as JSON</span></summary>
 
-  <div class="panel">
-    <h3>Broadcast feed <span class="r" id="copyFeedMeta">nothing sent yet</span></h3>
-    <div class="cpyfeed" id="copy_feed"></div>
-  </div>
+    <div class="panel">
+      <h3>Client paths <span class="r">one per line · https:// webhook or wss:// socket</span></h3>
+      <textarea class="cmdspace" id="copy_url" spellcheck="false" rows="4" placeholder="https://client-one.example.com/copy-webhook&#10;wss://client-two.example.com/trade-socket&#10;https://relay.example.com/ingest?token=their-own-key"></textarea>
+      <div class="cfg">
+        <label>Your tag<input id="copy_tag" type="text" spellcheck="false" placeholder="shown to clients"></label>
+        <label>Shared key<input id="copy_key" type="text" spellcheck="false" placeholder="a secret YOU both know"></label>
+        <label>Delivery mode<select id="copy_mode"><option value="blind">Blind — send and move on</option><option value="confirm">Confirm — wait for a reply</option></select></label>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn-blue" id="copy_add" title="Adds every path in the box above. Duplicates are ignored.">ADD / UPDATE CLIENTS</button>
+        <button class="btn btn-ghost" id="copyTestAll" title="Sends one TEST message to every client so you can see which paths work">TEST ALL CLIENTS</button>
+        <button class="btn btn-red" id="copyClearAll" title="Removes every client and closes every open socket">REMOVE ALL</button>
+      </div>
+      <div class="note"><b>What a client path is:</b> the web address your client (or their copier) gave you to receive trades. A <b>https://</b> address gets one HTTP POST per event; a <b>wss://</b> address gets one WebSocket message per event. <b>Blind</b> mode is the one that works against an ordinary endpoint: the browser sends the data and never reads a reply, so the client's server does not have to allow this site in its CORS headers. <b>Confirm</b> mode waits for a real reply and marks the client green or red — use it only when the endpoint is built to answer, otherwise every send looks like a failure.<br>
+      <b style="color:var(--amber)">Nothing private is ever sent.</b> The payload is built field by field from the trade — market, contract, stake, entry, exit, digit, result, profit, your tag and the shared key. Your Deriv API token, your login id and your account balance are not in it and cannot be added to it. Clients receive your <i>decisions</i>; they get no access to your account. Anyone who gives you a path is choosing to trust your stream — the same way you would trust a signal provider.<br>
+      <b>Execution is not guaranteed.</b> This pushes what <i>you</i> bought on Deriv. A client's copier decides its own stake and may fill at a different price, on a different account type, or not at all. Nothing here places orders for anybody else — that is the <b>Add a follower</b> card above.</div>
+    </div>
+
+    <div class="panel">
+      <h3>Your clients <span class="r" id="copyListMeta">none yet</span></h3>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Client</th><th>Path</th><th>Via</th><th>Last event</th><th>Sent / failed</th><th>State</th><th>Actions</th></tr></thead><tbody id="copy_list"></tbody></table></div>
+    </div>
+
+    <div class="panel">
+      <h3>Exactly what leaves this browser <span class="r">the last payload, field for field</span></h3>
+      <pre class="cpypreview" id="copy_preview">—</pre>
+    </div>
+
+    <div class="panel">
+      <h3>Broadcast feed <span class="r" id="copyFeedMeta">nothing sent yet</span></h3>
+      <div class="cpyfeed" id="copy_feed"></div>
+    </div>
+  </details>
 </section>
 
 <footer>
@@ -2437,6 +2541,14 @@ function onTickMsg(msg){
     onNewTick();
   }
 }
+/* Round 88: markets are named "VOL 10 (1s)". The full Deriv string ("Volatility 10 (1s) Index (1HZ10V)")
+   never fitted the 78px desk column, and the code in brackets told the trader nothing they could trade on.
+   1HZ markets print one tick a second, the R_ family every two — that is what the suffix now means. */
+function symShort(code, name){
+  const s = String(name || code || "").replace(/Volatility/i, "VOL").replace(/\s*Index\b/i, "").replace(/\s+/g, " ").trim();
+  return (/\(\d+s\)/.test(s) || !/^R_|^1HZ/.test(String(code)) ? s
+    : s + (/^1HZ/.test(String(code)) ? " (1s)" : " (2s)")) || String(code);
+}
 async function loadSymbols(){
   if (state.symbolsLoaded) return;
   const res = await api.send({ active_symbols: "brief" });
@@ -2446,7 +2558,10 @@ async function loadSymbols(){
   if (!syn.length) return;
   state.symbolsLoaded = true;
   const sel = $("#symbolSelect");
-  sel.innerHTML = syn.map(s => '<option value="' + symKey(s) + '">' + nameKey(s) + " (" + symKey(s) + ")</option>").join("");
+  sel.innerHTML = syn.map(s => {
+    const code = symKey(s), full = nameKey(s), short = symShort(code, full);
+    return '<option value="' + code + '" data-short="' + short + '" title="' + full + ' (' + code + ')">' + short + "</option>";
+  }).join("");
   if (!syn.some(s => symKey(s) === state.symbol)) state.symbol = symKey(syn[0]);
   sel.value = state.symbol;
 }
@@ -3571,6 +3686,9 @@ async function openPosition(plan){
   /* Round 81: ENTRY fires the moment the contract exists, before the log even repaints — a copier that
      waits for settlement is a copier that buys the entry late. */
   copyBroadcast(entry, "ENTRY", plan);
+  /* Round 88: the follower-side copier mirrors the same instant. Queued per account, never awaited —
+     a slow follower must not delay the leader's own log or its next entry. */
+  copierBroadcast(entry, plan);
   renderActivity(); renderSummary();
   return { plan, entry, contractId: buy.contract_id, stake: num(pr.ask_price),
     ratio: num(pr.payout) / Math.max(num(pr.ask_price), 0.01) };
@@ -3769,7 +3887,9 @@ function copyBroadcast(entry, event, plan){
   if (!COPY.on || !entry || !COPY.targets.length) return;
   const p = copyPayload(entry, event, plan);
   COPY.last = JSON.stringify(p, null, 1);
-  copyFeedLine("TRADE " + p.event + " · " + p.symbol + " " + p.contract + " · stake " + fmt(p.stake)
+  /* the payload keeps the raw API code — a client's copier needs "1HZ10V" — but the feed is read by a
+     human, so it prints the same compact market name the rest of the site uses. */
+  copyFeedLine("TRADE " + p.event + " · " + symLabel(p.symbol) + " " + p.contract + " · stake " + fmt(p.stake)
     + " → " + COPY.targets.length + " client" + (COPY.targets.length === 1 ? "" : "s"), "dim");
   COPY.targets.forEach(t => copySend(t, p));
   renderCopyPreview(); renderCopyList(); copyStatus();
@@ -3844,8 +3964,12 @@ function renderCopyList(){
     }).join("");
   }
   const meta = $("#copyListMeta");
+  /* Round 88 moved the sent/failed chips out of the old switch bar, so the counters live here instead
+     — the one line a trader reads when they are already inside the Advanced panel. */
   if (meta) meta.textContent = COPY.targets.length
-    ? COPY.targets.length + " client path" + (COPY.targets.length === 1 ? "" : "s") + (COPY.on ? " · LIVE" : " · waiting for the switch")
+    ? COPY.targets.length + " client path" + (COPY.targets.length === 1 ? "" : "s")
+      + (COPY.on ? " · LIVE" : " · waiting for the switch")
+      + " · " + COPY.sent + " sent · " + COPY.fails + " failed"
     : "none yet";
 }
 function renderCopyFeed(){
@@ -3870,24 +3994,36 @@ function renderCopyPreview(){
     type: "DIGITOVER 6", stake: 1, entry: "", exit: "", digit: "—", result: "OPEN", profit: 0, id: 12345678 },
     "ENTRY", { duration: 1, barrier: 6 }), null, 1);
 }
+/* Round 88: the hero button is the master arm for BOTH copy paths, so its label talks about copy trading
+   as a whole and not only about broadcasting. The #copyTargets / #copySent / #copyFail chips went away with
+   the old switch bar — follower counters live in .cpycount, path counters in #copyListMeta. */
 function copyStatus(){
   const btn = $("#copy_on");
   if (btn){
-    btn.textContent = COPY.on ? "STOP BROADCASTING" : "START BROADCASTING";
-    btn.className = "btn btn-big " + (COPY.on ? "btn-green" : "btn-red");
+    btn.textContent = COPY.on ? "STOP COPY TRADING" : "Start Demo to Real Copy Trading";
+    btn.className = "btn btn-big " + (COPY.on ? "btn-red" : "btn-green");
+    btn.setAttribute("aria-pressed", COPY.on ? "true" : "false");
   }
   const sub = $("#copy_status");
   if (sub){
-    const n = COPY.targets.length;
-    sub.innerHTML = !n ? "No client paths yet — paste one or more addresses above and press ADD / UPDATE CLIENTS."
-      : COPY.on ? "<b style='color:var(--green)'>LIVE</b> — every contract your bots open and settle is sent to " + n
-          + " client path" + (n === 1 ? "" : "s") + ". Nothing about your account is included."
-        : "Switch off — nothing leaves this browser, even while the bots trade.";
+    const nf = COPIER.list.filter(copierCanCopy).length;
+    const np = COPY.targets.length;
+    if (!COPY.on){
+      sub.innerHTML = (nf || np)
+        ? "Master switch OFF — <b>" + nf + "</b> linked follower account(s)"
+          + (np ? " and <b>" + np + "</b> client path(s)" : "")
+          + " are ready, but nothing leaves this browser."
+        : "Master switch OFF — nothing is linked yet. Add a follower token above, or open <b>Advanced</b> and paste client paths.";
+    } else {
+      const bits = [];
+      if (COPIER.on) bits.push(nf ? "buying on <b>" + nf + "</b> follower account(s)" : "armed, but <b>nobody is linked</b> — press Sync");
+      else if (COPIER.list.length) bits.push("followers not armed — press START COPY TRADING in the card");
+      if (np) bits.push("broadcasting to <b>" + np + "</b> client path(s)");
+      sub.innerHTML = "<b style='color:var(--green)'>ARMED</b> — "
+        + (bits.length ? bits.join(" · ") : "no follower account and no client path, so there is nothing to send to")
+        + ". Your token, login id and balance never leave this browser.";
+    }
   }
-  const tg = $("#copyTargets"), sn = $("#copySent"), fl = $("#copyFail");
-  if (tg) tg.textContent = COPY.targets.length + " client" + (COPY.targets.length === 1 ? "" : "s");
-  if (sn) sn.textContent = COPY.sent + " sent";
-  if (fl){ fl.textContent = COPY.fails + " failed"; fl.className = "pill " + (COPY.fails ? "l" : "d"); }
 }
 function copyApplyMode(){
   /* the dropdown is deliberately global — one switch for the whole list is easier to reason about than
@@ -3910,17 +4046,24 @@ function initCopyUI(){
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){ e.preventDefault(); copyAddFromText(ta.value); ta.value = ""; }
   });
   $("#copy_on").addEventListener("click", () => {
-    if (!COPY.on && !COPY.targets.length){
-      toast("Add a client path first — there is nobody to send to", "warn", 6000);
-      if (ta) ta.focus();
+    /* Round 88: this is the master arm for both paths, so a linked follower counts as somebody to send to
+       even though no webhook path exists. */
+    if (!COPY.on && !COPY.targets.length && !COPIER.list.length){
+      toast("Add a follower token or a client path first — there is nobody to copy", "warn", 7000);
+      const tk = $("#copy_tok"); if (tk) tk.focus();
       return;
     }
     COPY.on = !COPY.on;
     copySave(); renderCopyList(); renderCopyPreview(); copyStatus();
-    toast(COPY.on ? "COPY LIVE — every fill goes to " + COPY.targets.length + " client path(s)"
-      : "COPY OFF — nothing leaves this browser", COPY.on ? "success" : "info", 7000);
-    copyFeedLine(COPY.on ? "broadcast ON · " + COPY.targets.length + " client(s)" : "broadcast OFF", COPY.on ? "ok" : "bad");
-    if (!COPY.on) COPY.targets.forEach(t => copyCloseSock(t));
+    toast(COPY.on ? "MASTER ON — copies and broadcasts may flow" : "MASTER OFF — nothing leaves this browser",
+      COPY.on ? "success" : "info", 7000);
+    copyFeedLine(COPY.on ? "master ON · " + COPY.targets.length + " path(s), " + COPIER.list.length + " follower(s)"
+      : "master OFF", COPY.on ? "ok" : "bad");
+    if (!COPY.on){
+      COPY.targets.forEach(t => copyCloseSock(t));
+      /* an order that never got sent is worse than no order: drop the buffer and say so */
+      copierFlush("master switch off");
+    }
   });
   $("#copy_add").addEventListener("click", () => {
     if (!ta || !ta.value.trim()){ toast("Nothing pasted in the box", "warn", 5000); return; }
@@ -3961,6 +4104,530 @@ function initCopyUI(){
     }
   });
   renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus();
+}
+/* ================= Round 88: FOLLOWER-TOKEN COPIER =================
+   The other half of the tab: instead of pushing JSON at a client's webhook, the client hands you their
+   OWN Deriv API token and this page opens a second, private WebSocket as them and buys the same contract
+   on their account at the stake you set for them.
+
+   WHAT IS GUARANTEED BY CONSTRUCTION
+   · A token is held on the follower object in this tab's memory only. It is never written to localStorage,
+     never rendered into the DOM, never placed in a URL, a payload or a feed line, and a reload wipes the
+     whole list — that is deliberate, not a missing feature.
+   · Two switches must be thrown before anybody else's account moves: the hero master switch (COPY.on) and
+     START COPY TRADING (COPIER.on). Turning the master off also drops every buffered order, because an
+     order that fires late on someone else's money is worse than no order.
+   · A follower whose socket is not open, whose real side does not match what was listed, or whose token
+     provably lacks the Trade scope is skipped, not retried. Nothing auto-reconnects: a dead follower
+     stays dead until you press Sync, so a half-broken account can never trade behind your back.
+   · Two token styles are answered on two different hosts. A pat_ token is proved over the Options REST
+     API and traded on the single-use session socket Deriv mints for it — which is exactly why a dropped
+     PAT row needs a fresh Sync and never a silent reconnect. A classic v2 token is authorized on a v3
+     socket, and the host that has no authorize method at all is not tried first. A refused host is
+     reported on that row in about six seconds instead of leaving it on "linking…" forever.
+   · Each follower gets one socket and one serial queue. Two buys are never in flight on one account, and
+     the proposal subscription is forgotten + its req_id dropped on every copy, exactly like the bots' own
+     openPosition, so long sessions cannot leak a slot per mirrored trade.                                     */
+const COPIER = { on: false, seq: 0, sent: 0, fails: 0, list: [], feed: [] };
+const COPIER_FEED_MAX = 60;
+const COPIER_MIN_STAKE = 0.35;      /* Deriv's own floor for a volatility contract in USD */
+const COPIER_MAX_STAKE = 5000;
+const COPIER_QMAX = 20;
+const COPIER_CONNECT_MS = 8000;   /* a refused host says so in about 6s — waiting 12 for nothing is cruelty */
+/* Deriv tokens are long alphanumerics (classic v2) or pat_-prefixed (new Options API). Anything with
+   punctuation in it was pasted from a URL or a chat bubble and would only fail at Deriv, so refuse it here. */
+const COPIER_TOK_RE = /^[A-Za-z0-9_.-]{8,300}$/;
+function copierIsPat(tok){ return String(tok || "").slice(0, 4) === "pat_"; }
+/* The App ID belongs to whoever minted the token, so it is per follower; the leader's own saved one is a
+   sensible default for a household or a team that all made their tokens under the same app.
+   Deriv app ids are alphanumeric (34iyncRMY1FxE4TWisRR1), NOT numbers — stripping everything but digits
+   turns a real id into garbage that Deriv answers with a 401. */
+function copierCleanAppId(v){ return String(v == null ? "" : v).trim().replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40); }
+function copierAppId(f){
+  return copierCleanAppId((f && f.appId) ? f.appId : store.get("dt_app_id"));
+}
+
+class CopierAPI {
+  constructor(token){
+    this.token = token; this.ws = null; this.connected = false; this.host = "";
+    this.reqId = 0; this.pending = new Map(); this.usedIdx = -1; this.pingTimer = null;
+    this.appId = store.get("dt_app_id") || "1089";
+  }
+  /* One attempt per host, in order, and then it stops. DerivAPI behind the main app reconnects forever
+     because a dropped market feed only costs a stale chart; a dropped follower socket costs somebody
+     money, so silence here is the safe state. */
+  async connect(ms){
+    let err = null;
+    for (let i = 0; i < WS_ENDPOINTS.length; i++){
+      try { await this._open(i, ms); return; } catch(e){ err = e; }
+    }
+    throw err || new Error("no Deriv host answered");
+  }
+  async connectTo(i, ms){ await this._open(i, ms); }
+  /* A pat_ token is handed a single-use session URL by Deriv. Open it once; if it ever drops the
+     follower must Sync, which mints a brand-new one. Re-using a spent URL is how a copy would die
+     halfway, so there is deliberately no reconnect on this path. */
+  async connectSession(url, ms){ await this._openUrl(url, "their Deriv session", -1, ms); }
+  _open(i, ms){
+    const ep = WS_ENDPOINTS[i];
+    return this._openUrl(ep.build(this.appId), ep.label, i, ms);
+  }
+  _openUrl(url, label, i, ms){
+    const budget = ms || COPIER_CONNECT_MS;
+    return new Promise((resolve, reject) => {
+      let ws = null, done = false, to = null;
+      const settle = () => { if (done) return false; done = true; if (to) clearTimeout(to); return true; };
+      to = setTimeout(() => { if (ws) try { ws.close(); } catch(e){} if (settle()) reject(Object.assign(new Error(label + " did not answer within " + Math.round(budget / 1000) + "s"), { code: "Socket" })); }, budget);
+      try { ws = new WebSocket(url); }
+      catch(e){ if (settle()) reject(Object.assign(new Error("could not reach " + label + " — " + (e && e.message ? e.message : e)), { code: "Socket" })); return; }
+      this.ws = ws;
+      ws.onopen = () => {
+        if (ws !== this.ws || !settle()) return;
+        this.connected = true; this.host = label; this.usedIdx = i;
+        clearInterval(this.pingTimer);
+        this.pingTimer = setInterval(() => this.send({ ping: 1 }).catch(() => {}), 20000);
+        resolve();
+      };
+      ws.onmessage = ev => { if (ws !== this.ws) return; try { this._route(JSON.parse(ev.data)); } catch(e){} };
+      ws.onclose = () => {
+        if (ws !== this.ws) return;
+        this.connected = false; clearInterval(this.pingTimer);
+        /* a host that hangs up before ever opening is a refusal, not a mystery — say so now instead of
+           letting the connect sit on its timer while the trader watches "linking…" */
+        if (settle()) reject(Object.assign(new Error(label + " refused the connection"), { code: "Socket" }));
+        this._failAll("follower socket closed");
+      };
+      ws.onerror = () => {};
+    });
+  }
+  _route(msg){
+    const rid = msg.req_id;
+    if (!rid || !this.pending.has(rid)) return;
+    const h = this.pending.get(rid);
+    if (msg.error){
+      const err = new Error(msg.error.message || "Deriv refused this request");
+      err.code = msg.error.code || "APIError";
+      if (!h.settled){ h.settled = true; h.reject(err); }
+      this.pending.delete(rid);
+      return;
+    }
+    if (h.onUpdate) h.onUpdate(msg);
+    if (!h.settled){ h.settled = true; h.resolve(msg); }
+    if (!h.onUpdate) this.pending.delete(rid);
+  }
+  _armTimeout(h, req_id, ms){
+    if (!ms || h.settled) return;
+    const realResolve = h.resolve, realReject = h.reject;
+    h.resolve = v => { clearTimeout(h.timer); realResolve(v); };
+    h.reject = e => { clearTimeout(h.timer); realReject(e); };
+    h.timer = setTimeout(() => {
+      if (h.settled) return;
+      h.settled = true; this.pending.delete(req_id);
+      const e = new Error("Deriv did not answer within " + Math.round(ms / 1000) + "s");
+      e.code = "Timeout"; realReject(e);
+    }, ms);
+  }
+  _failAll(reason){
+    const e = new Error(reason); e.code = "Disconnected";
+    for (const h of this.pending.values()){ if (!h.settled){ h.settled = true; h.reject(e); } }
+    this.pending.clear();
+  }
+  send(request, ms){
+    if (!this.ws || this.ws.readyState !== 1) return Promise.reject(Object.assign(new Error("not connected"), { code: "Disconnected" }));
+    const req_id = ++this.reqId;
+    return new Promise((resolve, reject) => {
+      const h = { resolve, reject, settled: false, timer: null };
+      this.pending.set(req_id, h);
+      this._armTimeout(h, req_id, ms === undefined ? 15000 : ms);
+      this.ws.send(JSON.stringify(Object.assign({}, request, { req_id })));
+    });
+  }
+  subscribe(request, onUpdate, ms){
+    if (!this.ws || this.ws.readyState !== 1) return Promise.reject(Object.assign(new Error("not connected"), { code: "Disconnected" }));
+    const req_id = ++this.reqId;
+    return new Promise((resolve, reject) => {
+      const h = { resolve, reject, onUpdate, settled: false, timer: null };
+      this.pending.set(req_id, h);
+      this._armTimeout(h, req_id, ms === undefined ? 15000 : ms);
+      this.ws.send(JSON.stringify(Object.assign({}, request, { req_id })));
+    });
+  }
+  drop(reqId){ if (reqId) this.pending.delete(reqId); }
+  close(){
+    this._manual = true;
+    clearInterval(this.pingTimer); this.pingTimer = null;
+    this._failAll("closed");
+    try { if (this.ws) this.ws.close(); } catch(e){}
+    this.ws = null; this.connected = false;
+  }
+}
+
+function copierNewFollower(token, want, stake, appId){
+  return { id: "f" + (++COPIER.seq), name: "Client " + COPIER.seq, token: token, want: want, stake: stake,
+    appId: copierCleanAppId(appId),
+    currency: "", side: "", scopes: [], state: "idle", info: "not linked", last: 0, sent: 0, fails: 0,
+    api: null, q: [], pumping: false };
+}
+function copierSockUp(f){ return !!(f.api && f.api.connected); }
+/* Deriv answers authorize with the scopes a v2 token actually carries. An empty list is the old style of
+   answer and is NOT read as a refusal; a list that omits trade is proof the token cannot buy. */
+function copierScopeOk(f){
+  const sc = f && f.scopes;
+  if (!Array.isArray(sc) || !sc.length) return true;
+  return sc.map(s => String(s).toLowerCase()).indexOf("trade") >= 0;
+}
+/* the whole list of reasons a follower may not be traded for, in one place, so the switch text and the
+   pump agree */
+function copierCanCopy(f){
+  return !!f && f.state === "ok" && !!f.token && copierSockUp(f) && num(f.stake) >= COPIER_MIN_STAKE
+    && copierScopeOk(f)
+    /* a token listed as Demo that Deriv answers as REAL would spend somebody's live money on a trader
+       who thinks they are testing — that direction is refused outright, never silently allowed */
+    && !(f.want === "demo" && f.side === "real");
+}
+function copierErrText(e){
+  const m = e && e.message ? String(e.message) : String(e || "failed");
+  return m.length > 90 ? m.slice(0, 89) + "…" : m;
+}
+function copierFeedLine(msg, cls){
+  COPIER.feed.unshift({ t: Date.now(), m: String(msg), c: cls || "dim" });
+  while (COPIER.feed.length > COPIER_FEED_MAX) COPIER.feed.pop();
+  renderCopierFeed();
+}
+function copierFlush(reason){
+  let n = 0;
+  COPIER.list.forEach(f => { n += f.q.length; f.q.length = 0; });
+  if (n) copierFeedLine(n + " queued copie" + (n === 1 ? "s" : "s") + " dropped — " + reason, "bad");
+}
+
+/* pat_ route — the new Options API. /accounts with their token as Bearer + their App ID proves which
+   account it is, and Deriv then mints a one-use socket URL for it. There is deliberately no authorize
+   call on this path: that host has no authorize method, and waiting for one is how a row sits on
+   "linking…" while nothing is happening. */
+async function copierLinkPat(f, api){
+  const appId = copierAppId(f);
+  if (!appId) throw Object.assign(new Error("their PAT needs the App ID it was made under — fill Their App ID in, then Sync"), { code: "NoAppID" });
+  const list = normalizeAccounts(await derivRest("/accounts", { token: f.token, appId }));
+  if (!list.length) throw new Error("that PAT reaches no account — it needs Read + Trade scopes");
+  const wantVirtual = f.want === "demo";
+  const acct = list.find(a => !!a.isVirtual === wantVirtual) || list[0];
+  f.currency = String(acct.currency || "USD").slice(0, 6);
+  f.side = acct.isVirtual ? "demo" : "real";
+  f.scopes = Array.isArray(acct.scopes) ? acct.scopes.slice(0, 8) : [];
+  await api.connectSession(await fetchOtpUrl(acct.id, f.token, appId));
+}
+/* classic v2 route — authorize on a v3 socket. The Options host is skipped on purpose: it answers
+   "no recognized method" for authorize, so trying it first only costs every follower eight seconds. */
+async function copierLinkV2(f, api){
+  let last = null;
+  for (let i = 1; i < WS_ENDPOINTS.length; i++){
+    try {
+      await api.connectTo(i);
+      const a = (await api.send({ authorize: f.token })).authorize || {};
+      f.currency = String(a.currency || "USD").slice(0, 6);
+      f.side = a.is_virtual ? "demo" : "real";
+      f.scopes = Array.isArray(a.scopes) ? a.scopes.slice(0, 8) : [];
+      return;
+    } catch(e){ last = e; api.close(); }
+  }
+  throw last || new Error("no v3 host would answer their token");
+}
+
+/* Link one follower and read the truth about their account. Deriv answers the two token styles on two
+   different hosts, so each route only fills in currency / side / scopes and the guards below are shared. */
+async function copierLink(f){
+  if (!f || !f.token){ if (f){ f.state = "idle"; f.info = "no token in this tab — Add it again"; renderCopier(); } return; }
+  if (f.api){ f.api.close(); f.api = null; }
+  f.state = "wait"; f.info = copierIsPat(f.token) ? "linking their PAT…" : "linking…"; f.q.length = 0; renderCopier();
+  const api = new CopierAPI(f.token);
+  try {
+    if (copierIsPat(f.token)) await copierLinkPat(f, api);
+    else await copierLinkV2(f, api);
+    f.state = "ok";
+    /* a non-empty scope list that omits trade is proof the token cannot buy; an empty one is simply the
+      old style of answer and is not treated as a refusal */
+    if (!copierScopeOk(f)){
+      f.state = "err"; f.info = "token has no Trade scope";
+    } else if (f.want === "demo" && f.side === "real"){
+      f.state = "err"; f.info = "REAL account listed as Demo — copy refused";
+    } else {
+      f.info = "linked · " + f.side.toUpperCase() + " · " + f.currency + (f.want !== f.side ? " · listed as " + f.want.toUpperCase() : "");
+    }
+    if (f.state === "ok") f.api = api;
+    else api.close();   /* a refused side keeps no live session behind your back */
+    copierFeedLine(f.name + " · " + (f.state === "ok" ? "linked" : "refused") + " · " + f.info, f.state === "ok" ? "ok" : "bad");
+  } catch(e){
+    api.close();
+    f.api = null; f.state = "err"; f.side = ""; f.currency = "";
+    f.info = copierErrText(e);
+    copierFeedLine(f.name + " · link FAILED — " + f.info, "bad");
+  }
+  renderCopier(); copyStatus();
+}
+
+/* One mirrored entry: proposal (subscribed, so the id is buyable) → buy → forget → drop the local slot.
+   This is deliberately the same five lines the bots' own openPosition uses. */
+async function copierPlace(f, job){
+  const plan = job.plan;
+  const sym = plan.symbol || job.entry.symbol || state.symbol;
+  const req = {
+    proposal: 1, amount: round2(num(f.stake)), basis: "stake", contract_type: plan.type,
+    currency: f.currency || "USD", duration: plan.duration, duration_unit: plan.duration_unit || "t",
+    underlying_symbol: sym
+  };
+  if (plan.barrier !== undefined && plan.barrier !== null) req.barrier = String(plan.barrier);
+  req.subscribe = 1;
+  const first = await f.api.subscribe(req, () => {}, 12000);
+  const pr = first.proposal || {};
+  const propSubId = (first.subscription && first.subscription.id) || null;
+  const res = await f.api.send({ buy: pr.id, price: pr.ask_price }, 12000);
+  if (propSubId) f.api.send({ forget: propSubId }).catch(() => {});
+  f.api.drop(first.req_id);
+  return { contractId: (res.buy && res.buy.contract_id) || 0, stake: num(pr.ask_price), sym: sym,
+    type: plan.type + (plan.barrier !== undefined && plan.barrier !== null ? " " + plan.barrier : "") };
+}
+
+async function copierPump(f){
+  if (f.pumping) return;
+  f.pumping = true;
+  try {
+    while (f.q.length && COPIER.on && COPY.on){
+      const job = f.q.shift();
+      try {
+        const r = await copierPlace(f, job);
+        f.sent++; COPIER.sent++; f.last = Date.now();
+        f.info = "copied · contract " + r.contractId;
+        f.state = "ok";
+        copierFeedLine(f.name + " · " + r.type + " on " + symLabel(r.sym) + " · " + fmt(r.stake) + " " + f.currency + " · OK", "ok");
+      } catch(e){
+        f.fails++; COPIER.fails++; f.last = Date.now(); f.info = copierErrText(e);
+        copierFeedLine(f.name + " · " + f.info + " · FAILED", "bad");
+        const code = String((e && e.code) || "");
+        if (code === "Disconnected" || /socket|closed|connect/i.test(f.info)){
+          f.state = "idle"; f.info = "socket dropped — press Sync"; f.q.length = 0;
+          if (f.api){ f.api.close(); f.api = null; }
+          break;
+        }
+      }
+      renderCopier();
+    }
+  } finally { f.pumping = false; }
+}
+
+/* The follower-side outlet, hooked next to copyBroadcast() in openPosition. It never throws into the
+   trader's own trade path: nothing here can make your bot miss an entry. */
+function copierBroadcast(entry, plan){
+  if (!COPIER.on || !COPY.on || !entry || !plan) return;
+  COPIER.list.forEach(f => {
+    if (!copierCanCopy(f)) return;
+    if (f.q.length >= COPIER_QMAX){
+      f.fails++; COPIER.fails++;
+      copierFeedLine(f.name + " · queue full (" + COPIER_QMAX + ") — this entry was NOT copied", "bad");
+      return;
+    }
+    f.q.push({ entry: entry, plan: plan });
+    copierPump(f);
+  });
+}
+
+function copierRot(){
+  const txt = $("#copy_rot_txt");
+  if (!txt) return;
+  const acct = state.account;
+  if (!acct){ txt.textContent = "— not linked yet  ·  press AUTHORIZE to make this browser the trade leader"; return; }
+  txt.textContent = (acct.isVirtual ? "DEMO" : "REAL") + " leader · " + String(acct.currency || "USD")
+    + " · socket " + (api.connected ? "open" : "closed")
+    + (state.token || state.authMode === "oauth" ? " · authorized" : "");
+}
+function renderCopierFeed(){
+  const el = $("#copier_feed");
+  if (!el) return;
+  el.innerHTML = COPIER.feed.length
+    ? COPIER.feed.map(f => "<div class='" + f.c + "'>" + new Date(f.t).toLocaleTimeString() + " · " + copyEsc(f.m) + "</div>").join("")
+    : "<div class='dim'>Nothing copied yet. Add a follower token, get a green Linked row, then press START COPY TRADING.</div>";
+  const meta = $("#copierFeedMeta");
+  if (meta) meta.textContent = COPIER.feed.length ? COPIER.feed.length + " event" + (COPIER.feed.length === 1 ? "" : "s") + " this session" : "nothing copied yet";
+}
+function renderCopier(){
+  const body = $("#copier_list");
+  if (body){
+    if (!COPIER.list.length){
+      body.innerHTML = "<tr><td colspan='7' class='cpyempty'>No followers yet — paste their API token above, set the side and their stake, press Add.</td></tr>";
+    } else {
+      body.innerHTML = COPIER.list.map(f => {
+        const ago = f.last ? Math.max(0, Math.round((Date.now() - f.last) / 1000)) + "s ago" : "never";
+        const side = f.side ? "<span class='pill " + (f.side === "real" ? "l" : "d") + "'>" + f.side.toUpperCase() + "</span>"
+          : "<span class='pill' style='background:var(--chip);color:var(--dim)'>—</span>";
+        /* only a pat_ needs an App ID, and the box shows the one that will actually be sent */
+        const appid = copierIsPat(f.token) ? "<div class='cpyappidin'>their App ID<input class='copyappid' type='text'"
+          + " value='" + copyEsc(copierAppId(f)) + "' data-copact='appid' data-copid='" + f.id
+          + "' title='The App ID this PAT was created under — Deriv refuses their token without it'></div>" : "";
+        return "<tr" + (f.state === "err" ? " style='background:rgba(255,68,79,.05)'" : "") + ">"
+          + "<td class='src'>" + copyEsc(f.name) + appid + "</td>"
+          + "<td>" + side + "</td>"
+          + "<td><input class='copystake' type='number' min='" + COPIER_MIN_STAKE + "' step='0.05' value='" + fmt(f.stake)
+          + "' data-copact='stake' data-copid='" + f.id + "' title='Stake bought on this follower account for every one of your entries'></td>"
+          + "<td>" + ago + "</td>"
+          + "<td>" + f.sent + " / " + f.fails + "</td>"
+          + "<td><span class='cpydot " + (f.state === "ok" ? "ok" : (f.state === "err" ? "err" : (f.state === "wait" ? "wait" : "idle"))) + "'></span>" + copyEsc(f.info) + "</td>"
+          + "<td><span class='copyact'>"
+          + "<button class='btn btn-ghost btn-mini' data-copact='link' data-copid='" + f.id + "' title='Open a socket as this follower and re-read their account'>SYNC</button>"
+          + "<button class='btn btn-red btn-mini' data-copact='del' data-copid='" + f.id + "'>REMOVE</button>"
+          + "</span></td></tr>";
+      }).join("");
+    }
+  }
+  const n = COPIER.list.length, ok = COPIER.list.filter(copierCanCopy).length;
+  const cnt = $("#copyCount"); if (cnt) cnt.textContent = String(n);
+  const lk = $("#copierLinked"); if (lk) lk.textContent = ok + " linked";
+  const sn = $("#copierSent"); if (sn) sn.textContent = COPIER.sent + " copied";
+  const fl = $("#copierFail"); if (fl){ fl.textContent = COPIER.fails + " failed"; fl.className = "pill " + (COPIER.fails ? "l" : "d"); }
+  const meta = $("#copierMeta");
+  if (meta) meta.textContent = n
+    ? n + " follower account" + (n === 1 ? "" : "s") + (COPIER.on && COPY.on ? " · COPYING" : " · waiting")
+    : "none yet";
+  const go = $("#copyStart");
+  if (go){
+    go.textContent = COPIER.on ? "Stop Copy Trading" : "Start Copy Trading";
+    go.className = "btn cpy-go " + (COPIER.on ? "btn-red" : "btn-green");
+    go.setAttribute("aria-pressed", COPIER.on ? "true" : "false");
+  }
+  copierRot();
+}
+function copierDisarm(why){
+  if (!COPIER.on) return;
+  COPIER.on = false;
+  copierFlush(why || "stopped");
+  renderCopier(); copyStatus();
+  toast("COPY OFF — nothing is placed on follower accounts", "info", 7000);
+}
+async function copierToggleArm(){
+  if (COPIER.on){ copierDisarm("stopped by you"); return; }
+  if (!COPY.on){
+    toast("Press START DEMO TO REAL COPY TRADING at the top first — the master switch gates both copy paths", "warn", 8000);
+    return;
+  }
+  const ready = COPIER.list.filter(copierCanCopy);
+  if (!ready.length){
+    toast(COPIER.list.length ? "No follower is linkable — press Sync and get a green row first"
+      : "Add a follower token first — there is nobody to copy", "warn", 8000);
+    return;
+  }
+  const real = ready.filter(f => f.side === "real");
+  if (real.length){
+    const stakeTxt = real.map(f => fmt(f.stake)).join(" / ");
+    const go = await confirmDialog("Copy onto " + real.length + " REAL account" + (real.length === 1 ? "" : "s") + "?",
+      "Every contract your bots open will also be <b>bought</b> on " + real.length + " live Deriv account"
+      + (real.length === 1 ? "" : "s") + " at their own stake (" + stakeTxt + " " + (real[0].currency || "USD")
+      + "). Their real money moves the instant your bot enters."
+      + "<div class='warnstrip' style='margin:10px 0 0'>Only continue if each of these people handed you their token themselves and agreed to be copied. Their contracts settle on their own account — nothing here can close or override one, and a losing streak is their loss.</div>",
+      "YES, COPY REAL");
+    if (!go){ toast("Not armed — nothing will be placed on the live accounts", "info", 7000); return; }
+  }
+  COPIER.on = true;
+  renderCopier(); copyStatus();
+  copierFeedLine("COPY ARMED · " + ready.length + " account(s)", "ok");
+  toast("COPY ARMED — your entries are now bought on " + ready.length + " follower account(s)", "success", 9000);
+}
+async function copierAddFromInput(){
+  const ti = $("#copy_tok"), ty = $("#copy_type"), si = $("#copy_stake"), ai = $("#copy_appid");
+  const tok = String((ti && ti.value) || "").trim();
+  if (!tok){ toast("Paste the follower's API token first", "warn", 6000); if (ti) ti.focus(); return; }
+  if (!COPIER_TOK_RE.test(tok)){
+    toast("That is not a Deriv token — it has characters Deriv never uses", "error", 8000);
+    return;
+  }
+  if (state.token && tok === state.token){
+    toast("That is YOUR token. You are already the leader — do not add yourself as a follower.", "error", 9000);
+    if (ti) ti.value = "";
+    return;
+  }
+  if (COPIER.list.some(f => f.token === tok)){
+    toast("That token is already on the list", "info", 6000);
+    if (ti) ti.value = "";
+    return;
+  }
+  const stake = round2(clampFloat(si && si.value, COPIER_MIN_STAKE, COPIER_MAX_STAKE, COPIER_MIN_STAKE));
+  const f = copierNewFollower(tok, (ty && ty.value) === "demo" ? "demo" : "real", stake, copierAppId({ appId: ai && ai.value }));
+  COPIER.list.push(f);
+  if (ti){ ti.value = ""; ti.blur(); }     /* the secret leaves the visible box the moment Add is pressed */
+  if (ai) ai.value = "";
+  copierPatHint();
+  renderCopier(); copyStatus();
+  copierFeedLine("added " + f.name + " · listed as " + f.want.toUpperCase() + " · stake " + fmt(f.stake), "dim");
+  await copierLink(f);
+}
+async function copierSyncAll(){
+  if (!COPIER.list.length){ toast("No followers added yet", "info", 5000); return; }
+  toast("Re-linking " + COPIER.list.length + " follower account(s)…", "info", 5000);
+  for (const f of COPIER.list) await copierLink(f);   /* serial: two handshakes at once is a race for nothing */
+  renderCopier(); copyStatus();
+}
+function copierRemove(f){
+  if (!f) return;
+  if (f.api){ f.api.close(); f.api = null; }
+  const i = COPIER.list.indexOf(f);
+  if (i >= 0) COPIER.list.splice(i, 1);
+  if (!COPIER.list.filter(copierCanCopy).length) copierDisarm("last linkable follower removed");
+  renderCopier(); copyStatus();
+  toast(f.name + " removed — their token is gone from this tab", "info", 6000);
+  copierFeedLine(f.name + " removed", "dim");
+}
+let copierTimer = null;
+/* "5s ago" only stays true if the rows are repainted, but repainting the table wipes a box that is
+   mid-typing — so the clock pauses while the pointer is in either of the two inputs in a row. */
+function copierStartTimer(){
+  if (copierTimer) return;
+  copierTimer = setInterval(() => {
+    const el = document.activeElement;
+    if (el && el.dataset && el.dataset.copact && el.tagName === "INPUT") return;
+    renderCopier(); renderCopierFeed();
+  }, 3000);
+}
+function copierStopTimer(){ clearInterval(copierTimer); copierTimer = null; }
+function copierPatHint(){
+  /* one box appears out of nowhere per keystroke is noise; this flips once, on the pat_ boundary */
+  const join = $(".cpyjoin"), ti = $("#copy_tok");
+  if (join) join.classList.toggle("pat", !!ti && copierIsPat(ti.value));
+}
+function initCopierUI(){
+  if (!$("#copy_tok") || !$("#copier_list")) return;   /* a missing node must never take init() down */
+  const add = $("#copy_addtok"), sync = $("#copy_sync"), start = $("#copyStart"), ti = $("#copy_tok");
+  if (add) add.addEventListener("click", () => { copierAddFromInput().catch(e => toast("Add failed: " + copierErrText(e), "error", 8000)); });
+  if (ti) ti.addEventListener("input", copierPatHint);
+  if (ti) ti.addEventListener("keydown", e => {
+    if (e.key === "Enter"){ e.preventDefault(); copierAddFromInput().catch(() => {}); }
+  });
+  if (sync) sync.addEventListener("click", () => { copierSyncAll().catch(e => toast("Sync failed: " + copierErrText(e), "error", 8000)); });
+  if (start) start.addEventListener("click", () => { copierToggleArm().catch(e => toast("Could not arm: " + copierErrText(e), "error", 8000)); });
+  const body = $("#copier_list");
+  body.addEventListener("click", e => {
+    const b = e.target.closest ? e.target.closest("button[data-copact]") : null;
+    if (!b) return;
+    const f = COPIER.list.find(x => x.id === b.dataset.copid);
+    if (!f) return;
+    if (b.dataset.copact === "link") copierLink(f).catch(() => {});
+    else if (b.dataset.copact === "del") copierRemove(f);
+  });
+  /* a stake or an App ID typed mid-run applies to the next entry and the next Sync, never to an order
+     already sitting in that follower's queue */
+  body.addEventListener("change", e => {
+    const el = e.target;
+    const act = el && el.dataset ? el.dataset.copact : null;
+    if (act !== "stake" && act !== "appid") return;
+    const f = COPIER.list.find(x => x.id === el.dataset.copid);
+    if (!f) return;
+    if (act === "stake"){
+      f.stake = round2(clampFloat(el.value, COPIER_MIN_STAKE, COPIER_MAX_STAKE, f.stake));
+      el.value = fmt(f.stake);
+      copierFeedLine(f.name + " · stake set to " + fmt(f.stake), "dim");
+    } else {
+      f.appId = copierCleanAppId(el.value);
+      copierFeedLine(f.name + " · App ID set to " + (copierAppId(f) || "nothing — their link stays red") + ", press SYNC", "dim");
+    }
+    renderCopier();
+  });
+  renderCopier(); renderCopierFeed();
 }
 function waitTicks(n){
   return new Promise(resolve => {
@@ -7101,7 +7768,8 @@ const eoScan = { busy: false, bars: new Map(), sayTimer: null };
 function symLabel(sym){
   const sel = $("#symbolSelect");
   const o = sel && sel.querySelector('option[value="' + sym + '"]');
-  return o ? o.textContent.replace(/\s*\([^)]*\)\s*$/, "") : sym;
+  if (!o) return String(sym);
+  return o.dataset.short || o.textContent || String(sym);
 }
 function syncSay(text, animate){
   const el = $("#syncSay"); if (!el) return;
@@ -9521,6 +10189,8 @@ function renderAccount(){
         ". Asks first, and only ever touches the demo account you are signed into";
   }
   syncHdrOffset();
+  /* Round 88: the ROT row on the copy tab reports this same leader state, so it repaints with the account. */
+  copierRot();
 }
 /* ================= reset the demo balance (Round 74) =================
    The official endpoint is POST /accounts/{account_id}/reset-demo-balance on the same REST base the
@@ -9768,7 +10438,10 @@ function init(){
     if (b.dataset.tab === "allinone"){ renderBot(bot5); renderAio(); aioStartTimer(); }
     else aioStopTimer();
     /* Round 81: the copy tab repaints its own relative times ("12s ago") and dot states on entry. */
-    if (b.dataset.tab === "copy"){ renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus(); }
+    if (b.dataset.tab === "copy"){
+      renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus();
+      renderCopier(); renderCopierFeed(); copierStartTimer();
+    } else copierStopTimer();
   }));
   loadSettings();
   state.fastExec = $("#fastExec").checked;
@@ -10091,6 +10764,9 @@ function init(){
   /* Round 81: copy trading reads its own localStorage key, so it loads after the CFG_IDS blob and never
      enters that safety net. */
   initCopyUI();
+  /* Round 88: the follower-token copier. It keeps no stored settings at all — a token that can trade is
+     never written to this browser — so there is nothing to load and a reload always starts from zero. */
+  initCopierUI();
   /* Round 82: the head script already painted the chosen theme before the first frame; this only syncs
      the switch's label and repaints the canvases with that theme's ink. Not a CFG_IDS id — the theme is
      chrome, not a trading setting, and it keeps its own dt_theme key so a settings reset cannot leave
@@ -10110,6 +10786,15 @@ function init(){
     scanPop: { open: scanPopOpen, close: scanPopClose, render: scanPopRender, state: scanPop, defs: SCAN_POP },
     copy: { state: COPY, add: copyAddFromText, broadcast: copyBroadcast, test: copyTest, payload: copyPayload,
             render: () => { renderCopyList(); renderCopyFeed(); renderCopyPreview(); copyStatus(); } },
+    /* Round 88: the follower copier, exposed the same way. `list` is handed back mapped WITHOUT the
+       token, so no console read, screenshot or log can echo a follower's secret by accident. */
+    copier: { state: COPIER, add: copierAddFromInput, sync: copierSyncAll, link: copierLink, arm: copierToggleArm,
+              remove: copierRemove, canCopy: copierCanCopy, place: copierPlace, broadcast: copierBroadcast,
+              followers: () => COPIER.list.map(f => ({ id: f.id, name: f.name, want: f.want, stake: f.stake,
+                side: f.side, currency: f.currency, state: f.state, info: f.info, sent: f.sent, fails: f.fails,
+                appid: copierAppId(f), pat: copierIsPat(f.token),
+                linked: copierSockUp(f), queued: f.q.length })),
+              render: () => { renderCopier(); renderCopierFeed(); } },
     /* Round 82: the theme switch, exposed so it can be driven from the console during verification
        without a human clicking, and read without digging through localStorage. */
     theme: { get: () => THEME.now, set: t => themeApply(t, true), toggle: () => themeApply(THEME.now === "light" ? "dark" : "light", true),
