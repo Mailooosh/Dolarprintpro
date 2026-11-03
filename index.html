@@ -244,6 +244,16 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
   background:var(--panel2);color:var(--muted);font:700 12px var(--mono);cursor:pointer;touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;line-height:1}
 .edig:hover{border-color:var(--green);color:var(--text)}
+/* Four rank colours only — least, second least, second highest, highest — because those four ARE the read and
+   tinting all ten would be noise. Same hexes as the dashboard digit discs, so a red button here says the same
+   thing about the same ticks as a red disc up there. The fills are literal (not tokens) on purpose, so the white
+   theme cannot flatten them the way Round 90's .dbar rule did. Placed BEFORE .edig.sel so the armed digit always
+   paints green-filled regardless of its rank. */
+.edig.rank-low{background:linear-gradient(160deg,#ff6a72,#cf2b36);border-color:#ff7d84;color:#200406;font-weight:800}
+.edig.rank-low2{background:linear-gradient(160deg,#ffb648,#d98d0f);border-color:#ffc069;color:#1c1201;font-weight:800}
+.edig.rank-high2{background:linear-gradient(160deg,#7cb8ff,#2f79d8);border-color:#b9dbff;color:#03111f;font-weight:800}
+.edig.rank-high{background:linear-gradient(160deg,#00d68a,#00a066);border-color:#00e699;color:#04150f;font-weight:800}
+.edig[class*="rank-"]:hover{filter:brightness(1.15)}
 .edig.off{min-width:42px;font-size:9.5px;letter-spacing:.08em}
 .edig.sel{background:var(--green);border-color:var(--green);color:#04150f;font-weight:800;box-shadow:0 0 12px rgba(0,192,118,.42)}
 .edig.off.sel{background:var(--panel2);color:var(--text);border-color:var(--green);box-shadow:none}
@@ -5388,10 +5398,47 @@ function entryDigitNow(sym){
   if (!f || !f.prices || !f.prices.length) return null;
   return digitOfQ(f.prices[f.prices.length - 1], typeof f.pip === "number" ? f.pip : 0);
 }
+/* The ranking is read off the SAME ticks the dashboard distribution bars use (windowDigits for the header market,
+   the bot's own feed for a locked market), so a red button here and a red bar there are one statement about one
+   dataset — not two different windows disagreeing. Ties break by digit index, so each colour names exactly one
+   button, and a feed younger than 10 ticks stays plain rather than inventing a ranking out of noise. */
+function entryDigitsOf(sym){
+  if (!sym) return null;
+  if (sym === state.symbol) return windowDigits();
+  const f = scan.feeds.get(sym) || sweep.feeds.get(sym);
+  if (!f || !f.prices || !f.prices.length) return null;
+  const pip = typeof f.pip === "number" ? f.pip : 0;
+  return f.prices.slice(-Math.max(10, state.winSel)).map(q => digitOfQ(q, pip));
+}
+function entryRankArr(sym){
+  const arr = entryDigitsOf(sym);
+  if (!arr || arr.length < 10) return null;
+  const counts = new Array(10).fill(0); arr.forEach(d => counts[d]++);
+  const order = counts.map((c, i) => i).sort((x, y) => counts[y] - counts[x] || x - y);
+  const cls = new Array(10).fill("");
+  cls[order[0]] = "rank-high"; cls[order[1]] = "rank-high2"; cls[order[8]] = "rank-low2"; cls[order[9]] = "rank-low";
+  return cls;
+}
+/* Only writes when the RANKING changes, not when the percentages wobble — ten classList touches per card per tick
+   is exactly the main-thread churn Round 92 had to remove. `cache` lets one tick share the scan across cards that
+   watch the same market. */
+function entryRankPaint(row, sym, cache){
+  const cls = cache ? (cache.has(sym) ? cache.get(sym) : (cache.set(sym, entryRankArr(sym)), cache.get(sym))) : entryRankArr(sym);
+  const sig = cls ? cls.join(",") : "";
+  if (row._rankSig === sig) return;
+  row._rankSig = sig;
+  const btns = row.querySelectorAll(".edig");
+  for (let i = 0; i < btns.length; i++){
+    const el = btns[i], d = +el.dataset.d;
+    el.classList.remove("rank-low", "rank-low2", "rank-high2", "rank-high");
+    if (d >= 0 && cls && cls[d]) el.classList.add(cls[d]);
+  }
+}
 function entryRowHtml(id){
   const t = "Your rule of 2 Nov: touch a digit and this bot buys NOTHING until the last digit of the newest tick on " +
     "the market it trades is that digit. Touch it again (or OFF) to clear it. It is a timing filter — it changes WHEN " +
-    "a contract opens, not whether it wins.";
+    "a contract opens, not whether it wins. Colours rank the digits over the same ticks as the dashboard bars: " +
+    "red = least appearing, yellow = second least, blue = second highest, green = highest appearing.";
   let h = "<div class=\"entryrow\" id=\"entry_" + id + "\" role=\"group\" aria-label=\"Entry point digit\"><span class=\"elbl\" title=\"" + t + "\">ENTRY POINT</span>" +
     "<button type=\"button\" class=\"edig off\" data-d=\"-1\" title=\"No digit gate — the bot trades on its own conditions\">OFF</button>";
   for (let d = 0; d <= 9; d++) h += "<button type=\"button\" class=\"edig\" data-d=\"" + d + "\" title=\"Wait for the tick to land on " + d + "\">" + d + "</button>";
@@ -5407,6 +5454,7 @@ function paintEntryRow(b){
   });
   const now = row.querySelector(".enow b");
   if (now){ const q = entryDigitNow(entrySymOf(b)); now.textContent = q == null ? "—" : q; }
+  entryRankPaint(row, entrySymOf(b));
 }
 function buildEntryRows(){
   BOTS.forEach(b => {
@@ -5428,12 +5476,15 @@ function setEntry(b, d){
 }
 /* the live digit under each row, so the gate is visible while it counts. One text write per card per tick. */
 function paintEntryNow(){
+  const cache = new Map();
   for (let i = 0; i < BOTS.length; i++){
     const b = BOTS[i], row = document.getElementById("entry_" + b.id); if (!row) continue;
+    const sym = entrySymOf(b);
     const el = row.querySelector(".enow b"); if (!el) continue;
-    const q = entryDigitNow(entrySymOf(b));
+    const q = entryDigitNow(sym);
     const s = q == null ? "—" : String(q);
     if (el.textContent !== s) el.textContent = s;
+    entryRankPaint(row, sym, cache);
   }
 }
 class BaseBot {
