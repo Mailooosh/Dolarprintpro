@@ -232,6 +232,23 @@ input:focus,select:focus{outline:none;border-color:var(--dv);box-shadow:0 0 0 2p
 input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:9px;margin:10px 0}
 .cfg label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+/* ---------- Round 95: the entry point you touch ----------
+   One row per bot card: OFF + the ten digits. Tapping a digit arms a gate and the bot places nothing until
+   the last digit of the newest tick on the market it trades IS that digit. 28 px targets so a thumb works,
+   and OFF is the default — a card you never touch behaves exactly as it did. */
+.entryrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:2px 0 10px;padding:7px 8px;
+  border:1px dashed var(--line2);border-radius:9px;background:var(--well)}
+.entryrow.armed{border-style:solid;border-color:var(--green);background:var(--green-soft)}
+.entryrow .elbl{font:800 9px var(--mono);letter-spacing:.12em;color:var(--dim);margin-right:2px}
+.edig{appearance:none;min-width:27px;height:28px;padding:0 5px;border:1px solid var(--line2);border-radius:7px;
+  background:var(--panel2);color:var(--muted);font:700 12px var(--mono);cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;line-height:1}
+.edig:hover{border-color:var(--green);color:var(--text)}
+.edig.off{min-width:42px;font-size:9.5px;letter-spacing:.08em}
+.edig.sel{background:var(--green);border-color:var(--green);color:#04150f;font-weight:800;box-shadow:0 0 12px rgba(0,192,118,.42)}
+.edig.off.sel{background:var(--panel2);color:var(--text);border-color:var(--green);box-shadow:none}
+.entryrow .enow{margin-left:auto;font:700 10px var(--mono);color:var(--dim);white-space:nowrap}
+.entryrow .enow b{color:var(--green);font-size:14px;font-family:var(--mono)}
 .note{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-top:10px}
 .warnstrip{background:rgba(240,169,46,.08);border:1px solid rgba(240,169,46,.35);color:var(--amber-text);border-radius:9px;padding:10px 14px;font-size:12.5px;margin-bottom:14px}
 /* ---------- dashboard ---------- */
@@ -646,21 +663,30 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 .robotface{position:relative;width:min(320px,86%);aspect-ratio:1/.72;border-radius:12px;overflow:hidden;border:2px solid rgba(37,255,154,.6);box-shadow:0 0 30px rgba(37,255,154,.3),inset 0 0 20px rgba(37,255,154,.1)}
 .robotface img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(1.1) contrast(1.15) saturate(1.2)}
 .robotface .beam{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--syn-green),transparent);box-shadow:0 0 26px 6px rgba(37,255,154,.6);animation:beamy 2.2s linear infinite}
-/* Round 94 (your rule of 3 Nov: "the robot speak gesture isn't correct, let the mouth talk like a real one").
-   The mouth is sized in PERCENT of the face box, which is always 1 : .72, so the same numbers land on the
-   artwork's lips at 320 px on a desk and at 620 px in the scan popup — no per-context scale override any more.
-   Measured by reading sync-scanner.jpg pixel rows on a canvas: the image is 738x1600 and object-fit:cover leaves
-   rows 534..1066 visible, and the darkest horizontal run in that crop is rows 992..1040 — x 322..436 at its
-   widest — which is 86.1%..95.2 % of the box height, 15.2 % wide and centred at 51.4 %. That is the lip gap.
-   (The narrower dark band at 82-84 % is the shadow under the nose; an earlier pass anchored the mouth there,
-   which is why the gesture read as a ring floating under the nose instead of a mouth.)
-   --mo is the one number the talk engine writes on :root (0 = lips shut, 1 = jaw fully dropped). The top edge
-   stays at the upper lip and only the bottom drops, so the cavity opens down into the chin like a real jaw,
-   widening slightly as it goes. Dark cavity, thin rim, shadow under the upper lip, glow off the lower lip. */
-.robotface .mouth{position:absolute;left:51.4%;top:86%;width:calc(14.2% + var(--mo,0) * 1.6%);height:calc(.9% + var(--mo,0) * 7.6%);
-  transform:translateX(-50%);background:radial-gradient(62% 74% at 50% 44%,rgba(1,9,7,.97) 0 46%,rgba(2,24,17,.92) 70%,rgba(37,255,154,.3) 92%,rgba(37,255,154,.55));
-  border:1px solid rgba(37,255,154,.5);border-radius:42% 42% 50% 50%/26% 26% 74% 74%;
-  box-shadow:0 0 9px rgba(37,255,154,.32),inset 0 3px 7px rgba(0,0,0,.75),inset 0 -3px 6px rgba(37,255,154,.26);
+/* Round 94 (your rule of 3 Nov: "the robot speak gesture isn't correct, let the mouth talk like a real one") and
+   Round 95 ("robot talk sign in under the lips"). The mouth is sized in PERCENT of the face box, which is always
+   1 : .72, so the same numbers land on the artwork's lips at 320 px on a desk and at 620 px in the scan popup.
+   The crop is what has to be got right: the image is 738x1600, object-fit:cover scales it by boxWidth/738 and
+   leaves cropH = 738 x .72 = 531.4 SOURCE ROWS visible, centred on row 800 — rows 534.3..1065.7. Reading the
+   luma of the mouth column (x 320..430, blurred 7 rows) row by row inside that crop, then checked against a
+   3x zoom of the artwork with the source row numbers drawn on it, gives the mouth complex:
+     row 915                71.9 %  the shadow under the nose (philtrum) — NOT a lip
+     rows 928..948 = 74.3%..78.0 %  the UPPER LIP, its bright ridge peaking at row 935
+     rows 950..968 = 78.3%..81.7 %  the LIP SEAM, the dark line the lips meet on, darkest at row 956
+     rows 968..990 = 81.7%..85.8 %  the LOWER LIP, a bright rounded band peaking at row 972
+     rows 992..1015 = 86.2%..89.8 % the crease UNDER the lower lip — darkest row of the whole face is 1000
+     rows 1021..1055                the CHIN takes the light back (row 1055 is its highlight)
+   Round 94 and 94b read that row-1000 minimum as the seam and anchored the sign there. It is not: it is the
+   shadow the lower lip casts on the chin, so every mouth we drew landed below the lips — your complaint.
+   Now: top 79.0 % (row 954, the top of the seam), height 1.8 % closed (rows 954..964, a line ON the seam) and
+   5.2 % fully open (rows 954..982, ending inside the lower lip's bright band, never reaching the crease).
+   The lips span x 318..455, centred at 52.4 % of the image, so the cavity is 17 % wide at rest, 19.4 % open.
+   --mo is the one number the talk engine writes on :root (0 = lips shut, 1 = jaw fully dropped); the top edge
+   stays on the upper lip and only the bottom drops, so the cavity opens down like a real jaw. */
+.robotface .mouth{position:absolute;left:52.4%;top:79.0%;width:calc(17% + var(--mo,0) * 2.4%);height:calc(1.8% + var(--mo,0) * 3.4%);
+  transform:translateX(-50%);background:radial-gradient(58% 72% at 50% 42%,rgba(1,9,7,.95) 0 44%,rgba(2,24,17,.88) 70%,rgba(37,255,154,.26) 92%,rgba(37,255,154,.5));
+  border:1px solid rgba(37,255,154,.45);border-radius:48% 48% 52% 52%/30% 30% 70% 70%;
+  box-shadow:0 0 8px rgba(37,255,154,.28),inset 0 2px 4px rgba(0,0,0,.8),inset 0 -2px 4px rgba(37,255,154,.22);
   opacity:0;transition:opacity .16s;z-index:10}
 html.talkon .robotface .mouth{opacity:1}
 .robotface .faceTag{position:absolute;left:0;right:0;bottom:1.2%;text-align:center;font:800 14px var(--mono);letter-spacing:.28em;color:var(--syn-green);text-shadow:0 0 14px rgba(37,255,154,.9),0 0 4px #000,0 2px 4px #000;pointer-events:none;z-index:5}
@@ -1100,7 +1126,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <label>Contract type (from last ticks)
         <select id="b11_contract" title="AUTO = the bot reads the window you set below and takes the side that has covered MORE of the last ticks, re-decided every 0.5 second. Picking a side manually locks that side for the run"></select>
       </label>
-      <label>Min AI confidence %<input type="number" id="b11_minconf" value="80" min="50" max="95" step="1" title="Your rule of 1 Nov: Bot 11 opens no contract — on any of the four families — until the AI confidence reaches this value. It is the same market gauge the header and the AI Signal Center run on (the ensemble needs ~45 ticks of price feed, so a market that is too young holds too). 50 is effectively off, because the gauge floors at 50%"></label>
+      <label id="b11_confwrap">Min AI confidence %<input type="number" id="b11_minconf" value="80" min="50" max="95" step="1" title="Your rule of 2 Nov: this gate belongs to RISE/FALL only, so the whole field is hidden — and NOT applied — whenever the trade type above is a digit family. It is the AI direction gauge the header and the AI Signal Center run on (the ensemble needs ~45 ticks of price feed), and a direction forecast has nothing to say about an Even/Odd, Over/Under or Matches contract, which are read off the tick digits themselves. 50 is effectively off, because the gauge floors at 50%"></label>
       <label>Window (ticks)<input type="number" id="b11_win" value="100" min="30" max="500" step="10" title="How many recent ticks the contract type is named from — 'the last 100 ticks' by default"></label>
       <label>Barrier / digit<input type="number" id="b11_barrier" value="3" min="0" max="9" step="1" title="OVER n wins on digits above n, UNDER n wins on digits below n, MATCH n wins when the tick lands exactly on n. Ignored by Even/Odd and Rise/Fall"></label>
       <label>Duration (ticks)<input type="number" id="b11_dur" value="1" min="1" max="10" step="1" title="Contract length in ticks"></label>
@@ -2657,6 +2683,7 @@ function onNewTick(){
   if (r) onSignalCompute(r); else renderSignalPanel();
   const eop = $("#tab_eostrat");
   if (eop && eop.classList.contains("show") && !bot10.running) renderBot(bot10);
+  paintEntryNow();   // Round 95: the live digit beside each entry-point picker
 }
 
 /* ================= dashboard rendering ================= */
@@ -5339,10 +5366,82 @@ async function waitGap(ms){
   let left = target - Date.now();
   while (left > 0){ await waitTick(left); left = target - Date.now(); }
 }
+/* ================= Round 95 — the entry point you touch =================
+   Your rule of 2 Nov: "add an entry point option where I can choose the digit touched by the cursor for the
+   bot to execute the trade". Every bot card gets a row of the ten digits; tapping one arms a gate, and the bot
+   places NO contract until the last digit of the newest tick on the market it trades is that digit. Tapping the
+   armed digit again, or OFF, clears it. OFF is the default and the choice is per bot and persisted, so a card
+   you never touch behaves exactly as before.
+   What it honestly is: a TIMING filter. It decides WHEN a contract is bought, never whether it wins — the tick
+   that touches your digit is no more likely to be followed by a winning tick than any other, and a digit you
+   pick that covers 10% of the ticks means roughly 90% fewer contracts, not better ones. */
+const ENTRY_KEY = "dt_entry_";
+function entryLoad(id){ const v = store.get(ENTRY_KEY + id); if (v === null || v === "") return null; const n = +v; return n >= 0 && n <= 9 ? n : null; }
+function entrySave(id, d){ store.set(ENTRY_KEY + id, d == null ? "" : String(d)); }
+/* the market a bot is actually watching: the ALL IN ONE bot trades its own locked symbol, everyone else the
+   one in the header. Reading the digit off the wrong feed would gate a bot on ticks it never sees. */
+function entrySymOf(b){ return (b && b.id === "b5" && b.lockSym) ? b.lockSym : state.symbol; }
+function entryDigitNow(sym){
+  if (!sym) return null;
+  if (sym === state.symbol) return state.digits.length ? state.digits[state.digits.length - 1] : null;
+  const f = scan.feeds.get(sym) || sweep.feeds.get(sym);
+  if (!f || !f.prices || !f.prices.length) return null;
+  return digitOfQ(f.prices[f.prices.length - 1], typeof f.pip === "number" ? f.pip : 0);
+}
+function entryRowHtml(id){
+  const t = "Your rule of 2 Nov: touch a digit and this bot buys NOTHING until the last digit of the newest tick on " +
+    "the market it trades is that digit. Touch it again (or OFF) to clear it. It is a timing filter — it changes WHEN " +
+    "a contract opens, not whether it wins.";
+  let h = "<div class=\"entryrow\" id=\"entry_" + id + "\" role=\"group\" aria-label=\"Entry point digit\"><span class=\"elbl\" title=\"" + t + "\">ENTRY POINT</span>" +
+    "<button type=\"button\" class=\"edig off\" data-d=\"-1\" title=\"No digit gate — the bot trades on its own conditions\">OFF</button>";
+  for (let d = 0; d <= 9; d++) h += "<button type=\"button\" class=\"edig\" data-d=\"" + d + "\" title=\"Wait for the tick to land on " + d + "\">" + d + "</button>";
+  return h + "<span class=\"enow\">last digit <b>—</b></span></div>";
+}
+function paintEntryRow(b){
+  const row = document.getElementById("entry_" + (b.id || b)); if (!row) return;
+  const d = b.entry == null ? null : b.entry;
+  row.classList.toggle("armed", d != null);
+  row.querySelectorAll(".edig").forEach(el => {
+    const v = +el.dataset.d;
+    el.classList.toggle("sel", d == null ? v < 0 : v === d);
+  });
+  const now = row.querySelector(".enow b");
+  if (now){ const q = entryDigitNow(entrySymOf(b)); now.textContent = q == null ? "—" : q; }
+}
+function buildEntryRows(){
+  BOTS.forEach(b => {
+    const card = $("#card_" + b.id); if (!card) return;
+    if (document.getElementById("entry_" + b.id)) return;
+    const anchor = card.querySelector(".cfg") || card.querySelector(".botrun");
+    if (anchor) anchor.insertAdjacentHTML("afterend", entryRowHtml(b.id));
+    else card.insertAdjacentHTML("beforeend", entryRowHtml(b.id));
+  });
+  BOTS.forEach(paintEntryRow);
+}
+function setEntry(b, d){
+  b.entry = d; entrySave(b.id, d);
+  b._entryWhy = "";
+  paintEntryRow(b);
+  b.sys(d == null ? "Entry point cleared — trading on its own conditions again"
+    : "Entry point set to " + d + " — no contract until the last digit of a tick on " + entrySymOf(b) + " touches " + d);
+  renderBot(b);
+}
+/* the live digit under each row, so the gate is visible while it counts. One text write per card per tick. */
+function paintEntryNow(){
+  for (let i = 0; i < BOTS.length; i++){
+    const b = BOTS[i], row = document.getElementById("entry_" + b.id); if (!row) continue;
+    const el = row.querySelector(".enow b"); if (!el) continue;
+    const q = entryDigitNow(entrySymOf(b));
+    const s = q == null ? "—" : String(q);
+    if (el.textContent !== s) el.textContent = s;
+  }
+}
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
-    this.tpSaid = false; this.slSaid = false; this.streakHeld = false; }
+    this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
+    /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate). */
+    this.entry = null; this._entryWhy = ""; }
   countStreak(res){ if (res && res.virtual) return; this.winStreak = res.won ? this.winStreak + 1 : 0; if (!res.won) this.streakHeld = false; }
   async start(opts){
     if (this.running) return;
@@ -5466,11 +5565,29 @@ class BaseBot {
     if (opts && opts.limit) this.afterLimitStop(reason, opts.kind);   // only the bot's own limits may hand it back to itself
   }
   sys(msg){ this.syslog.unshift({ t: Date.now(), msg }); if (this.syslog.length > 30) this.syslog.pop(); }
+  /* Round 95 — the digit you touched. Checked BEFORE the bot's own strategy, so a gated bot does not even run
+     its analysis while the tick is on another digit. The hold is re-read at BOT_HOLD_MS because with
+     ⚡ Fast execution (the default) waitGap snaps onto the next tick pulse — exactly the cadence a digit entry
+     needs; with it unticked the gate is sampled 20× a second, which still cannot miss a tick it never sees.
+     Returns true = "this cycle is held", and the card repaint stays on the old 0.5 s heartbeat. */
+  entryGate(){
+    const d = this.entry;
+    if (d == null) return false;
+    const sym = entrySymOf(this), cur = entryDigitNow(sym);
+    if (cur == null){ this._entryWhy = ""; return false; }   // no feed on that market yet — planNext() already says so
+    if (cur === d){ this._entryWhy = ""; return false; }
+    const why = "waiting for the tick to touch " + d + " on " + sym + " (last digit " + cur + ")";
+    if (this._entryWhy !== why){ this._entryWhy = why; this.sys("Holding — entry point " + why); }
+    const now = Date.now();
+    if (now - (this._holdPaint || 0) >= BOT_STEP_MS){ this._holdPaint = now; renderBot(this); }
+    return true;
+  }
   async loop(){
     while (this.running){
       if (!api.connected){ await waitGap(); continue; }
       if (!state.account){ this.stop("account logged out"); break; }
       try {
+        if (this.entryGate()){ await waitGap(BOT_HOLD_MS); continue; }
         const plan = this.planNext();
         if (!plan){
           /* Waiting for an entry condition. holdMs() is how often the condition is RE-READ and the paint
@@ -7591,6 +7708,10 @@ function cfg11(){
   return {
     trade, kind,
     win: clampInt($("#b11_win").value, 30, 500, 100),
+    /* Round 95 (your rule of 2 Nov): the AI confidence gate is a DIRECTION gauge, so it only exists for
+       RISE/FALL. On the three digit families it is switched off here as well as hidden on the card —
+       hiding the field while the bot still obeyed it would be the worst kind of quiet. */
+    confOn: trade === "rf",
     minConf: clampInt($("#b11_minconf").value, 50, 95, 80),
     barrier: clampInt($("#b11_barrier").value, 0, 9, 3),
     dur: clampInt($("#b11_dur").value, 1, 10, 1),
@@ -7695,10 +7816,10 @@ class CustomRunBot extends BaseBot {
       if (this.lastWhy !== r.why){ this.lastWhy = r.why; this.sys("Holding — " + r.why); renderBot(this); }
       return null;
     }
-    /* Round 89 (your rule of 1 Nov): no contract below the AI confidence floor — on any family. A market
-       too young for the gauge is not "80% and above" either, so it holds instead of trading blind. The
-       dedupe key is the KIND of hold, so the journal says it once and does not spam every 0.5 second. */
-    if (r.conf == null || r.conf < c.minConf){
+    /* Round 89 (your rule of 1 Nov) as narrowed by Round 95 (your rule of 2 Nov): the AI confidence floor
+       gates RISE/FALL only. A digit family is read off the tick digits, so a direction gauge no longer
+       holds it back. The dedupe key is the KIND of hold, so the journal says it once and does not spam. */
+    if (c.confOn && (r.conf == null || r.conf < c.minConf)){
       const kind = r.conf == null ? "conf-none" : "conf-low";
       if (this.lastWhy !== kind){
         this.lastWhy = kind;
@@ -7734,8 +7855,8 @@ class CustomRunBot extends BaseBot {
     if (!this.run) return { label: "NO RUN YET", cls: "mode-wait", stake: c.stake };
     const r = b11Read(c);
     if (!r.ok) return { label: "WAITING · CONTRACT", cls: "mode-wait", stake: this.nextStake(c) };
-    if (r.conf == null) return { label: "WAITING · AI GAUGE", cls: "mode-wait", stake: this.nextStake(c) };
-    if (r.conf < c.minConf)
+    if (c.confOn && r.conf == null) return { label: "WAITING · AI GAUGE", cls: "mode-wait", stake: this.nextStake(c) };
+    if (c.confOn && r.conf < c.minConf)
       return { label: "WAITING · AI CONF " + r.conf + " OF " + c.minConf, cls: "mode-wait", stake: this.nextStake(c) };
     return { label: (this.lossStreak ? "RECOVERY STEP " + this.lossStreak + " · " : "TRADE · ") + r.lab + (r.auto ? " (AUTO)" : ""),
       cls: this.lossStreak ? "mode-rec" : "mode-main", stake: this.nextStake(c) };
@@ -7747,9 +7868,10 @@ class CustomRunBot extends BaseBot {
     if (!r.ok) return "Contract not readable yet — " + r.why;
     return "Buys " + r.lab + " on " + state.symbol + " · " + fmt(r.p, 1) + "% of the last " + r.n + " ticks vs " +
       fmt(r.be, 2) + "% break-even ⇒ EV " + fmtS(r.ev) + " per 1.00 · next stake " + fmt(this.nextStake(c)) +
-      (r.conf == null ? " · AI conf no gauge read yet (min " + c.minConf + "%)"
-        : " · AI conf " + fmt(r.conf, 0) + "% (min " + c.minConf + "%)" +
-          (c.trade === "rf" && r.aiSide && r.aiSide !== r.key ? " · AI says " + r.aiSide : "")) +
+      (c.confOn
+        ? (r.conf == null ? " · AI conf no gauge read yet (min " + c.minConf + "%)"
+          : " · AI conf " + fmt(r.conf, 0) + "% (min " + c.minConf + "%)" + (r.aiSide && r.aiSide !== r.key ? " · AI says " + r.aiSide : ""))
+        : " · no AI gate on this family (the confidence gauge is RISE/FALL only)") +
       (this.lossStreak ? " · ladder step " + this.lossStreak + " (−" + fmt(this.runLossAmt) + ")" : "");
   }
   describe(){
@@ -7761,7 +7883,8 @@ class CustomRunBot extends BaseBot {
       "% and this window gives EV " + fmtS(r.ev) + " per 1.00" : "not readable yet — " + r.why) +
       "<br><b>Play:</b> one contract every ~0.5 second decision at " + fmt(c.stake) + " " + cur + ", " + c.dur +
       " tick" + (c.dur > 1 ? "s" : "") + ". A loss multiplies the stake ×" + fmt(c.mult) + " (cap " + fmt(c.maxStake) +
-      "), a win drops it back to base. " + (r.conf == null ? "The AI gauge has no read on this market yet, so nothing is bought. "
+      "), a win drops it back to base. " + (!c.confOn ? "No AI confidence gate applies to this family — the gauge is a direction forecast, so it only gates RISE/FALL. "
+        : r.conf == null ? "The AI gauge has no read on this market yet, so nothing is bought. "
         : "Nothing is bought until the AI gauge clears " + c.minConf + "% — it is at " + r.conf + "% (" + (r.aiSide || "—") + ") right now. ") +
       "Worst-case ladder exposure ≈ " + fmt(round2(total)) + " " + cur + ".<br><b>Limits:</b> " +
       limitsText(c, this.stopKinds()) + "<br><b>Read this:</b> the percentages describe ticks that already happened. " +
@@ -7788,6 +7911,12 @@ function b11FillContracts(){
   if (bEl){ bEl.disabled = !B11_USES_BARRIER[trade]; bEl.parentElement.style.opacity = bEl.disabled ? ".45" : ""; }
   const lab = bEl ? bEl.parentElement.firstChild : null;
   if (lab && lab.nodeType === 3) lab.textContent = trade === "match" ? "Digit to match" : trade === "ou" ? "Barrier / digit" : "Barrier (unused)";
+  /* Round 95 (your rule of 2 Nov): the AI confidence field is a direction gauge, so on the three digit
+     families it is taken off the card entirely — and cfg11().confOn switches the gate off with it, so a
+     hidden field never silently keeps holding trades. It comes back the moment RISE/FALL is selected. */
+  const cw = $("#b11_confwrap"), mc = $("#b11_minconf");
+  if (cw) cw.style.display = trade === "rf" ? "" : "none";
+  if (mc) mc.disabled = trade !== "rf";
 }
 function b11CreateRun(opts){
   if (bot11.running){ toast("Bot 11 is running — press STOP before you re-lock its run", "warn", 6000); return null; }
@@ -7802,7 +7931,7 @@ function b11CreateRun(opts){
   bot11.side = r.key;
   bot11.sys("Run created — " + r.lab + " on " + state.symbol + " · " + fmt(c.stake) + " ×" + fmt(c.mult) +
     " cap " + fmt(c.maxStake) + " · " + c.dur + " tick(s) · " + fmt(r.pay) + "× payout (" + fmt(r.be, 2) + "% break-even, this window " + fmt(r.p, 1) + "%)" +
-    (r.conf == null ? "" : " · AI confidence gate " + c.minConf + "%"));
+    (c.confOn ? " · AI confidence gate " + c.minConf + "% (RISE/FALL only)" : " · no AI confidence gate on this family"));
   if (!(opts && opts.quiet)) toast("Bot 11 run locked: " + r.lab + " on " + state.symbol, "success", 5000);
   renderBot(bot11);
   return bot11.run;
@@ -7837,8 +7966,8 @@ function renderB11Panels(b){
     ["MARKET", b.run.market + (b.run.market === state.symbol ? "" : " → now " + state.symbol), b.run.market === state.symbol ? "" : "down"],
     ["FAMILY", B11_LAB_TXT[rc.trade] || rc.trade, ""],
     ["CONTRACT", r.ok ? r.lab + (rc.kind === "AUTO" ? " (AUTO)" : " (LOCKED)") : "not readable", ""],
-    ["AI GATE", rc.minConf + "%" + (r.conf == null ? " · no gauge read" : " · now " + r.conf + "%"),
-      r.ok && (r.conf == null || r.conf < rc.minConf) ? "down" : ""],
+    ["AI GATE", rc.confOn ? rc.minConf + "%" + (r.conf == null ? " · no gauge read" : " · now " + r.conf + "%") : "off · RISE/FALL only",
+      rc.confOn && r.ok && (r.conf == null || r.conf < rc.minConf) ? "down" : ""],
     ["WINDOW", rc.win + " ticks", ""],
     [rc.trade === "match" ? "DIGIT" : "BARRIER", B11_USES_BARRIER[rc.trade] ? rc.barrier : "n/a", ""],
     ["DURATION", rc.dur + " tick" + (rc.dur > 1 ? "s" : ""), ""],
@@ -7855,7 +7984,7 @@ function renderB11Panels(b){
     (same ? "" : "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ The settings on this card have changed since the run was saved — the run still trades what it was created with. Press <b>SAVE CHANGES</b> to save the new values over it (press STOP first if it is running).</div>") +
     "<div class=\"b11kv\">" + kv.map(x => "<span>" + x[0] + " <b class=\"" + x[2] + "\">" + x[1] + "</b></span>").join("") + "</div>" +
     (r.ok ? "" : "<div class=\"note\" style=\"margin:6px 0 0\">It cannot place a contract right now: " + r.why + ".</div>") +
-    (r.ok && (r.conf == null || r.conf < rc.minConf)
+    (rc.confOn && r.ok && (r.conf == null || r.conf < rc.minConf)
       ? "<div class=\"note\" style=\"margin:6px 0 0\">Holding — " +
         (r.conf == null ? "the AI gauge has no read on " + state.symbol + " yet (it needs ~45 ticks of price feed)"
           : "the AI gauge is at <b>" + r.conf + "%</b> and your minimum is <b>" + rc.minConf + "%</b>") +
@@ -8859,6 +8988,7 @@ async function runAllInOneAI(){
     const best = cleared[0];
     const moved = bot5.lockSym !== best.sym;
     bot5.lockSym = best.sym;
+    paintEntryRow(bot5);   // Round 95: the entry gate now counts digits on the NEW locked market, so show that market's digit
     const spoken = "Analysing the best market for you. Done. " +
       "The strongest family is " + famOf(best) + " — " + best.label + " on " + symLabel(best.sym) +
       ", " + fmt(best.pct, 1) + " percent over the last " + best.n + " ticks, against " + fmt(best.be, 1) + " percent needed. " +
@@ -10696,6 +10826,19 @@ function init(){
      Journal). Built before anything renders, and it only MOVES elements the cards already had, so no
      id, listener or stored setting is duplicated anywhere.                              */
   buildRunPanels();
+  /* Round 95 — the entry-point digit pickers. The stored digit is restored onto the bot object BEFORE the
+     rows are built, so a page reload comes back with the same gate armed. One delegated listener on the
+     document (not ten per-card listeners) so a rebuilt card can never lose its picker. */
+  BOTS.forEach(b => { b.entry = entryLoad(b.id); });
+  buildEntryRows();
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".edig"); if (!btn) return;
+    const row = btn.closest(".entryrow"); if (!row) return;
+    const b = BOTS.find(x => x.id === row.id.slice(6)); if (!b) return;
+    const d = +btn.dataset.d;
+    setEntry(b, d < 0 || b.entry === d ? null : d);   // OFF always clears; touching an armed digit clears it too
+  });
+
   // tabs
   $$(".tabbtn").forEach(b => b.addEventListener("click", () => {
     const nav = b.closest("nav.tabs");
