@@ -1075,6 +1075,9 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
 <nav class="tabs">
   <button class="tabbtn active" data-tab="dashboard">Dashboard · Digit Distribution</button>
   <button class="tabbtn" data-tab="eostrat">OVER UNDER STRATEGY</button>
+  <!-- Round 97: the user asked for a header of its own between OVER UNDER STRATEGY and Bots for the new
+       DIFFERS BOT — same slot in the bar, same tab mechanism as every other desk. -->
+  <button class="tabbtn" data-tab="differs">DIFFERS BOT</button>
   <button class="tabbtn" data-tab="bots">Bots</button>
   <button class="tabbtn" data-tab="sync">Synchronization</button>
   <button class="tabbtn" data-tab="rf">RISE FALL DESK</button>
@@ -1294,6 +1297,51 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
       <div class="note"><b>Strategy (your rules of 27 Oct — the AI Signal Center's signals, traded as a bot):</b> the Even/Odd bot is gone from this desk. It plays two <b>over/under campaigns</b> — <b>OVER 3, recovering at OVER 4</b>, and <b>UNDER 7, recovering at UNDER 6</b>. Your second rule of 27 Oct is on this card: <b>the side it buys comes from the AI Signal Center itself</b>, not from a second opinion computed here. Once a second the bot runs the center's own rule on the market in the header — over its <b>100 ticks</b> the <b>3 highest-percentage digits</b> must all be <b>RED bars (≥11.5%)</b> and all sit in one group — and takes the <b>OVER 3 / UNDER 6</b> row of that table, including a signal the center has already popped and is holding on its card. So: center says <b>OVER</b> → Bot 10 buys its OVER campaign; center says <b>UNDER</b> → it buys its UNDER campaign; center says <b>EVEN/ODD</b> or nothing → it <b>holds</b>. The center calls UNDER at <b>UNDER 6</b> (digits 0–5) while this card's campaign is <b>UNDER 7</b> (digits 0–6) — every digit 0–5 wins UNDER 7 as well, so a center UNDER signal always covers the buy. <b>Signal source</b> on this card switches back to the Round 77 behaviour (<b>this card's own RED-digit competition</b> over its own window and leaders) whenever you want the bot to read for itself.<br><b>The campaign numbers below are still scored on the card either way</b> — coverage, break-even, live payout and EV for both campaigns and both rungs — so you can see what the signalled side is actually worth before it buys.<br><b>ONE campaign per session:</b> the family of the <b>first entry</b> — OVER or UNDER — is LOCKED for the rest of the run. The bot does not hop to the other side because the hottest digit moved: it re-reads the same campaign every second and, with <b>Buy every tick after lock</b> on (your rule, on by default), keeps buying it <b>every tick</b> until TP. Untick the box to gate every entry again.<br><b>The recovery rung is always the harder barrier:</b> a win stays on the main barrier at base stake; a loss moves to <b>OVER 4</b> (needs digits 5–9) or <b>UNDER 6</b> (needs 0–5) with the stake multiplied ×2.1 per consecutive loss, cut off by the recovery-step limit or the stake cap and then back to main at base. The recovery barrier is forced harder than the main one on the card for exactly that reason — its payout is bigger, so one win can cover the run. <b>Every tick means the ladder moves fast:</b> four straight losses reach the top step in four seconds.<br><b>How often it opens:</b> those numbers are the <b>own-read</b> rule — 20,000 random 100-tick windows through the campaign competition this card runs when "this card's own RED-digit read" is selected: OVER 3 clears on <b>8.7%</b>, UNDER 7 on <b>16.9%</b>, at least one of them on <b>25.2%</b> (both on 0.4%). On the <b>AI Signal Center</b> source the entry is the center's own call, which is <b>stricter</b> — it demands all 3 leaders in one group at its own 100-tick window, and its UNDER row is measured at <b>UNDER 6</b> rather than your UNDER 7 — so expect <b>fewer, not more</b> first entries; with <b>Buy every tick after lock</b> on, the ones it does take then run every tick until TP. Real tick streams are lumpier than random ones, so read all of it as the order of magnitude.<br><b>Honesty:</b> this is a timing filter, not an edge. At this terminal's measured hold (a payout ≈ <b>0.93×</b> of the fair share) OVER 3 quotes ≈ <b>1.55×</b> and needs <b>64.5%</b> of ticks in 4–9, UNDER 7 ≈ <b>1.33×</b> and needs <b>75.2%</b> in 0–6, while their fair shares are 60% and 70% — so on a flat market all four barriers are worth about <b>−0.07 per 1.00</b> staked. The card quotes the <b>real payout for your market with read-only proposals</b> (nothing is bought to quote) and shows each barrier's measured share against its break-even; where a quote is missing it falls back to the theoretical number, which is labelled as such. No gate here lifts that −7% — they decide WHEN a contract is bought, not whether it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> is an announcement only — the AI says the number once and the bot keeps buying the same campaign, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DIFFERS BOT ============ -->
+<!-- Round 97 (user, 2 Nov 2026): "add a header between over under strategy and bots name ut DIFFERS BOT
+     where ai picks the least appearing digit which is redbar and if it goes a loss then it will recover
+     with even odd/OVER 3 ai picks the favorite one of them with and add option of the where i can set the
+     last ticks". The tab sits in exactly that slot; the card is Bot 12. -->
+<section class="tabpanel" id="tab_differs">
+  <div class="wrap">
+    <div class="panel botcard blkstyle" id="card_b12" style="border-color:rgba(255,140,60,.30)">
+      <h3>BOT 12 · DIFFERS BOT — the least appearing digit <span class="mode"><span class="mode-badge mode-wait" id="b12_mode">WAITING · TICKS</span></span></h3>
+      <div class="runbar" id="b12_runbar"><span class="rdot"></span><span class="rstate" id="b12_state">Bot stopped</span><span class="rmeta" id="b12_runmeta"></span></div>
+      <div class="botrun">
+        <button class="btn btn-blue btn-big" id="b12_toggle">START</button>
+        <span class="sub" id="b12_sub">Idle — it ranks the digits over the window you set below and buys DIGITDIFF against the coldest one.</span>
+      </div>
+      <div class="cfg">
+        <label>Last ticks (ranking window)<input type="number" id="b12_win" value="50" min="20" max="500" step="5" title="THE OPTION YOU ASKED FOR: how many of the most recent ticks on this market the AI ranks. It ranks all ten digits over exactly this window and the LEAST appearing one becomes the DIGITDIFF barrier. Set it to the same number as the dashboard tick selector (25/50/100/500/1000) and that digit IS the one the entry-point row paints RED. It waits until at least 60% of this many ticks have actually arrived rather than ranking noise out of eight ticks."></label>
+        <label>Base stake<input type="number" id="b12_stake" value="0.50" min="0.35" step="0.05" title="Every main DIGITDIFF contract costs this. Recovery contracts multiply it by the ladder factor."></label>
+        <label>Duration (ticks)<input type="number" id="b12_dur" value="1" min="1" max="10" step="1" title="Contract length — the exit tick's last digit decides it. 1 tick = the very next quote."></label>
+        <label>Recovery pick<select id="b12_rec" title="What it buys after a loss. AI FAVOURITE (default) = the best expected value of EVEN, ODD and OVER 3 measured on the SAME window (share × payout − 1) — that is what 'ai picks the favorite one of them' means here. Best of EVEN / ODD and OVER 3 force your own side. Same DIFFERS ladder keeps buying the cold digit at the bigger stake — honest warning: DIFFERS pays ≈1.03×, so a win returns only ≈0.03 per 1.00 staked and one loss needs the NEXT stake at ≈33× the loss to be worth recovering. The other three options exist because that asymmetry is exactly what recovery is for."><option value="ai" selected>AI favourite · EVEN / ODD / OVER 3</option><option value="eo">EVEN or ODD — the better parity</option><option value="ov3">OVER 3 always</option><option value="diff">No switch — DIFFERS again, stake laddered</option></select></label>
+        <label>Martingale ×<input type="number" id="b12_mult" value="2.0" min="1" max="5" step="0.1" title="Recovery stake = base × this per consecutive loss. EVEN/ODD at ≈1.86× needs only ≥1.17× to clear one loss; OVER 3 at ≈1.55× needs ≥1.82×; a DIFFERS-only ladder needs ≈33×."></label>
+        <label>Max recovery steps<input type="number" id="b12_steps" value="4" min="1" max="9" step="1" title="Consecutive losses the ladder will follow before it gives up and returns to DIGITDIFF at base stake."></label>
+        <label>Stake cap<input type="number" id="b12_maxstake" value="25" min="1" step="1" title="No ladder stake goes above this — the run is cut and it restarts at base stake."></label>
+        <label>Take profit<input type="number" id="b12_tp" value="5" min="0" step="0.5" title="Stop the bot once the run P/L reaches +this (0 = off)."></label>
+        <label>Stop loss<input type="number" id="b12_sl" value="10" min="0" step="0.5" title="Stop the bot once the run P/L falls to −this (0 = off). It also refuses an entry whose next stake would breach it."></label>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">Trades</div><div class="v" id="b12_trades">0</div></div>
+        <div class="stat"><div class="k">Wins</div><div class="v" id="b12_wins">0</div></div>
+        <div class="stat"><div class="k">Losses</div><div class="v" id="b12_losses">0</div></div>
+        <div class="stat"><div class="k">Win rate</div><div class="v" id="b12_wr">—</div></div>
+        <div class="stat"><div class="k">Net P/L</div><div class="v" id="b12_pl">0.00</div></div>
+        <div class="stat"><div class="k">Next stake</div><div class="v" id="b12_next">0.50</div></div>
+        <div class="stat"><div class="k">Total stake</div><div class="v" id="b12_staked">0.00</div></div>
+        <div class="stat"><div class="k">ROI</div><div class="v" id="b12_roi">—</div></div>
+      </div>
+      <div class="cmdstatus" id="b12_read">The window read lands here — coldest digit, its share, and the three recovery candidates with their expected values.</div>
+      <div class="chips" id="b12_chips"></div>
+      <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b12_chart"></canvas></div>
+      <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b12_recent"></tbody></table></div>
+      <div class="note" id="b12_expo"></div>
+      <div class="note"><b>What it does (your words, 2 Nov):</b> "ai picks the least appearing digit which is redbar and if it goes a loss then it will recover with even odd/OVER 3 ai picks the favorite one of them … and add option of the where i can set the last ticks".<br><b>Main trade — DIGITDIFF on the coldest digit.</b> Over the <b>Last ticks</b> window you set, the ten digits are ranked by share, ties broken by digit index — the <b>same sort the entry-point row colours with</b> — so the digit it buys is the one painted <b style="color:#ff7d84">red</b> down there whenever <b>Last ticks</b> equals the dashboard window (the 25/50/100/500/1000 selector above); at any other length it is the least appearing digit of <b>your</b> window, which that row may colour differently, and the read-out under the stats says which of the two you are looking at. A DIGITDIFF contract wins when the exit digit is <b>anything except</b> that digit, so a digit sitting at 6% of the window gives the contract <b>94% of the exits</b>. It buys <b>one</b> contract every cycle on the coldest digit, re-ranked each cycle.<br><b>On a loss — recovery on the AI's favourite.</b> It stops diffing and buys ONE of <b>EVEN</b>, <b>ODD</b> or <b>OVER 3</b>, and "the favourite" is the one with the best <b>expected value on the same window</b> — measured share × that contract's payout − 1 — the way every other AI read in this terminal compares money instead of vibes. Its stake is the martingale ladder; the first win closes the run and it returns to DIGITDIFF at base stake. The payout it prices with is the <b>live read-only quote</b> for your market (nothing is bought to quote it); until that answer lands it falls back to this terminal's measured theoretical multiples — <b>≈1.86×</b> for EVEN/ODD (break-even <b>53.76%</b>) and <b>≈1.55×</b> for OVER 3 (break-even <b>64.52%</b>).<br><b style="color:var(--amber)">The honest part about the main trade:</b> DIFFERS is a ~90% contract that pays only ≈<b>1.03×</b> — a win returns about <b>0.03 per 1.00</b> staked while a loss costs the whole <b>1.00</b>. Picking the <b>coldest</b> digit genuinely improves it (at a 6% digit the edge is ≈94% × 1.03 = <b>−0.03</b> per 1.00 against <b>−0.07</b> for a flat 90% pick), but it does <b>not</b> turn it positive, and that 30-to-1 win/loss ratio is why a DIFFERS-only ladder cannot recover a losing run at any sane multiplier (one loss needs the next stake ≈<b>33×</b>). Use the recovery leg for that — it is the reason you asked for it.<br><b>Every number here is a timing rule, not an edge.</b> Tick digits are independent: the last 50 ticks do not cause the next one. These rules decide <b>which digit</b> and <b>when</b>, and the stake ladder decides <b>how much</b> — they cannot change what a contract pays.<br><b>Limits:</b> take profit and stop loss are measured on the run since you pressed RUN, and the bot also refuses an entry whose next stake would breach your stop loss. The <b>ENTRY POINT</b> row above works here too — touch a digit and nothing is bought until that digit lands. STOP, a market switch or a logout end the run.</div>
     </div>
   </div>
 </section>
@@ -2693,6 +2741,10 @@ function onNewTick(){
   if (r) onSignalCompute(r); else renderSignalPanel();
   const eop = $("#tab_eostrat");
   if (eop && eop.classList.contains("show") && !bot10.running) renderBot(bot10);
+  /* Round 97: the DIFFERS card follows the same tick — the coldest digit of the window is a per-tick read,
+     and a running bot already repaints itself through its own loop. */
+  const dfp = $("#tab_differs");
+  if (dfp && dfp.classList.contains("show") && !bot12.running) renderBot(bot12);
   paintEntryNow();   // Round 95: the live digit beside each entry-point picker
 }
 
@@ -4790,6 +4842,7 @@ function simWon(plan, entry, exit){
     case "DIGITOVER": return Number.isFinite(d) && d > plan.barrier;
     case "DIGITUNDER": return Number.isFinite(d) && d < plan.barrier;
     case "DIGITMATCH": return Number.isFinite(d) && d === Number(plan.barrier);
+    case "DIGITDIFF": return Number.isFinite(d) && d !== Number(plan.barrier);
     default: return x > e;
   }
 }
@@ -5182,6 +5235,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   /* b11_contract is NOT here on purpose: its option list is rebuilt when the family changes, and a
      restored stale value would leave an empty select. It persists as its own dt_b11_contract key. */
   "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
+  "b12_stake","b12_dur","b12_win","b12_rec","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","virtCount","winStreak","cashSound","aiVoice"];
 function loadSettings(){
@@ -7987,6 +8041,60 @@ function b11CreateRun(opts){
   renderBot(bot11);
   return bot11.run;
 }
+/* Round 97 — the DIFFERS BOT's live window read and its exposure line, both repainted by renderBot() so the
+   card can never drift from what planNext() is about to buy. No new CSS classes: it writes into the two
+   blocks the card already has, and every number in it is the same one the bot trades on. */
+function renderB12Panels(b){
+  const el = $("#b12_read"), ex = $("#b12_expo");
+  if (!el) return;
+  const c = cfg12(), r = b.read();
+  const cur = (state.account && state.account.currency) || "USD";
+  if (!r){
+    el.className = "cmdstatus";
+    el.innerHTML = "Not enough ticks yet — it needs " + Math.max(20, Math.round(c.win * 0.6)) + " of the last <b>" + c.win +
+      "</b> on <b>" + state.symbol + "</b> before it names the coldest digit. Nothing is bought out of a thin window.";
+  } else {
+    const tail = [r.w.order[9], r.w.order[8], r.w.order[7]];
+    const q = b12PayLive(r.sym, c.dur, "DIFF") ? "live quotes for " + r.sym : "theoretical multiples — the live quote has not landed";
+    /* The entry-point row colours the DASHBOARD window, so the two only agree when the user sizes this
+       card's window to the same number. Say which case they are in instead of claiming a match always. */
+    const dash = state.winSel;
+    const match = c.win === dash
+      ? "same " + dash + "-tick window the dashboard bars and the entry-point colours use, so this digit IS the red button down there"
+      : "its own " + c.win + "-tick window (the dashboard and the entry-point row rank the last " + dash +
+        " ticks, so their red digit can be a different one — set Last ticks to " + dash + " to make them identical)";
+    el.className = "cmdstatus ok";
+    el.innerHTML = "<b>LAST " + r.w.n + " TICKS on " + r.sym + "</b> · coldest digit <b>" + r.w.cold + "</b> at " +
+      fmt(r.w.pcts[r.w.cold], 1) + "%" + (c.win === dash ? " (the red entry-point digit)" :
+        " (the red button in the entry-point row only once this window matches the dashboard's " + dash + " ticks)") + " → <b>DIFFERS " + r.w.cold + "</b> wins on <b>" + fmt(r.diff.p, 1) +
+      "%</b> of exits × " + fmt(r.diff.pay, 2) + "× ⇒ EV <b>" + fmt(r.diff.ev, 3) + "</b> per 1.00 (break-even " + fmt(r.diff.be, 2) +
+      "%) · coldest three " + tail.map(d => d + " " + fmt(r.w.pcts[d], 1) + "%").join(" · ") + " · hottest " + r.w.hot + " " +
+      fmt(r.w.pcts[r.w.hot], 1) + "%<br><b>Recovery candidates, same window:</b> " +
+      r.cands.map(x => x.label + " " + fmt(x.p, 1) + "% × " + fmt(x.pay, 2) + "× ⇒ EV " + fmt(x.ev, 3)).join(" · ") +
+      " — the AI buys <b>" + (c.rec === "diff" ? "the same DIFFERS " + r.w.cold + " at the laddered stake" : r.fav.label) +
+      "</b> (" + c.rec + ") · payouts: " + q + " · ranking window: " + match + ".";
+  }
+  if (ex){
+    const ladder = [fmt(c.stake)];
+    let s = c.stake, total = c.stake;
+    for (let i = 1; i <= c.steps; i++){ const n = round2(s * c.mult); if (n > c.maxStake) break; ladder.push(fmt(n)); total += n; s = n; }
+    const one = (pay) => round2(1 / Math.max(0.01, pay - 1));
+    /* the recovery ratio is payout-dependent, so quote it off the multiples actually in play —
+       the live proposals when they have landed, the theoretical ones until then. */
+    const sy = r ? r.sym : state.symbol;
+    const eop = b12Pay(sy, c.dur, "EVEN"), ov3p = b12Pay(sy, c.dur, "OV3"), dfp = b12Pay(sy, c.dur, "DIFF");
+    ex.innerHTML = "<b>Worst-case ladder exposure ≈ " + fmt(round2(total)) + " " + cur + "</b> over " + ladder.length +
+      " contract" + (ladder.length === 1 ? "" : "s") + " — stakes " + ladder.join(" → ") + " — the base stake plus the " +
+      (ladder.length - 1) + " recovery rung" + (ladder.length - 1 === 1 ? "" : "s") + " the " + c.steps +
+      "-step limit and the stake cap " + fmt(c.maxStake) + " allow before the run is cut and dropped back to base." +
+      "<br><b>What one loss actually needs to be recovered:</b> a stake of <b>" + fmt(one(eop), 2) + "× the loss</b> on EVEN/ODD (" +
+      fmt(eop, 2) + "× ⇒ " + fmt(one(eop) * c.stake) + " here), <b>" + fmt(one(ov3p), 2) + "×</b> on OVER 3 (" +
+      fmt(ov3p, 2) + "× ⇒ " + fmt(one(ov3p) * c.stake) + "), or <b>" + fmt(one(dfp), 0) + "×</b> on another DIFFERS (" +
+      fmt(dfp, 2) + "× ⇒ " + fmt(one(dfp) * c.stake) + ") — that last one is the whole reason the recovery leg exists. " +
+      "<b style='color:var(--amber)'>Martingale amplifies losses quickly; keep the base stake small.</b>" +
+      (c.sl > 0 ? " Your stop loss (" + fmt(c.sl) + " " + cur + ") stops the bot first if the run falls that far." : "");
+  }
+}
 /* the create-run bar + the locked-run read-out, both repainted by renderBot() so they can never drift */
 function renderB11Panels(b){
   const box = $("#b11_run"), exp = $("#b11_expo"), cs = $("#b11_createSub");
@@ -8182,12 +8290,209 @@ function initB11UI(){
   });
   renderBot(bot11);
 }
+/* ================= BOT 12 · DIFFERS BOT (the user's rule of 2 Nov 2026) =================
+   Asked for in one sentence: "ai picks the least appearing digit which is redbar and if it goes a loss
+   then it will recover with even odd/OVER 3 ai picks the favorite one of them … add option of the where
+   i can set the last ticks". Three parts, and each one is read off a dataset this terminal already has:
+     · THE COLD DIGIT — the user sets the window (#b12_win, "Last ticks"). The ten digits are ranked by
+       share with the SAME sort the entry-point row colours with (share desc, ties by digit index), so the
+       LAST place of that order is provably the RED button the user pointed at in Round 96. One DIGITDIFF
+       contract per cycle on that digit: it wins when the exit digit is anything EXCEPT the barrier, so a
+       digit showing 6% of the window hands the contract 94% of the exits.
+     · THE RECOVERY — after any loss the bot stops diffing and buys ONE of EVEN / ODD / OVER 3. "The
+       favorite one" is the candidate with the best expected value on that same window — measured share ×
+       payout − 1 — which is how every AI read in this terminal compares money instead of vibes (the All
+       In One desk does exactly this). A win there closes the run and returns to DIGITDIFF at base stake.
+     · THE WINDOW — #b12_win, 20 to 500 ticks, and the bot holds until 60% of it has arrived (bot 7's rule)
+       rather than ranking noise out of eight ticks.
+   THE ECONOMICS THE COPY MUST KEEP HONEST: DIGITDIFF is a ~90% contract paying ≈1.03× at this terminal's
+   measured hold, so a win banks ≈3% of the stake while a loss costs 100% of it — that asymmetry is exactly
+   why a recovery leg exists, and equally why the ladder has to be real. EVEN/ODD (≈1.86×, break-even
+   53.76%) and OVER 3 (≈1.55×, break-even 64.52%) are negative-EV on a flat market too. Nothing here is an
+   edge: the window decides WHICH digit and WHEN, never whether the next tick lands. */
+const B12_DIFF_PAY = 1.03, B12_EO_PAY = 1.86, B12_OV3_PAY = 1.55;   // theoretical, at this terminal's measured ≈0.93× hold
+const b12Payouts = new Map();   // "SYM|dur|TAG" -> live payout multiple (read-only proposals, nothing is bought to quote)
+const b12Quoted = new Set();    // "SYM|dur" already asked about, so a per-tick loop never turns into a per-tick proposal storm
+let b12Quoting = null;
+async function b12Quote(sym, dur, force){
+  if (!sym || !state.account || !api.connected) return;
+  const key = sym + "|" + dur;
+  if (b12Quoting === key) return;
+  if (!force && b12Quoted.has(key)) return;
+  b12Quoting = key; b12Quoted.add(key);
+  const cur = (state.account && state.account.currency) || "USD";
+  const one = async (tag, type, barrier) => {
+    try {
+      const req = { proposal: 1, amount: 1, basis: "stake", contract_type: type, currency: cur,
+        duration: dur, duration_unit: "t", underlying_symbol: sym };
+      if (barrier !== null && barrier !== undefined) req.barrier = String(barrier);
+      const r = await api.send(req);
+      const pay = num(r.proposal && r.proposal.payout);
+      if (pay > 1) b12Payouts.set(key + "|" + tag, pay);
+    } catch(e){ /* the theoretical multiple stands — a missing quote is never worth an error line */ }
+  };
+  /* A DIFFERS contract pays the same multiple whatever the barrier digit is (nine of ten digits win),
+     so ONE diff quote covers every cold digit the ranking can name. */
+  await Promise.all([one("DIFF", "DIGITDIFF", 0), one("EVEN", "DIGITEVEN", null),
+    one("ODD", "DIGITODD", null), one("OV3", "DIGITOVER", 3)]);
+  b12Quoting = null;
+  renderBot(bot12);
+}
+function b12Pay(sym, dur, tag){
+  const v = b12Payouts.get(sym + "|" + dur + "|" + tag);
+  if (v && v > 1) return round2(v);
+  return tag === "DIFF" ? B12_DIFF_PAY : tag === "OV3" ? B12_OV3_PAY : B12_EO_PAY;
+}
+function b12PayLive(sym, dur, tag){ return !!b12Payouts.get(sym + "|" + dur + "|" + tag); }
+function cfg12(){
+  return {
+    stake: Math.max(0.35, +$("#b12_stake").value || 0.5),
+    dur: clampInt($("#b12_dur").value, 1, 10, 1),
+    win: clampInt($("#b12_win").value, 20, 500, 50),
+    rec: ($("#b12_rec") || {}).value || "ai",
+    mult: Math.max(1, +$("#b12_mult").value || 2),
+    steps: clampInt($("#b12_steps").value, 1, 9, 4),
+    maxStake: Math.max(1, +$("#b12_maxstake").value || 25),
+    tp: Math.max(0, +$("#b12_tp").value || 0),
+    sl: Math.max(0, +$("#b12_sl").value || 0)
+  };
+}
+/* The ranking window the user sizes on the card. Returns null until 60% of it has arrived. */
+function b12Window(win){
+  const arr = state.digits.slice(-win);
+  const min = Math.max(20, Math.round(win * 0.6));
+  if (arr.length < min) return null;
+  const n = arr.length, counts = new Array(10).fill(0);
+  for (const d of arr) counts[d]++;
+  const pcts = counts.map(c => c / n * 100);
+  const order = counts.map((c, i) => i).sort((x, y) => counts[y] - counts[x] || x - y);
+  let even = 0, odd = 0, high = 0;
+  for (let d = 0; d < 10; d++){
+    if (d % 2 === 0) even += pcts[d]; else odd += pcts[d];
+    if (d >= 4) high += pcts[d];          // the OVER 3 winning set is exactly digits 4-9
+  }
+  return { n, min, win, counts, pcts, order, cold: order[9], hot: order[0], even, odd, high };
+}
+function b12Cands(w, c, sym){
+  const mk = (tag, label, type, barrier, share) => {
+    const pay = b12Pay(sym, c.dur, tag), p = share / 100;
+    return { tag, label, type, barrier, share: round2(share), pay, p: round2(p * 100),
+      be: round2(100 / pay), ev: round2(p * pay - 1) };
+  };
+  return [ mk("EVEN", "EVEN", "DIGITEVEN", null, w.even),
+    mk("ODD", "ODD", "DIGITODD", null, w.odd),
+    mk("OV3", "OVER 3", "DIGITOVER", 3, w.high) ];
+}
+/* "ai picks the favorite one of them" — highest expected value wins; a tie goes to the side that
+   actually covers more of the window. rule "eo" / "ov3" force the user's own choice instead. */
+function b12Fav(list, rule){
+  const best = a => a.slice().sort((x, y) => y.ev - x.ev || y.share - x.share)[0];
+  if (rule === "eo") return best(list.filter(x => x.tag === "EVEN" || x.tag === "ODD"));
+  if (rule === "ov3") return list[2];
+  return best(list);
+}
+class DiffersBot extends BaseBot {
+  constructor(){ super("b12", "Differs Bot · cold digit → AI recovery", "Bot 12 · Differs");
+    this.mode = "MAIN"; this.lossStreak = 0; this.runLossAmt = 0; this._why = ""; }
+  cfg(){ return cfg12(); }
+  /* the read is one slice of an array already in memory, so a hold re-checks at tick cadence */
+  holdMs(){ return BOT_HOLD_MS; }
+  onStart(){ this.resetRun(); b12Quote(state.symbol, cfg12().dur, true); }
+  stakeFor(c){ return round2(c.stake * Math.pow(c.mult, this.lossStreak)); }
+  read(){
+    const c = cfg12(), w = b12Window(c.win);
+    if (!w) return null;
+    const sym = state.symbol;
+    const cands = b12Cands(w, c, sym);
+    const pay = b12Pay(sym, c.dur, "DIFF"), p = round2(100 - w.pcts[w.cold]);
+    return { c, w, sym, cands, fav: b12Fav(cands, c.rec),
+      diff: { pay, p, be: round2(100 / pay), ev: round2(p / 100 * pay - 1) } };
+  }
+  mainPlan(r, stake){ return { type: "DIGITDIFF", barrier: r.w.cold, stake, duration: r.c.dur, source: this.source }; }
+  why(msg, kind){ if (this._why === kind) return; this._why = kind; this.sys(msg); }
+  ladderStake(c){
+    if (this.lossStreak > c.steps){ this.cutLadder("recovery abandoned after " + this.lossStreak + " losses"); return null; }
+    const s = this.stakeFor(c);
+    if (s > c.maxStake){ this.cutLadder("martingale stake " + fmt(s) + " exceeds cap " + fmt(c.maxStake)); return null; }
+    return s;
+  }
+  cutLadder(msg){
+    this.sys(msg + " (run loss " + fmt(this.runLossAmt) + ") — back to DIGITDIFF at base stake");
+    toast(this.name + ": ladder cut — reset to the base stake", "warn");
+    this.resetRun();
+  }
+  planNext(){
+    const r = this.read();
+    if (!r) return this.why("Waiting for " + Math.max(20, Math.round(cfg12().win * 0.6)) +
+      " of the last " + cfg12().win + " ticks on " + state.symbol + " before it ranks the digits", "ticks"), null;
+    this._why = "";
+    const c = r.c;
+    if (this.mode === "MAIN") return this.mainPlan(r, c.stake);
+    const s = this.ladderStake(c);
+    if (s === null) return this.mainPlan(r, c.stake);   // cutLadder already reset the run
+    if (c.rec === "diff") return this.mainPlan(r, s);          // "same contract, bigger stake" ladder
+    return { type: r.fav.type, barrier: r.fav.barrier, stake: s, duration: c.dur, source: this.source };
+  }
+  onSettled(res, plan){
+    if (res.won){
+      if (this.mode === "RECOVERY") this.sys("Recovery win on " + dbotLabel(plan.type) + " at step " + this.lossStreak +
+        " · run closed " + fmtS(res.profit) + " — back to DIGITDIFF at base stake");
+      this.resetRun();
+    } else {
+      this.runLossAmt = round2(this.runLossAmt + Math.abs(res.profit));
+      if (this.mode === "MAIN") this.sys("DIFFERS " + plan.barrier + " lost — recovery on the AI's favourite of EVEN / ODD / OVER 3");
+      this.mode = "RECOVERY";
+      this.lossStreak++;
+    }
+  }
+  resetRun(){ this.mode = "MAIN"; this.lossStreak = 0; this.runLossAmt = 0; }
+  recName(c){ return c.rec === "diff" ? "DIGITDIFF ladder" : c.rec === "eo" ? "best of EVEN / ODD" : c.rec === "ov3" ? "OVER 3" : "AI's favourite of EVEN / ODD / OVER 3"; }
+  preview(){
+    const c = cfg12(), r = this.read();
+    if (!r) return { label: "WAITING · TICKS", cls: "mode-wait", stake: c.stake };
+    if (this.mode !== "RECOVERY") return { label: "MAIN · DIFFERS " + r.w.cold, cls: "mode-main", stake: c.stake };
+    const s = Math.min(this.stakeFor(c), c.maxStake);
+    return { label: (c.rec === "diff" ? "LADDER · DIFFERS " : "RECOVERY · ") +
+      (c.rec === "diff" ? r.w.cold : r.fav.label) + " · step " + this.lossStreak + "/" + c.steps, cls: "mode-rec", stake: s };
+  }
+  evLine(x){ return x.label + " " + fmt(x.p, 1) + "% × " + fmt(x.pay, 2) + "× ⇒ EV " + fmt(x.ev, 3); }
+  subText(){
+    const c = cfg12(), r = this.read();
+    if (!r) return "Needs " + Math.max(20, Math.round(c.win * 0.6)) + "+ of the last " + c.win +
+      " ticks on " + state.symbol + " before it names the coldest digit";
+    const head = "Last " + r.w.n + " ticks · coldest digit " + r.w.cold + " at " + fmt(r.w.pcts[r.w.cold], 1) +
+      "% → DIFFERS " + r.w.cold + " wins on " + fmt(r.diff.p, 1) + "% of exits · " + fmt(r.diff.pay, 2) + "× ⇒ EV " + fmt(r.diff.ev, 3) + " per 1.00";
+    if (this.mode === "RECOVERY")
+      return head + " · " + (c.rec === "diff" ? "laddering the SAME differs at stake " + fmt(Math.min(this.stakeFor(c), c.maxStake))
+        : "recovery " + r.fav.label + " stake " + fmt(Math.min(this.stakeFor(c), c.maxStake)) + " (" + this.evLine(r.fav) + ")") +
+        " · step " + this.lossStreak + "/" + c.steps + " · run loss " + fmt(this.runLossAmt);
+    return head + " · recovery on " + this.recName(c) + (c.rec === "diff" ? "" : " — " + r.cands.map(x => this.evLine(x)).join(" · "));
+  }
+  describe(){
+    const c = cfg12(), r = this.read();
+    const lad = [];
+    let s = c.stake;
+    for (let i = 1; i <= c.steps; i++){ const n = round2(s * c.mult); if (n > c.maxStake) break; lad.push(fmt(n)); s = n; }
+    return "<div class='note' style='margin:0'><b>Main trade:</b> ONE <b>DIGITDIFF</b> contract every cycle on " + state.symbol +
+      " against the <b>least appearing digit</b> of the last <b>" + c.win + " ticks</b> (the digit the entry-point row paints" +
+      (c.win === state.winSel ? " <b style='color:#ff7d84'>RED</b>" : " <b style='color:#ff7d84'>RED</b> only when this window equals the dashboard's " + state.winSel + "-tick one") +
+      ") — stake " +
+      fmt(c.stake) + ", " + c.dur + " tick(s). DIGITDIFF wins when the exit digit is <b>not</b> that digit.<br><b>On a loss:</b> it recovers with <b>" + this.recName(c) +
+      "</b> at " + fmt(c.stake) + " × " + fmt(c.mult) + "^step = " + (lad.length ? lad.join(" → ") : "—") +
+      ", max " + c.steps + " recovery steps, stake cap " + fmt(c.maxStake) + "; the first win returns it to DIGITDIFF at base stake.<br>" +
+      (r ? "<b>Right now the window reads:</b> " + r.cands.map(x => this.evLine(x)).join(" · ") + " — the AI buys <b>" + r.fav.label +
+        "</b>, and the differs leg reads " + fmt(r.diff.p, 1) + "% × " + fmt(r.diff.pay, 2) + "× ⇒ EV " + fmt(r.diff.ev, 3) +
+        " (" + (b12PayLive(r.sym, c.dur, "DIFF") ? "live payout quoted for " + r.sym : "theoretical payout — the live quote has not landed yet") + ").<br>" : "") +
+      "<b>Session limits:</b> " + limitsText(c) + "</div>";
+  }
+}
 const bot7 = new MatchesBot();
 const bot8 = new SyncBot();
 const bot9 = new SyncRecoveryBot();
 const bot10 = new OverUnderStratBot();
 const bot11 = new CustomRunBot();
-const BOTS = [bot1, bot2, bot3, bot4, bot5, bot6, bot7, bot8, bot9, bot10, bot11];
+const bot12 = new DiffersBot();
+const BOTS = [bot1, bot2, bot3, bot4, bot5, bot6, bot7, bot8, bot9, bot10, bot11, bot12];
 const anyBotRunning = () => BOTS.some(b => b.running);
 const anyBotBusy = () => BOTS.some(b => b.busy);
 function stopAllBots(reason){ BOTS.forEach(b => b.stop(reason)); }
@@ -9633,6 +9938,7 @@ function renderBot(b){
       "<td>" + exitTxt + "</td><td class='" + (r.profit >= 0 ? "up" : "down") + "'>" + fmtS(r.profit) + "</td></tr>";
   }).join("");
   if (p === "b11") renderB11Panels(b);   // Round 83 — the create-run bar, the locked-run read-out and the exposure line
+  if (p === "b12") renderB12Panels(b);   // Round 97 — the DIFFERS window read and the recovery-stake maths
   if (p === "b1"){
     const c = cfg1(), cur = (state.account && state.account.currency) || "USD";
     let s = c.stake, total = 0, steps = 0;
@@ -10909,6 +11215,7 @@ function init(){
     } else if (sigScan.on) syncReleaseFeeds();
     if (b.dataset.tab === "sync"){ renderBot(bot8); renderBot(bot9); }   // cards + charts + desk state (renderSync runs from those branches)
     if (b.dataset.tab === "eostrat") renderBot(bot10);
+    if (b.dataset.tab === "differs") renderBot(bot12);   // Round 97 — the DIFFERS BOT card paints its window read on open
     if (b.dataset.tab === "rf") renderBot(bot3);   // the moved card + the desk header (renderRf runs from that branch)
     if (b.dataset.tab === "allinone"){ renderBot(bot5); renderAio(); aioStartTimer(); }
     else aioStopTimer();
@@ -11056,6 +11363,8 @@ function init(){
   });
   $("#b6_toggle").addEventListener("click", () => bot6.running ? bot6.stop() : bot6.start());
   $("#b7_toggle").addEventListener("click", () => bot7.running ? bot7.stop() : bot7.start());
+  /* Round 97 — Bot 12 lives on its own DIFFERS BOT tab, so its RUN button is wired like the other desks'. */
+  $("#b12_toggle").addEventListener("click", () => bot12.running ? bot12.stop() : bot12.start());
   BOTS.forEach(b => { BOT_BY_ID[b.id] = b; const lb = $("#t" + b.id.slice(1) + "_load"); if (lb) lb.addEventListener("click", () => setOpenBot(b.id)); });
   $("#stopAll").addEventListener("click", () => stopAllBots("manual stop"));
   ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp","b1_sl","b2_stake","b2_dur","b2_mult","b2_maxstake","b2_maxage","b2_tp","b2_sl","b3_stake","b3_dur","b3_entry","b3_win","b3_pat","b3_exact","b3_minconf","b3_every","b3_mult","b3_maxstake","b3_tp","b3_sl","b4_stake","b4_dur","b4_mult","b4_maxstake","b4_tp","b4_sl","b5_stake","b5_mult","b5_steps","b5_maxstake","b5_dur","b5_win","b5_top","b5_sig","b5_rfmin","b5_tp","b5_sl","b6_stake","b6_dur","b6_mult","b6_steps","b6_maxstake","b6_tp","b6_sl",
@@ -11063,7 +11372,8 @@ function init(){
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
    "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
-   "b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl"]
+   "b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
+   "b12_win","b12_dur","b12_stake","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl"]
     .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
   /* the every-tick switch is a checkbox: re-render the card so its label shows the new mode at once */
@@ -11074,6 +11384,13 @@ function init(){
   $("#b10_src").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b10_src").value === "own"
     ? "Bot 10 is back to its OWN RED-digit read — it trades whichever campaign clears the competition on this card's " + cfg10().win + "-tick window"
     : "Bot 10 now trades the AI SIGNAL CENTER's signal — it buys only when the center calls OVER or UNDER on that market; an EVEN/ODD or empty call means HOLD", "info", 8000); });
+  /* Bot 12's recovery switch — the card re-renders and says what it will buy after a loss now */
+  $("#b12_rec").addEventListener("change", () => { renderBots(); saveSettings();
+    const c = cfg12(), r = bot12.read(), fv = $("#b12_rec").value;
+    toast(fv === "diff"
+      ? "Bot 12 recovers with the SAME DIGITDIFF on the cold digit at the laddered stake — honest maths: at ≈" + fmt(b12Pay(state.symbol, c.dur, "DIFF"), 2) + "× a win returns " + fmt((b12Pay(state.symbol, c.dur, "DIFF") - 1) * 100, 1) + "% of the stake, so a loss needs ≈" + fmt(1 / Math.max(0.01, b12Pay(state.symbol, c.dur, "DIFF") - 1), 0) + "× the stake to be worth it"
+      : "Bot 12 recovers with " + (fv === "eo" ? "the better of EVEN / ODD" : fv === "ov3" ? "OVER 3 every time" : "the AI's favourite of EVEN / ODD / OVER 3") +
+        (r ? " — right now that is " + r.fav.label + " (" + fmt(r.fav.p, 1) + "% × " + fmt(r.fav.pay, 2) + "× ⇒ EV " + fmt(r.fav.ev, 3) + ")" : ""), "info", 8000); });
   /* Bot 3 entry-rule switch — the card re-renders and says which rule names the direction now */
   $("#b3_entry").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b3_entry").value === "ai"
     ? "Bot 3 is on the 5-model AI ensemble — it names RISE or FALL every tick and buys that call"
