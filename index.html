@@ -630,7 +630,6 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 /* The face IS the point of this popup, so it takes most of the screen: capped by the panel width and by
    the viewport height (its box is 1 : .72), so it never pushes CLOSE off a short window. */
 .sppanel .robotface{width:min(620px,97%,70vh)}
-.sppanel .robotface .mouth{transform:translateX(-50%) scale(1.75);transform-origin:50% 100%}
 .sppanel .robotface .faceTag{font-size:17px}
 #aiScanPop .saybox{font-size:16px;max-width:640px;min-height:24px}
 .spreads{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:3px 16px;width:100%;max-width:460px}
@@ -647,9 +646,21 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 .robotface{position:relative;width:min(320px,86%);aspect-ratio:1/.72;border-radius:12px;overflow:hidden;border:2px solid rgba(37,255,154,.6);box-shadow:0 0 30px rgba(37,255,154,.3),inset 0 0 20px rgba(37,255,154,.1)}
 .robotface img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(1.1) contrast(1.15) saturate(1.2)}
 .robotface .beam{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--syn-green),transparent);box-shadow:0 0 26px 6px rgba(37,255,154,.6);animation:beamy 2.2s linear infinite}
-.robotface .mouth{position:absolute;bottom:20%;left:50%;transform:translateX(-50%);width:48px;height:8px;background:var(--syn-green);border-radius:4px;box-shadow:0 0 16px rgba(37,255,154,1),0 0 30px rgba(37,255,154,.6);opacity:0;transition:opacity .15s;z-index:10}
-.robotface.speaking .mouth{opacity:1;animation:mouthTalk .25s ease-in-out infinite alternate}
-@keyframes mouthTalk{from{height:6px;width:44px;border-radius:3px;box-shadow:0 0 14px rgba(37,255,154,.9)}to{height:14px;width:52px;border-radius:6px;box-shadow:0 0 20px rgba(37,255,154,1),0 0 40px rgba(37,255,154,.7)}}
+/* Round 94 (your rule of 3 Nov: "the robot speak gesture isn't correct, let the mouth talk like a real one").
+   The mouth is sized in PERCENT of the face box, which is always 1 : .72, so the same numbers land on the
+   artwork's lips at 320 px on a desk and at 620 px in the scan popup — no per-context scale override any more.
+   Measured against sync-scanner.jpg: the image is 738x1600 and object-fit:cover leaves rows 534..1066 visible,
+   so the robot's lip line (source row 956, the darkest run across the face) sits at 79.3 % of the box height
+   and spans 12.3 % of its width, centred at 51.5 %. The old bar bottomed at 80 % and grew UPWARD from there,
+   which is why the gesture read wrong — a jaw opens down, not into the nose.
+   --mo is the one number the talk engine writes on :root (0 = lips shut, 1 = jaw fully dropped); the top edge
+   is fixed so only the bottom drops, and the mouth widens a little as it opens, like a real one. */
+.robotface .mouth{position:absolute;left:51.5%;top:78.8%;width:calc(12.6% + var(--mo,0) * 3%);height:calc(0.7% + var(--mo,0) * 6.2%);
+  transform:translateX(-50%);background:radial-gradient(58% 66% at 50% 34%,rgba(2,16,12,.96) 0 52%,rgba(37,255,154,.34) 84%,rgba(37,255,154,.72));
+  border:1px solid rgba(37,255,154,.85);border-radius:46% 46% 50% 50%/38% 38% 62% 62%;
+  box-shadow:0 0 12px rgba(37,255,154,.55),0 3px 12px rgba(37,255,154,.3),inset 0 -2px 6px rgba(37,255,154,.45);
+  opacity:0;transition:opacity .16s;z-index:10}
+html.talkon .robotface .mouth{opacity:1}
 .robotface .faceTag{position:absolute;left:0;right:0;bottom:1.2%;text-align:center;font:800 14px var(--mono);letter-spacing:.28em;color:var(--syn-green);text-shadow:0 0 14px rgba(37,255,154,.9),0 0 4px #000,0 2px 4px #000;pointer-events:none;z-index:5}
 @keyframes beamy{0%{top:-4px}100%{top:100%}}
 .saybox{max-width:560px;text-align:center;font:700 13px var(--mono);letter-spacing:.04em;color:var(--syn-green);min-height:20px;text-shadow:0 0 12px rgba(37,255,154,.5)}
@@ -4963,6 +4974,85 @@ function limitFanfare(win, delayMs){
     });
   } catch(e){}
 }
+/* ================= the talking mouth =================
+   One number (talk.env, 0..1) written to --mo on :root once a frame; every face reads it, so five mouths share
+   one loop instead of five. The loop is driven by whatever actually knows when the AI is talking:
+   · speechSynthesis onboundary — Chrome fires one event per WORD, so each spoken word gets its own burst, its
+     length estimated from the word's own character count, and the lips SHUT for a moment before it starts.
+     That shut-before-the-word is what makes it read as speech rather than a flashing indicator.
+   · the four desk typewriters (syncSay / rfSay / aioSay / eoSay) feed it too, so the face still lip-syncs when
+     ⚡ AI voice is off and the typed subtitle is the only thing moving.
+   If a voice gives no boundary events at all the engine falls back to generating its own word bursts, so the
+   mouth never sits shut while the AI is audibly talking. The loop stops itself when both sources go quiet. */
+const talk = { env: 0, raf: 0, prev: 0, flapStart: 0, flapEnd: 0, flapPeak: 0, nextFlap: 0, gapUntil: 0,
+  wordEnd: 0, voice: false, typing: false, typeOff: 0, utter: 0, quietSince: 0 };
+function talkStart(){
+  if (talk.raf) return;
+  talk.prev = performance.now();
+  document.documentElement.classList.add("talkon");
+  talk.raf = requestAnimationFrame(talkFrame);
+}
+/* one word: shut briefly, then a run of syllables for as long as that word takes to say */
+function talkWord(len, rate){
+  const now = performance.now();
+  const ms = Math.max(130, Math.min(760, (+len || 4) * 66 / (rate || 1)));
+  talk.gapUntil = now + 20 + Math.random() * 55;
+  talk.nextFlap = talk.gapUntil + 4;
+  talk.wordEnd = talk.gapUntil + ms;
+  talkStart();
+}
+/* Typed subtitles reveal about five times faster than anyone speaks, so the typewriter does not ask for a word
+   per space — that reset the in-flight flap and left the mouth shut half the time. It keeps the current word
+   window alive instead and only closes the mouth, briefly at a space and longer at a stop. */
+function talkTyped(chunk){
+  const now = performance.now();
+  talk.typing = true;
+  clearTimeout(talk.typeOff);
+  talk.typeOff = setTimeout(() => { talk.typing = false; }, 240);
+  if (/[\s.,;:!?"'…]/.test(chunk)){
+    talk.gapUntil = Math.max(talk.gapUntil, now + (/[.,;:!?"'…]/.test(chunk) ? 120 : 45));
+    talk.nextFlap = Math.max(talk.nextFlap, talk.gapUntil + 4);
+    talk.wordEnd = Math.max(talk.wordEnd, talk.gapUntil + 90);
+  } else talk.wordEnd = Math.max(talk.wordEnd, now + 120);
+  talkStart();
+}
+function talkFlap(now){
+  talk.flapStart = now;
+  talk.flapEnd = now + 78 + Math.random() * 85;
+  talk.flapPeak = 0.4 + Math.random() * 0.6;
+  talk.nextFlap = talk.flapEnd + (Math.random() < 0.22 ? 90 + Math.random() * 120 : 28 + Math.random() * 55);
+}
+function talkBusy(now){
+  return talk.voice || talk.typing || now < talk.wordEnd + 140 || now < talk.nextFlap;
+}
+function talkFrame(now){
+  const dt = Math.min(50, now - talk.prev); talk.prev = now;
+  /* Chrome does not always deliver onend — after a cancel(), or when an utterance is swallowed, the flag would
+     strand the mouth open forever — so the engine watches the speech queue itself and goes quiet 1.5 s after it
+     empties, whichever event did or did not arrive. */
+  if (talk.voice && window.speechSynthesis){
+    if (speechSynthesis.speaking || speechSynthesis.pending) talk.quietSince = 0;
+    else if (!talk.quietSince) talk.quietSince = now;
+    else if (now - talk.quietSince > 1500) talk.voice = false;
+  }
+  // a source that has gone quiet keeps the mouth moving until the word it was mid-way through finishes
+  if ((talk.voice || talk.typing) && now >= talk.wordEnd && now >= talk.nextFlap) talkWord(3 + Math.floor(Math.random() * 6), 1);
+  if (now >= talk.nextFlap && now < talk.wordEnd && now >= talk.flapEnd) talkFlap(now);
+  let tgt = 0;
+  if (now < talk.flapEnd) {
+    const p = (now - talk.flapStart) / (talk.flapEnd - talk.flapStart);
+    // a flap is one jaw drop: quick to open, held, then released — sin^0.65 dwells open longer than a sine
+    tgt = talk.flapPeak * Math.pow(Math.sin(Math.PI * p), 0.65);
+  }
+  talk.env += (tgt - talk.env) * Math.min(1, dt / 26);
+  document.documentElement.style.setProperty("--mo", Math.max(0, Math.min(1, talk.env)).toFixed(3));
+  if (talkBusy(now)) talk.raf = requestAnimationFrame(talkFrame);
+  else {
+    talk.raf = 0; talk.env = 0; talk.flapEnd = 0; talk.wordEnd = 0; talk.nextFlap = 0;
+    document.documentElement.style.setProperty("--mo", "0");
+    document.documentElement.classList.remove("talkon");
+  }
+}
 /* ================= AI voice narration — "let the AI speak" =================
    Subtitles always show in the bottom bar; speech plays only when #aiVoice is on.
    Throttled per key so continuous "analyzing" chatter never becomes spam, while
@@ -4998,7 +5088,7 @@ function speak(text, opts){
   if (!opts.force && !voiceOn()) return;
   try {
     if (!("speechSynthesis" in window)) return;
-    if (opts.interrupt) speechSynthesis.cancel();
+    if (opts.interrupt){ try { speechSynthesis.cancel(); } catch(e){} talk.voice = false; }
     if (speechSynthesis.paused) speechSynthesis.resume();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = opts.rate || 1.0; u.pitch = opts.pitch || 1.0; u.volume = 1;
@@ -5006,22 +5096,19 @@ function speak(text, opts){
     /* Chrome can swallow an utterance queued in the same tick as cancel();
        queueing on the next tick (and retrying once if the engine stays idle)
        keeps the take-profit / stop-loss announcement audible. */
-    const say = () => { 
-      try { 
-        // Animate robot mouth while speaking
-        const mouths = document.querySelectorAll('.robotface');
-        mouths.forEach(m => m.classList.add('speaking'));
-        speechSynthesis.speak(u); 
-      } catch(e){} 
+    const id = ++talk.utter;
+    const mine = () => id === talk.utter;
+    const say = () => { try { speechSynthesis.speak(u); } catch(e){} };
+    u.onstart = () => { if (mine()){ talk.voice = true; talkWord(5, u.rate); } };
+    u.onboundary = (e) => {
+      if (!mine()) return;
+      talk.voice = true;
+      let len = (e && e.charLength) || 0;
+      if (!len){ const m = /^\S+/.exec(String(text).slice((e && e.charIndex) || 0)); len = m ? m[0].length : 5; }
+      talkWord(len, u.rate);
     };
-    u.onend = () => {
-      const mouths = document.querySelectorAll('.robotface');
-      mouths.forEach(m => m.classList.remove('speaking'));
-    };
-    u.onerror = () => {
-      const mouths = document.querySelectorAll('.robotface');
-      mouths.forEach(m => m.classList.remove('speaking'));
-    };
+    u.onend = () => { if (mine()) talk.voice = false; };
+    u.onerror = () => { if (mine()) talk.voice = false; };
     /* opts.now = speak in THIS task. Chrome lets a page speak only if the very first
        utterance is handed over inside the click's own task; a setTimeout would lose it. */
     if (opts.now) say(); else setTimeout(say, opts.interrupt ? 60 : 0);
@@ -7933,7 +8020,7 @@ function syncSay(text, animate){
   el.classList.add("talk"); el.textContent = "";
   let i = 0;
   syncDesk.sayTimer = setInterval(() => {
-    i += 2; el.textContent = text.slice(0, i);
+    const from = i; i += 2; el.textContent = text.slice(0, i); talkTyped(text.slice(from, i));
     if (i >= text.length){ clearInterval(syncDesk.sayTimer); syncDesk.sayTimer = null; el.classList.remove("talk"); }
   }, 26);
 }
@@ -8186,7 +8273,7 @@ function rfSay(text, animate){
   el.classList.add("talk"); el.textContent = "";
   let i = 0;
   rfDesk.sayTimer = setInterval(() => {
-    i += 2; el.textContent = text.slice(0, i);
+    const from = i; i += 2; el.textContent = text.slice(0, i); talkTyped(text.slice(from, i));
     if (i >= text.length){ clearInterval(rfDesk.sayTimer); rfDesk.sayTimer = null; el.classList.remove("talk"); }
   }, 26);
 }
@@ -8581,7 +8668,7 @@ function aioSay(text, animate){
   el.classList.add("talk"); el.textContent = "";
   let i = 0;
   aio.sayTimer = setInterval(() => {
-    i += 2; el.textContent = text.slice(0, i);
+    const from = i; i += 2; el.textContent = text.slice(0, i); talkTyped(text.slice(from, i));
     if (i >= text.length){ clearInterval(aio.sayTimer); aio.sayTimer = null; el.classList.remove("talk"); }
   }, 26);
 }
@@ -8810,7 +8897,7 @@ function eoSay(text, animate){
   el.classList.add("talk"); el.textContent = "";
   let i = 0;
   eoScan.sayTimer = setInterval(() => {
-    i += 2; el.textContent = text.slice(0, i);
+    const from = i; i += 2; el.textContent = text.slice(0, i); talkTyped(text.slice(from, i));
     if (i >= text.length){ clearInterval(eoScan.sayTimer); eoScan.sayTimer = null; el.classList.remove("talk"); }
   }, 26);
 }
