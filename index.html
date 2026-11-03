@@ -656,7 +656,7 @@ footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 6px;color
 .saybox.talk::after{content:"▮";margin-left:3px;animation:blink .28s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .bars{display:flex;flex-direction:column;gap:5px;width:100%;max-width:560px}
-.barrrow{display:grid;grid-template-columns:84px 1fr 74px;gap:8px;align-items:center;font:700 10px var(--mono);color:#9fe6c6}
+.barrrow{display:grid;grid-template-columns:96px 1fr 74px;gap:8px;align-items:center;font:700 10px var(--mono);color:#9fe6c6}
 .barrrow .track{height:9px;background:rgba(37,255,154,.1);border:1px solid rgba(37,255,154,.22);border-radius:5px;overflow:hidden}
 .barrrow .fill{height:100%;width:0;background:linear-gradient(90deg,rgba(37,255,154,.45),var(--syn-green));transition:width .18s linear;box-shadow:0 0 10px rgba(37,255,154,.5)}
 .barrrow.best{color:var(--syn-green)}
@@ -791,7 +791,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .spreads{grid-template-columns:1fr 1fr;gap:2px 10px}
   .spfoot{gap:8px}
   .spfoot .hint{flex:1 1 100%;min-width:0}
-  .barrrow{grid-template-columns:60px 1fr 58px;gap:6px;font-size:10px}
+  .barrrow{grid-template-columns:92px 1fr 58px;gap:6px;font-size:10px}   /* Round 93: 92px keeps "VOL 100 (plain)" on one line */
   .dzband{font-size:11px;gap:8px;padding:9px 11px}
   .dzband .why{flex:1 1 100%;min-width:0}
   .verdict{font-size:11.5px}
@@ -2596,11 +2596,17 @@ function onTickMsg(msg){
 }
 /* Round 88: markets are named "VOL 10 (1s)". The full Deriv string ("Volatility 10 (1s) Index (1HZ10V)")
    never fitted the 78px desk column, and the code in brackets told the trader nothing they could trade on.
-   1HZ markets print one tick a second, the R_ family every two — that is what the suffix now means. */
+   Round 93 (your rule of 2 Nov: "all my volatilities is 1s, show plain index too"): the two families share
+   a name and used to differ only by the number in the bracket — "VOL 100 (1s)" against "VOL 100 (2s)" —
+   so the 1-tick-a-second streams now print "(1s)" and the standard Volatility N Index prints "(plain)".
+   The tick rate itself stays in the dropdown's tooltip next to the real Deriv name and code. */
 function symShort(code, name){
   const s = String(name || code || "").replace(/Volatility/i, "VOL").replace(/\s*Index\b/i, "").replace(/\s+/g, " ").trim();
-  return (/\(\d+s\)/.test(s) || !/^R_|^1HZ/.test(String(code)) ? s
-    : s + (/^1HZ/.test(String(code)) ? " (1s)" : " (2s)")) || String(code);
+  if (/^R_/.test(String(code))) return (s || String(code)) + " (plain)";
+  return (/\(\d+s\)/.test(s) || !/^1HZ/.test(String(code)) ? s : s + " (1s)") || String(code);
+}
+function symTickNote(code){
+  return /^1HZ/.test(String(code)) ? "1 tick ~1 s" : /^R_/.test(String(code)) ? "1 tick ~2 s" : "";
 }
 async function loadSymbols(){
   if (state.symbolsLoaded) return;
@@ -2613,7 +2619,9 @@ async function loadSymbols(){
   const sel = $("#symbolSelect");
   sel.innerHTML = syn.map(s => {
     const code = symKey(s), full = nameKey(s), short = symShort(code, full);
-    return '<option value="' + code + '" data-short="' + short + '" title="' + full + ' (' + code + ')">' + short + "</option>";
+    const note = symTickNote(code);
+    return '<option value="' + code + '" data-short="' + short + '" title="' + full + ' (' + code + ')' +
+      (note ? " · " + note : "") + '">' + short + "</option>";
   }).join("");
   if (!syn.some(s => symKey(s) === state.symbol)) state.symbol = symKey(syn[0]);
   sel.value = state.symbol;
@@ -5215,12 +5223,16 @@ const BOT_STEP_MS = 500;
 const BOT_TRADE_GAP_MS = 0;
 /* Round 92: BOT_STEP_MS is the pace of a bot that has NOTHING to wait for — an order has just settled and
    the next one goes out immediately, so this only bites on the HOLD path, where the bot is sitting on an
-   unmet entry condition (Bot 11's AI-confidence floor is the one the user feels). The hold is now re-read
-   every BOT_HOLD_MS instead of every heartbeat, so the order leaves within ~0.1s of the gate opening
-   rather than up to a full 0.5s after it. A hold decision costs b11Read() + the gauge — measured 0.2 ms —
-   so 10 of them a second is ~2 % of the main thread, and the card is still only repainted on the old
-   0.5 s cadence (see BaseBot.loop) so the DOM does not churn 5× as often. */
-const BOT_HOLD_MS = 100;
+   unmet entry condition (Bot 11's AI-confidence floor is the one the user feels). The hold is re-read every
+   BOT_HOLD_MS instead of every heartbeat, so the order leaves within ~0.05s of the gate opening rather than
+   up to a full 0.5s after it. Round 93 (your rule of 2 Nov: "still slow, reduce it to 50ms"): 100 → 50.
+   A hold decision costs b11Read() + the gauge — measured 0.2 ms — so 20 of them a second is ~0.4 % of the
+   main thread, and the card is still only repainted on the old 0.5 s cadence (see BaseBot.loop) so the DOM
+   does not churn 10× as often. HONEST LIMIT: with ⚡ Fast execution ticked (the default) waitGap snaps onto
+   the next tick pulse, and the gate can only change when a tick arrives, so below one tick interval this
+   poll no longer buys anything — it is the floor for when the feed is quiet. What is left per contract is
+   Deriv's own 3 serial round trips (~0.5 s each on this line) plus the contract's tick life. */
+const BOT_HOLD_MS = 50;
 async function waitGap(ms){
   const total = ms == null ? BOT_STEP_MS : ms;   // `||` here used to turn an explicit 0 back into 500
   const target = Date.now() + total;
