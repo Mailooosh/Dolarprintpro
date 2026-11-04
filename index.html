@@ -2606,6 +2606,7 @@ const state = {
   fastExec: true,          // fast execution: snap the bots' ~0.5s heartbeat onto the next tick instead of sleeping it
   candleTicks: 5,          // ticks aggregated into one candlestick
   account: null, token: "", balanceSubId: null, balanceReqId: null, balancePollId: null,
+  nameBlocked: false,      // Round 99: Deriv answered 403 on its one name-bearing endpoint — this sign-in lacks account_manage
   authMode: null, authBusy: false
 };
 const activity = [];
@@ -10564,7 +10565,12 @@ async function doAuthorize(token, silent, remember){
    REST (Bearer token + Deriv-App-ID header), which mints a one-time WebSocket
    session URL — that "path" contains a temporary OTP credential and is valid for
    ~2 minutes, single use. Every reconnect mints a fresh one. */
-const REST_BASE = "https://api.derivws.com/trading/v1/options";
+/* One host, two API families: /trading/v1/options is the trading surface everything here runs on, and
+   /account/v1 is Deriv's account surface — GET /account/v1/nickname being the one place in this whole
+   API family that hands out a name. Both live on the same host, which matters because it is the only
+   Deriv host that answers from every network this site has been measured on.                          */
+const API_ORIGIN = "https://api.derivws.com";
+const REST_BASE = API_ORIGIN + "/trading/v1/options";
 async function derivRest(path, opts = {}){
   const headers = Object.assign({ "Accept": "application/json" }, opts.headers || {});
   if (opts.token) headers["Authorization"] = "Bearer " + opts.token;
@@ -10572,7 +10578,7 @@ async function derivRest(path, opts = {}){
   if (opts.body) headers["Content-Type"] = "application/json";
   let res;
   try {
-    res = await fetch(REST_BASE + path, {
+    res = await fetch((opts.root ? API_ORIGIN : REST_BASE) + path, {
       method: opts.method || "GET", headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
@@ -10691,7 +10697,7 @@ async function authorizeWithToken(token, appId, mode, silent, remember, preferre
     isVirtual: acct.isVirtual,
     scopes: (acct.scopes && acct.scopes.length) ? acct.scopes
       : (isOAuth ? oauthScopes().split(/[\s,+]+/).filter(Boolean) : ["read", "trade"]),
-    fullname: acct.name || ""
+    fullname: acct.name || "", nickname: ""
   };
   if (isOAuth){
     /* An OAuth client must not leave a personal token behind for the next person at this browser. */
@@ -10729,7 +10735,11 @@ function switchAccountTo(target){
   if (signal.active && signal.active.state === "pending") expireSignal("skipped (account switch)");
   toast("Switching to the " + (target.isVirtual ? "DEMO" : "REAL") + " account…", "info");
   const appId = isOAuth ? "" : (store.get("dt_app_id") || api.appId);
+  /* Both names describe the CLIENT, not one of their accounts, so a DEMO↔REAL switch carries them over —
+     otherwise the greeting would fall back to "trader" mid-session on a token that will not be asked twice. */
+  const known = { fullname: state.account.fullname || "", nickname: state.account.nickname || "" };
   authorizeWithToken(state.token, appId, state.authMode, true, true, target.id).then(() => {
+    if (state.account && !derivName()){ state.account.fullname = known.fullname; state.account.nickname = known.nickname; renderGreeting(); }
     renderBots();
     toast("Now trading on the " + (state.account.isVirtual ? "DEMO" : "REAL") + " account", "success");
   }).catch(e => {
@@ -11067,6 +11077,7 @@ async function logout(){
     const wasOAuth = state.authMode === "oauth";
     state.token = ""; state.account = null; state.authMode = null;
     greetTried = "";                                   // Round 98: the next client who signs in here gets their own name, not a remembered one
+    state.nameBlocked = false;                         // Round 99: and the next one gets their own answer from Deriv
     store.del("dt_token"); store.del("dt_acct");
     if (wasOAuth){ oauthClear(); state.oauth = null; }   // the tab forgets the granted token immediately
     api.otpProvider = null;
@@ -11078,6 +11089,7 @@ async function logout(){
   try { await api.send({ logout: 1 }); } catch(e){}
   state.token = ""; state.account = null; state.authMode = null; store.del("dt_token");
   greetTried = "";                                     // Round 98: forget the name that went with that token
+  state.nameBlocked = false;                           // Round 99: and the scope answer that came with it
   renderAccount(); renderSignalCard(); renderBots();
   toast("Logged out", "info");
 }
@@ -11087,21 +11099,25 @@ let resetBusy = false;
    Your rule of 3 Nov: "there is welcome trader at the top so change trader into every client name they authorize
    my site from their deriv account … replay with their names they set in deriv".
 
-/* Two sources, in this order:
+/* Three sources, in this order:
    1. state.account.fullname — the name the client typed on their own Deriv profile. The classic authorize reply
       carries it; the one-click (pat_ / OAuth) session does NOT, because Deriv's Options API has no name anywhere:
-      authorize, get_settings, get_account_status and ~10 more all answer UnknownMethod on its socket, and REST
-      /accounts gives only account_id, balance, currency, group, status, account_type. So it is chased in the
-      background on Deriv's APIv3 socket instead — and APIv3 is not reachable from every network. Measured here on
-      3 Nov: ws.derivws.com and ws.binaryws.com both fail the WebSocket handshake (code 1006 at ~6 s) from the
-      file:// copy AND from the live https site, while the Options host opens in 1.4 s. Where that is true, no API
-      call this site can make will ever know the client's name.
-   2. dt_greet — which is why the word itself is pressable. The client types their name once, it is remembered on
-      their own browser, and the header greets them with it until they LOGOUT. Nothing else reads it: it never
-      joins a proposal, a buy, or a copy-trading payload.
-   Both paths keep the same three rules: first word only, letters/marks/apostrophes/hyphens only, 16-char cap, and
-   written with textContent so a name can never smuggle markup into the header. The login id stays out of the UI
-   exactly as in Round 38 — a name is not an account number. */
+      authorize, get_settings, account_info, profile, whoami and ~30 more all answer UnknownMethod on its socket,
+      and REST /accounts gives only account_id, balance, currency, group, status, account_type. So it is chased in
+      the background on Deriv's APIv3 socket instead — and APIv3 is not reachable from every network. Measured here
+      on 3 Nov: ws.derivws.com and ws.binaryws.com both fail the WebSocket handshake (code 1006 at ~6 s, and the
+      plain HTTPS form answers a Cloudflare 520) from the file:// copy AND from the live https site, while the
+      Options host opens in 1.4 s.
+   2. state.account.nickname — GET /account/v1/nickname, found in Deriv's own endpoint index on 3 Nov and the one
+      reachable call that returns a name the client set inside Deriv. It needs the account_manage scope, so a
+      trade-only token earns HTTP 403 "Insufficient scopes" (measured with the owner's own token — a scope answer,
+      not a missing route: sibling paths answer 404 page not found). Where it answers, the greeting is Deriv's.
+   3. dt_greet — which is why the word itself is still pressable. The client types their name once, it is
+      remembered on their own browser, and the header greets them with it until they LOGOUT. Nothing else reads
+      it: it never joins a proposal, a buy, or a copy-trading payload.
+   All paths keep the same rules: letters/marks/apostrophes/hyphens only, 16-char cap, written with textContent so
+   a name can never smuggle markup into the header. The login id stays out of the UI exactly as in Round 38 — a
+   name is not an account number. */
 const GREET_KEY = "dt_greet", GREET_ACCT_KEY = "dt_greet_acct";
 function greetAcctId(){ return String((state.account && state.account.loginid) || ""); }
 function cleanName(src){
@@ -11109,8 +11125,21 @@ function cleanName(src){
   if (!w) return "";
   return w.charAt(0).toUpperCase() + w.slice(1);
 }
+/* A nickname is a label the client chose for themselves ("My demo"), so it keeps its spaces — a profile
+   name is still just the first word. Same character whitelist and the same 16-char cap. */
+function cleanLabel(src){
+  const s = String(src || "").trim().replace(/[^\p{L}\p{M}'’\- ]/gu, "").replace(/\s+/g, " ").slice(0, 16).replace(/-+$/, "");
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+/* Whatever name Deriv has given this session, from whichever source got there first. */
+function derivName(){
+  const a = state.account;
+  if (!a) return "";
+  return cleanName(a.fullname) || cleanLabel(a.nickname);
+}
 function greetWord(){
-  const fromDeriv = cleanName(state.account && state.account.fullname);
+  const fromDeriv = derivName();
   if (fromDeriv) return fromDeriv;
   /* A typed name is tied to the account it was typed on, so it walks back in with that account and never follows
      the browser onto someone else's session. Signed out, the header simply says "trader". */
@@ -11120,7 +11149,7 @@ function greetWord(){
 function renderGreeting(){
   const el = $("#greetName"); if (!el) return;
   if (el.querySelector("input")) return;      // mid-typing: a balance repaint must not eat the client's keystrokes
-  const fromDeriv = cleanName(state.account && state.account.fullname);
+  const fromDeriv = derivName();
   const canEdit = !!state.account && !fromDeriv;
   const w = greetWord();
   const txt = w || "trader";
@@ -11134,13 +11163,15 @@ function renderGreeting(){
   } else {
     el.tabIndex = 0; el.setAttribute("role", "button"); el.setAttribute("aria-label", "Set the name this site greets you by");
     el.title = w ? "Your name on this site — press it to change"
-      : "Press to type your name — Deriv does not hand its profile name to this kind of sign-in, so this site keeps yours on your own browser instead";
+      : state.nameBlocked
+        ? "Deriv only gives out your account name to a sign-in that carries the account_manage scope, and this token does not — re-create your API token with Account management (or add that scope to the OAuth app) and this becomes your Deriv name. Meanwhile, press to type your name."
+        : "Press to type your name — Deriv does not hand its account name to this kind of sign-in, so this site keeps yours on your own browser instead";
   }
 }
 /* Press the greeting, type a name, Enter keeps it, Esc puts it back. */
 function editGreetName(){
   const el = $("#greetName"); if (!el || el.querySelector("input")) return;
-  if (!state.account || cleanName(state.account.fullname)) return;   // only when a name is ours to choose
+  if (!state.account || derivName()) return;   // only when a name is ours to choose
   const inp = document.createElement("input");
   inp.type = "text"; inp.className = "greetin"; inp.maxLength = 16; inp.placeholder = "your name";
   inp.value = cleanName(store.get(GREET_KEY)); inp.setAttribute("aria-label", "Your name for this site");
@@ -11182,16 +11213,39 @@ function nameViaAuthorize(token, url){
   });
 }
 let greetTried = "", greetBusy = false;
+/* GET /account/v1/nickname — the only call in Deriv's reachable API family that returns a name the client set
+   inside Deriv. Read-only, one request per sign-in, on the credential the sign-in already holds: the Bearer token
+   plus the Deriv-App-ID header a PAT needs (the docs say an OAuth token does not). A 403 here is not a failure to
+   retry — it is Deriv saying this token carries no account_manage scope, which is the one thing the owner can fix
+   on their own, so only a pasted-token session is told about it. A one-click client has no token to re-create. */
+async function nameViaNickname(){
+  const isOAuth = state.authMode === "oauth";
+  try {
+    const j = await derivRest("/account/v1/nickname", {
+      root: true, token: state.token,
+      appId: isOAuth ? "" : (api.appId || store.get("dt_app_id") || "")
+    });
+    const d = j && (j.data !== undefined ? j.data : j);
+    return cleanLabel(d && d.nickname);
+  } catch(e){
+    if (e && e.code === "HTTP403" && state.authMode === "pat"){ state.nameBlocked = true; renderGreeting(); }
+    return "";
+  }
+}
 async function fetchGreetName(){
   const a = state.account;
-  if (!a || a.fullname || !state.token) return;             // already have it, or there is no credential to ask with
+  if (!a || derivName() || !state.token) return;            // already have it, or there is no credential to ask with
   if (greetTried === state.token || greetBusy) return;      // one attempt per token per tab — a stubborn host is not retried forever
   greetTried = state.token; greetBusy = true;
   const id = api.appId || store.get("dt_app_id") || "1089";
   try {
+    /* The account service answers in about half a second on the host the trading session already runs on, so it is
+       asked first; APIv3's authorize reply is the fallback for wherever that host is reachable. */
+    const nick = await nameViaNickname();
+    if (nick && state.account === a){ a.nickname = nick; renderGreeting(); return; }
     /* index 0 is the Options host, which has no authorize method at all (Round 88 found the same for the copier),
        so the name hunt starts at the first APIv3 endpoint. Both are tried; whichever answers first wins. */
-    for (let i = 1; i < WS_ENDPOINTS.length && state.account === a && !a.fullname; i++){
+    for (let i = 1; i < WS_ENDPOINTS.length && state.account === a && !derivName(); i++){
       const nm = await nameViaAuthorize(state.token, WS_ENDPOINTS[i].build(id));
       if (nm && state.account === a){ a.fullname = nm; renderGreeting(); }
     }
