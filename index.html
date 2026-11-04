@@ -87,6 +87,9 @@ header{position:sticky;top:0;z-index:60;background:var(--hdr);border-bottom:1px 
    person typed, not a label in a design system, so it drops the wide letterspacing and the thin weight — and it
    is capped at 16 characters in JS so a long name cannot push the whole header onto a second row. */
 .logo .thin.isname{font-weight:700;color:var(--green);letter-spacing:.02em;text-transform:none}
+.logo .thin.canname{cursor:text;border-bottom:1px dashed var(--dv-line);text-decoration-skip-ink:none}
+.logo .thin.canname:hover,.logo .thin.canname:focus-visible{border-bottom-color:var(--green);outline:none}
+.logo .greetin{width:9ch;max-width:34vw;height:20px;margin-left:2px;padding:0 5px;font:700 12.5px var(--font);letter-spacing:.02em;color:var(--text);background:var(--panel2);border:1px solid var(--green);border-radius:5px;text-transform:none}
 /* Waving hand in the header brand — greets the trader, then rests. */
 .logo .wave{display:inline-block;font-size:19px;line-height:1;transform-origin:65% 78%;animation:handWave 2.6s ease-in-out infinite}
 @keyframes handWave{0%,55%,100%{transform:rotate(0)}8%,28%{transform:rotate(18deg)}18%,38%{transform:rotate(-12deg)}48%{transform:rotate(6deg)}}
@@ -11084,30 +11087,77 @@ let resetBusy = false;
    Your rule of 3 Nov: "there is welcome trader at the top so change trader into every client name they authorize
    my site from their deriv account … replay with their names they set in deriv".
 
-   What the greeting reads is ONE field: state.account.fullname — the name the client typed on their own Deriv
-   profile, never anything this site invents. Three privacy rules it honours:
-     · the name is memory-only. It is never written to localStorage, never in a toast, never in the activity log,
-       so a shared or handed-over browser cannot read the previous client's name off it;
-     · the login id stays out of the UI exactly as in Round 38 — a name is not an account number;
-     · asking for it costs the trading session nothing: it is a background read on a throwaway socket, and if it
-       fails the header simply keeps saying "trader". Where a name cannot come: LOGOUT and the signed-out page. */
-function greetWord(){
-  const src = String((state.account && state.account.fullname) || "").trim();
-  if (!src) return "";
-  /* First word only — a greeting, not an account statement, and a full name would push the header onto a second
-     row on a phone. Letters, marks, apostrophes and hyphens survive; anything else (a stray bracket, an emoji in
-     a profile name) is dropped, so the header can never be fed markup by a profile field. */
-  const w = src.split(/\s+/)[0].replace(/[^\p{L}\p{M}'’-]/gu, "").slice(0, 16);
+/* Two sources, in this order:
+   1. state.account.fullname — the name the client typed on their own Deriv profile. The classic authorize reply
+      carries it; the one-click (pat_ / OAuth) session does NOT, because Deriv's Options API has no name anywhere:
+      authorize, get_settings, get_account_status and ~10 more all answer UnknownMethod on its socket, and REST
+      /accounts gives only account_id, balance, currency, group, status, account_type. So it is chased in the
+      background on Deriv's APIv3 socket instead — and APIv3 is not reachable from every network. Measured here on
+      3 Nov: ws.derivws.com and ws.binaryws.com both fail the WebSocket handshake (code 1006 at ~6 s) from the
+      file:// copy AND from the live https site, while the Options host opens in 1.4 s. Where that is true, no API
+      call this site can make will ever know the client's name.
+   2. dt_greet — which is why the word itself is pressable. The client types their name once, it is remembered on
+      their own browser, and the header greets them with it until they LOGOUT. Nothing else reads it: it never
+      joins a proposal, a buy, or a copy-trading payload.
+   Both paths keep the same three rules: first word only, letters/marks/apostrophes/hyphens only, 16-char cap, and
+   written with textContent so a name can never smuggle markup into the header. The login id stays out of the UI
+   exactly as in Round 38 — a name is not an account number. */
+const GREET_KEY = "dt_greet", GREET_ACCT_KEY = "dt_greet_acct";
+function greetAcctId(){ return String((state.account && state.account.loginid) || ""); }
+function cleanName(src){
+  const w = String(src || "").trim().split(/\s+/)[0].replace(/[^\p{L}\p{M}'’-]/gu, "").slice(0, 16);
   if (!w) return "";
   return w.charAt(0).toUpperCase() + w.slice(1);
 }
+function greetWord(){
+  const fromDeriv = cleanName(state.account && state.account.fullname);
+  if (fromDeriv) return fromDeriv;
+  /* A typed name is tied to the account it was typed on, so it walks back in with that account and never follows
+     the browser onto someone else's session. Signed out, the header simply says "trader". */
+  if (!state.account || String(store.get(GREET_ACCT_KEY) || "") !== greetAcctId()) return "";
+  return cleanName(store.get(GREET_KEY));
+}
 function renderGreeting(){
   const el = $("#greetName"); if (!el) return;
+  if (el.querySelector("input")) return;      // mid-typing: a balance repaint must not eat the client's keystrokes
+  const fromDeriv = cleanName(state.account && state.account.fullname);
+  const canEdit = !!state.account && !fromDeriv;
   const w = greetWord();
   const txt = w || "trader";
   if (el.textContent !== txt) el.textContent = txt;
   el.classList.toggle("isname", !!w);
-  el.title = w ? "Signed in with the Deriv account named " + w : "Welcome — sign in with your Deriv account and this becomes the name you set on it";
+  el.classList.toggle("canname", canEdit);
+  if (!canEdit){
+    el.removeAttribute("tabindex"); el.removeAttribute("role"); el.removeAttribute("aria-label");
+    el.title = fromDeriv ? "Signed in with the Deriv account named " + fromDeriv
+      : "Welcome — sign in with your Deriv account and this becomes the name you set on it";
+  } else {
+    el.tabIndex = 0; el.setAttribute("role", "button"); el.setAttribute("aria-label", "Set the name this site greets you by");
+    el.title = w ? "Your name on this site — press it to change"
+      : "Press to type your name — Deriv does not hand its profile name to this kind of sign-in, so this site keeps yours on your own browser instead";
+  }
+}
+/* Press the greeting, type a name, Enter keeps it, Esc puts it back. */
+function editGreetName(){
+  const el = $("#greetName"); if (!el || el.querySelector("input")) return;
+  if (!state.account || cleanName(state.account.fullname)) return;   // only when a name is ours to choose
+  const inp = document.createElement("input");
+  inp.type = "text"; inp.className = "greetin"; inp.maxLength = 16; inp.placeholder = "your name";
+  inp.value = cleanName(store.get(GREET_KEY)); inp.setAttribute("aria-label", "Your name for this site");
+  let shut = false;
+  const close = keep => {
+    if (shut) return; shut = true;
+    const v = cleanName(inp.value);
+    if (keep){ if (v){ store.set(GREET_KEY, v); store.set(GREET_ACCT_KEY, greetAcctId()); } else { store.del(GREET_KEY); store.del(GREET_ACCT_KEY); } }
+    if (inp.parentNode) inp.parentNode.removeChild(inp);
+    renderGreeting();
+    if (keep && v) toast("Greeting set to " + v, "success");
+  };
+  inp.addEventListener("keydown", e => { e.stopPropagation();
+    if (e.key === "Enter"){ e.preventDefault(); close(true); }
+    else if (e.key === "Escape"){ e.preventDefault(); close(false); } });
+  inp.addEventListener("blur", () => close(true));
+  el.appendChild(inp); inp.focus(); inp.select();
 }
 /* One shot at Deriv's own name for the token this tab is trading, on a socket that is opened, asked and closed
    immediately. It is not the trading socket — that one stays exactly where it is — and the token is only ever
@@ -11411,6 +11461,15 @@ function init(){
     const d = +btn.dataset.d;
     setEntry(b, d < 0 || b.entry === d ? null : d);   // OFF always clears; touching an armed digit clears it too
   });
+
+  /* Round 98: the greeting itself is pressable. Deriv's Options surface (the one-click sign-in this site runs on)
+     exposes no profile name at all and APIv3 is not reachable from every network, so the client types their name
+     once here and it is remembered for that account on this browser. */
+  const greetEl = $("#greetName");
+  if (greetEl){
+    greetEl.addEventListener("click", () => editGreetName());
+    greetEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); editGreetName(); } });
+  }
 
   // tabs
   $$(".tabbtn").forEach(b => b.addEventListener("click", () => {
