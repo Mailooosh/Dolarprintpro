@@ -83,6 +83,10 @@ header{position:sticky;top:0;z-index:60;background:var(--hdr);border-bottom:1px 
 @keyframes logoSpin{to{transform:rotate(360deg)}}
 @keyframes logoPulse{0%,100%{transform:scale(.86);opacity:.9}50%{transform:scale(1.06);opacity:1}}
 .logo .thin{font-weight:300;color:var(--muted);letter-spacing:.18em}
+/* Round 98: the same slot now carries the client's own Deriv name when the session supplies one. It is a word a
+   person typed, not a label in a design system, so it drops the wide letterspacing and the thin weight — and it
+   is capped at 16 characters in JS so a long name cannot push the whole header onto a second row. */
+.logo .thin.isname{font-weight:700;color:var(--green);letter-spacing:.02em;text-transform:none}
 /* Waving hand in the header brand — greets the trader, then rests. */
 .logo .wave{display:inline-block;font-size:19px;line-height:1;transform-origin:65% 78%;animation:handWave 2.6s ease-in-out infinite}
 @keyframes handWave{0%,55%,100%{transform:rotate(0)}8%,28%{transform:rotate(18deg)}18%,38%{transform:rotate(-12deg)}48%{transform:rotate(6deg)}}
@@ -259,6 +263,19 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .edig.off.sel{background:var(--panel2);color:var(--text);border-color:var(--green);box-shadow:none}
 .entryrow .enow{margin-left:auto;font:700 10px var(--mono);color:var(--dim);white-space:nowrap}
 .entryrow .enow b{color:var(--green);font-size:14px;font-family:var(--mono)}
+/* Round 98 (your rule of 3 Nov: "let entry point be used at the fast run of the market not every run") — the chip
+   that says WHEN an armed digit holds the bot, and the live pace number beside the digit. It is deliberately NOT
+   a .edig: the rank painter and the delegated picker both select on .edig, and a mode chip is neither a digit nor
+   a colour. Same 28 px tap target as the digits so a thumb works. */
+.emode{appearance:none;min-width:66px;height:28px;padding:0 7px;border:1px solid var(--line2);border-radius:7px;
+  background:var(--panel2);color:var(--muted);font:800 9px var(--mono);letter-spacing:.05em;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;line-height:1}
+.emode:hover{border-color:var(--amber);color:var(--text)}
+.emode.fast{border-color:rgba(240,169,46,.55);color:var(--amber-text)}
+.emode.all{border-color:var(--green);color:var(--green)}
+.entryrow .enow i{font-style:normal;font-weight:700;opacity:.9}
+.entryrow .enow i.go{color:var(--amber-text)}
+.entryrow .enow i.rest{color:var(--dim)}
 .note{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-top:10px}
 .warnstrip{background:rgba(240,169,46,.08);border:1px solid rgba(240,169,46,.35);color:var(--amber-text);border-radius:9px;padding:10px 14px;font-size:12.5px;margin-bottom:14px}
 /* ---------- dashboard ---------- */
@@ -1045,7 +1062,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
 
 <header>
   <div class="hrow">
-    <div class="logo"><span class="ailogo"><span class="ring"></span><span class="core"></span></span>Welcome <span class="thin">trader</span><span class="wave" aria-hidden="true">👋</span></div>
+    <div class="logo"><span class="ailogo"><span class="ring"></span><span class="core"></span></span>Welcome <span class="thin" id="greetName">trader</span><span class="wave" aria-hidden="true">👋</span></div>
     <div class="hsep"></div>
     <div class="hfield">
       <label>Symbol</label>
@@ -1341,7 +1358,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b12_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b12_recent"></tbody></table></div>
       <div class="note" id="b12_expo"></div>
-      <div class="note"><b>What it does (your words, 2 Nov):</b> "ai picks the least appearing digit which is redbar and if it goes a loss then it will recover with even odd/OVER 3 ai picks the favorite one of them … and add option of the where i can set the last ticks".<br><b>Main trade — DIGITDIFF on the coldest digit.</b> Over the <b>Last ticks</b> window you set, the ten digits are ranked by share, ties broken by digit index — the <b>same sort the entry-point row colours with</b> — so the digit it buys is the one painted <b style="color:#ff7d84">red</b> down there whenever <b>Last ticks</b> equals the dashboard window (the 25/50/100/500/1000 selector above); at any other length it is the least appearing digit of <b>your</b> window, which that row may colour differently, and the read-out under the stats says which of the two you are looking at. A DIGITDIFF contract wins when the exit digit is <b>anything except</b> that digit, so a digit sitting at 6% of the window gives the contract <b>94% of the exits</b>. It buys <b>one</b> contract every cycle on the coldest digit, re-ranked each cycle.<br><b>On a loss — recovery on the AI's favourite.</b> It stops diffing and buys ONE of <b>EVEN</b>, <b>ODD</b> or <b>OVER 3</b>, and "the favourite" is the one with the best <b>expected value on the same window</b> — measured share × that contract's payout − 1 — the way every other AI read in this terminal compares money instead of vibes. Its stake is the martingale ladder; the first win closes the run and it returns to DIGITDIFF at base stake. The payout it prices with is the <b>live read-only quote</b> for your market (nothing is bought to quote it); until that answer lands it falls back to this terminal's measured theoretical multiples — <b>≈1.86×</b> for EVEN/ODD (break-even <b>53.76%</b>) and <b>≈1.55×</b> for OVER 3 (break-even <b>64.52%</b>).<br><b style="color:var(--amber)">The honest part about the main trade:</b> DIFFERS is a ~90% contract that pays only ≈<b>1.03×</b> — a win returns about <b>0.03 per 1.00</b> staked while a loss costs the whole <b>1.00</b>. Picking the <b>coldest</b> digit genuinely improves it (at a 6% digit the edge is ≈94% × 1.03 = <b>−0.03</b> per 1.00 against <b>−0.07</b> for a flat 90% pick), but it does <b>not</b> turn it positive, and that 30-to-1 win/loss ratio is why a DIFFERS-only ladder cannot recover a losing run at any sane multiplier (one loss needs the next stake ≈<b>33×</b>). Use the recovery leg for that — it is the reason you asked for it.<br><b>Every number here is a timing rule, not an edge.</b> Tick digits are independent: the last 50 ticks do not cause the next one. These rules decide <b>which digit</b> and <b>when</b>, and the stake ladder decides <b>how much</b> — they cannot change what a contract pays.<br><b>Limits:</b> take profit and stop loss are measured on the run since you pressed RUN, and the bot also refuses an entry whose next stake would breach your stop loss. The <b>ENTRY POINT</b> row above works here too — touch a digit and nothing is bought until that digit lands. STOP, a market switch or a logout end the run.</div>
+      <div class="note"><b>What it does (your words, 2 Nov):</b> "ai picks the least appearing digit which is redbar and if it goes a loss then it will recover with even odd/OVER 3 ai picks the favorite one of them … and add option of the where i can set the last ticks".<br><b>Main trade — DIGITDIFF on the coldest digit.</b> Over the <b>Last ticks</b> window you set, the ten digits are ranked by share, ties broken by digit index — the <b>same sort the entry-point row colours with</b> — so the digit it buys is the one painted <b style="color:#ff7d84">red</b> down there whenever <b>Last ticks</b> equals the dashboard window (the 25/50/100/500/1000 selector above); at any other length it is the least appearing digit of <b>your</b> window, which that row may colour differently, and the read-out under the stats says which of the two you are looking at. A DIGITDIFF contract wins when the exit digit is <b>anything except</b> that digit, so a digit sitting at 6% of the window gives the contract <b>94% of the exits</b>. It buys <b>one</b> contract every cycle on the coldest digit, re-ranked each cycle.<br><b>On a loss — recovery on the AI's favourite.</b> It stops diffing and buys ONE of <b>EVEN</b>, <b>ODD</b> or <b>OVER 3</b>, and "the favourite" is the one with the best <b>expected value on the same window</b> — measured share × that contract's payout − 1 — the way every other AI read in this terminal compares money instead of vibes. Its stake is the martingale ladder; the first win closes the run and it returns to DIGITDIFF at base stake. The payout it prices with is the <b>live read-only quote</b> for your market (nothing is bought to quote it); until that answer lands it falls back to this terminal's measured theoretical multiples — <b>≈1.86×</b> for EVEN/ODD (break-even <b>53.76%</b>) and <b>≈1.55×</b> for OVER 3 (break-even <b>64.52%</b>).<br><b style="color:var(--amber)">The honest part about the main trade:</b> DIFFERS is a ~90% contract that pays only ≈<b>1.03×</b> — a win returns about <b>0.03 per 1.00</b> staked while a loss costs the whole <b>1.00</b>. Picking the <b>coldest</b> digit genuinely improves it (at a 6% digit the edge is ≈94% × 1.03 = <b>−0.03</b> per 1.00 against <b>−0.07</b> for a flat 90% pick), but it does <b>not</b> turn it positive, and that 30-to-1 win/loss ratio is why a DIFFERS-only ladder cannot recover a losing run at any sane multiplier (one loss needs the next stake ≈<b>33×</b>). Use the recovery leg for that — it is the reason you asked for it.<br><b>Every number here is a timing rule, not an edge.</b> Tick digits are independent: the last 50 ticks do not cause the next one. These rules decide <b>which digit</b> and <b>when</b>, and the stake ladder decides <b>how much</b> — they cannot change what a contract pays.<br><b>Limits:</b> take profit and stop loss are measured on the run since you pressed RUN, and the bot also refuses an entry whose next stake would breach your stop loss. The <b>ENTRY POINT</b> row above works here too — touch a digit and nothing is bought until that digit lands, which by your rule of 3 Nov is <b>only while that market is running faster than its own pace</b> (the chip on the row says <b>EVERY ENTRY</b> for the Round 95 behaviour). STOP, a market switch or a logout end the run.</div>
     </div>
   </div>
 </section>
@@ -2687,6 +2704,7 @@ function onTickMsg(msg){
     if (t.symbol && t.symbol !== state.symbol) return;   // stray tick from a stream being forgotten
     if (typeof t.pip_size === "number") setPipSize(t.pip_size);
     pushQuote(t.quote);
+    markPulse(state.symbol, t.quote);   // Round 98: live ticks only — this is what "the fast run of the market" is measured from
     state.tickCount++;
     onNewTick();
   }
@@ -3532,6 +3550,7 @@ function onScanMsg(sym, feed, msg){
     if (t.symbol && t.symbol !== sym) return;
     if (typeof t.pip_size === "number") feed.pip = t.pip_size;
     scanPush(feed, t.quote);
+    markPulse(sym, t.quote);            // Round 98: a bot locked to a scanner market is gated on THAT market's pace
   }
 }
 async function scanFeedOpen(sym){
@@ -5442,6 +5461,62 @@ async function waitGap(ms){
 const ENTRY_KEY = "dt_entry_";
 function entryLoad(id){ const v = store.get(ENTRY_KEY + id); if (v === null || v === "") return null; const n = +v; return n >= 0 && n <= 9 ? n : null; }
 function entrySave(id, d){ store.set(ENTRY_KEY + id, d == null ? "" : String(d)); }
+/* ================= Round 98 — WHEN the touched digit applies =================
+   Your rule of 3 Nov: "let entry point be used at the fast run of the market not every run". The gate therefore has
+   two modes, chosen per card on the chip in its own row:
+     ⚡ FAST RUN (the new default) — hold an entry only while that market is moving quicker than its own norm;
+     EVERY ENTRY (the Round 95 behaviour) — hold every entry until the digit lands, whatever the pace.
+   Both need a MEASURABLE "fast run", and an absolute one would be meaningless on this line: VOL 10 (1s) delivers
+   one tick a second and R_25 one every two seconds, forever. So pace is relative to the symbol's OWN recent
+   behaviour, on the two things that genuinely change when a market runs — how close the ticks arrive, and how far
+   each one moves the price. Each is a short memory (≈3 ticks) read against a longer one (≈20), so >1 means
+   "quicker than this market has been". Only LIVE ticks feed it: the 120–1000 tick history seed never enters, so a
+   resubscribe or a background-tab catch-up cannot be mistaken for a burst (gaps over 20 s are ignored outright). */
+const ENTRY_MODE_KEY = "dt_entrym_";
+const ENTRY_MODES = ["fast", "all"];
+const ENTRY_FAST_IDX = 1.25;                    // 25% quicker than the market's own recent pace, in either dimension
+function entryModeLoad(id){ const v = store.get(ENTRY_MODE_KEY + id); return ENTRY_MODES.indexOf(v) >= 0 ? v : "fast"; }
+function entryModeSave(id, m){ store.set(ENTRY_MODE_KEY + id, m); }
+function entryModeOf(b){ return ENTRY_MODES.indexOf(b && b.entryMode) >= 0 ? b.entryMode : "fast"; }
+function entryModeLabel(m){ return m === "all" ? "EVERY ENTRY" : "⚡ FAST RUN"; }
+const pulse = new Map();                        // sym -> { at, q, gapCur, gapBase, mvCur, mvBase, n }
+function markPulse(sym, q){
+  if (!sym) return;
+  const now = Date.now();
+  let p = pulse.get(sym);
+  if (!p){ p = { at: now, q: null, gapCur: 0, gapBase: 0, mvCur: 0, mvBase: 0, n: 0 }; pulse.set(sym, p); }
+  const gap = now - p.at;
+  if (gap > 0 && gap < 20000){
+    p.gapCur  = p.gapCur  ? p.gapCur  * 0.65 + gap * 0.35 : gap;
+    p.gapBase = p.gapBase ? p.gapBase * 0.95 + gap * 0.05 : gap;
+    p.n++;
+  }
+  const v = Number(q);
+  if (isFinite(v) && p.q != null && isFinite(p.q)){
+    const mv = Math.abs(v - p.q);
+    p.mvCur  = p.mvCur  ? p.mvCur  * 0.7 + mv * 0.3 : mv;
+    p.mvBase = p.mvBase ? p.mvBase * 0.95 + mv * 0.05 : mv;
+  }
+  p.q = isFinite(v) ? v : p.q; p.at = now;
+}
+/* null = not enough of this market measured yet (say so rather than guess); .fast = the run the chip waits for. */
+function paceOf(sym){
+  const p = pulse.get(sym);
+  if (!p || p.n < 10 || !p.gapBase) return null;
+  const now = Date.now();
+  if (now - p.at > Math.max(6000, 3 * p.gapBase)) return { gap: 0, move: 0, idx: 0, fast: false, quiet: true };
+  const gap = p.gapCur ? p.gapBase / p.gapCur : 1;
+  const move = p.mvBase > 0 ? p.mvCur / p.mvBase : (p.mvCur > 0 ? 1.4 : 1);
+  const idx = gap * 0.55 + move * 0.45;
+  return { gap, move, idx, fast: idx >= ENTRY_FAST_IDX, quiet: false };
+}
+/* the short pace text beside the live digit, and the longer sentence in the row's tooltip */
+function paceText(sym){
+  const p = paceOf(sym);
+  if (!p) return "pace measuring…";
+  if (p.quiet) return "feed quiet — gate resting";
+  return (p.fast ? "⚡ running " : "at its own pace — resting ") + fmt(p.idx, 2) + "×";
+}
 /* the market a bot is actually watching: the ALL IN ONE bot trades its own locked symbol, everyone else the
    one in the header. Reading the digit off the wrong feed would gate a bot on ticks it never sees. */
 function entrySymOf(b){ return (b && b.id === "b5" && b.lockSym) ? b.lockSym : state.symbol; }
@@ -5492,11 +5567,16 @@ function entryRowHtml(id){
   const t = "Your rule of 2 Nov: touch a digit and this bot buys NOTHING until the last digit of the newest tick on " +
     "the market it trades is that digit. Touch it again (or OFF) to clear it. It is a timing filter — it changes WHEN " +
     "a contract opens, not whether it wins. Colours rank the digits over the same ticks as the dashboard bars: " +
-    "red = least appearing, yellow = second least, blue = second highest, green = highest appearing.";
+    "red = least appearing, yellow = second least, blue = second highest, green = highest appearing. " +
+    "Your rule of 3 Nov — \"let entry point be used at the fast run of the market, not every run\": the chip at the " +
+    "right of this row decides WHEN the digit is enforced. ⚡ FAST RUN (the default) holds an entry only while this " +
+    "market is ticking or moving more than " + fmt(ENTRY_FAST_IDX, 2) + "× quicker than its own recent pace; at its usual pace the gate rests " +
+    "and the bot trades on its own conditions. EVERY ENTRY is the old behaviour — the digit holds every entry.";
   let h = "<div class=\"entryrow\" id=\"entry_" + id + "\" role=\"group\" aria-label=\"Entry point digit\"><span class=\"elbl\" title=\"" + t + "\">ENTRY POINT</span>" +
     "<button type=\"button\" class=\"edig off\" data-d=\"-1\" title=\"No digit gate — the bot trades on its own conditions\">OFF</button>";
   for (let d = 0; d <= 9; d++) h += "<button type=\"button\" class=\"edig\" data-d=\"" + d + "\" title=\"Wait for the tick to land on " + d + "\">" + d + "</button>";
-  return h + "<span class=\"enow\">last digit <b>—</b></span></div>";
+  h += "<button type=\"button\" class=\"emode fast\" data-emode=\"1\" aria-label=\"When the entry point applies\">⚡ FAST RUN</button>";
+  return h + "<span class=\"enow\">last digit <b>—</b><i></i></span></div>";
 }
 function paintEntryRow(b){
   const row = document.getElementById("entry_" + (b.id || b)); if (!row) return;
@@ -5506,9 +5586,42 @@ function paintEntryRow(b){
     const v = +el.dataset.d;
     el.classList.toggle("sel", d == null ? v < 0 : v === d);
   });
+  /* Round 98: the WHEN chip. It stays readable with no digit armed — the mode is a property of the card, and the
+     next digit you touch inherits it. */
+  const m = entryModeOf(b), chip = row.querySelector(".emode");
+  if (chip){
+    const label = entryModeLabel(m);
+    if (chip.textContent !== label) chip.textContent = label;
+    chip.classList.toggle("fast", m === "fast");
+    chip.classList.toggle("all", m === "all");
+    chip.title = m === "all"
+      ? "The digit holds EVERY entry — your Round 95 behaviour. Press to switch to ⚡ FAST RUN only"
+      : "⚡ FAST RUN only (your rule of 3 Nov): the digit holds an entry only while " + entrySymOf(b) +
+        " is running at least " + fmt(ENTRY_FAST_IDX, 2) + "× quicker than its own recent pace — at its usual pace the bot trades on its own conditions. Press for EVERY ENTRY";
+  }
   const now = row.querySelector(".enow b");
   if (now){ const q = entryDigitNow(entrySymOf(b)); now.textContent = q == null ? "—" : q; }
+  entryPacePaint(row, b);
   entryRankPaint(row, entrySymOf(b));
+}
+/* one pace line per card, only when the words actually change — the same rule Round 92 set for the rank colours */
+function entryPacePaint(row, b){
+  const el = row.querySelector(".enow i"); if (!el) return;
+  const on = b && b.entry != null && entryModeOf(b) === "fast";
+  const s = on ? " · " + paceText(entrySymOf(b)) : "";
+  if (el.textContent !== s) el.textContent = s;
+  const p = on ? paceOf(entrySymOf(b)) : null;
+  el.classList.toggle("go", !!(p && p.fast));
+  el.classList.toggle("rest", !!(p && !p.fast));
+}
+function setEntryMode(b, m){
+  b.entryMode = ENTRY_MODES.indexOf(m) >= 0 ? m : "fast";
+  entryModeSave(b.id, b.entryMode);
+  b._entryWhy = "";
+  paintEntryRow(b);
+  b.sys(b.entryMode === "all" ? "Entry point now holds EVERY entry (Round 95 behaviour)"
+    : "Entry point now applies only at the fast run of the market — at its usual pace the bot trades on its own conditions");
+  renderBot(b);
 }
 function buildEntryRows(){
   BOTS.forEach(b => {
@@ -5525,7 +5638,8 @@ function setEntry(b, d){
   b._entryWhy = "";
   paintEntryRow(b);
   b.sys(d == null ? "Entry point cleared — trading on its own conditions again"
-    : "Entry point set to " + d + " — no contract until the last digit of a tick on " + entrySymOf(b) + " touches " + d);
+    : "Entry point set to " + d + " — no contract until the last digit of a tick on " + entrySymOf(b) + " touches " + d +
+      (entryModeOf(b) === "fast" ? ", and only while that market is running faster than its own pace" : " on every entry"));
   renderBot(b);
 }
 /* the live digit under each row, so the gate is visible while it counts. One text write per card per tick. */
@@ -5538,6 +5652,7 @@ function paintEntryNow(){
     const q = entryDigitNow(sym);
     const s = q == null ? "—" : String(q);
     if (el.textContent !== s) el.textContent = s;
+    entryPacePaint(row, b);
     entryRankPaint(row, sym, cache);
   }
 }
@@ -5545,8 +5660,10 @@ class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
-    /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate). */
-    this.entry = null; this._entryWhy = ""; }
+    /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
+       Round 98: entryMode is WHEN that digit bites — "fast" (only while the market outruns its own recent pace,
+       the default your rule of 3 Nov asks for) or "all" (every entry, the way it worked through Round 97). */
+    this.entry = null; this._entryWhy = ""; this.entryMode = "fast"; this._restSaid = false; }
   countStreak(res){ if (res && res.virtual) return; this.winStreak = res.won ? this.winStreak + 1 : 0; if (!res.won) this.streakHeld = false; }
   async start(opts){
     if (this.running) return;
@@ -5562,6 +5679,7 @@ class BaseBot {
     }
     const resume = !!(opts && opts.resume);   // an automatic restart of the SAME session — the session P/L base survives, so the user's TP/SL target is not reset
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
+    this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
     this.startPl = this.stats.pl;
     if (!resume) this.sessionPl = this.stats.pl;
     if (!resume) this.runEquity = [0];
@@ -5674,12 +5792,27 @@ class BaseBot {
      its analysis while the tick is on another digit. The hold is re-read at BOT_HOLD_MS because with
      ⚡ Fast execution (the default) waitGap snaps onto the next tick pulse — exactly the cadence a digit entry
      needs; with it unticked the gate is sampled 20× a second, which still cannot miss a tick it never sees.
-     Returns true = "this cycle is held", and the card repaint stays on the old 0.5 s heartbeat. */
+     Returns true = "this cycle is held", and the card repaint stays on the old 0.5 s heartbeat.
+     Round 98 (your rule of 3 Nov: "let entry point be used at the fast run of the market not every run") — in
+     ⚡ FAST RUN mode the gate only bites while this market is quicker than its own recent pace; at its usual pace
+     it rests and the bot trades on its own conditions. EVERY ENTRY mode keeps the Round 95 behaviour, and the chip
+     on the card's own entry row switches between them. */
   entryGate(){
     const d = this.entry;
     if (d == null) return false;
     const sym = entrySymOf(this), cur = entryDigitNow(sym);
     if (cur == null){ this._entryWhy = ""; return false; }   // no feed on that market yet — planNext() already says so
+    if (entryModeOf(this) === "fast"){
+      const pc = paceOf(sym);
+      if (!pc || !pc.fast){
+        const why = "entry point resting — " + sym + (pc ? (pc.quiet ? " feed quiet" : " at its own pace, " + fmt(pc.idx, 2) + "×") : " pace still measuring");
+        if (this._entryWhy !== why){
+          this._entryWhy = why;
+          if (!this._restSaid){ this._restSaid = true; this.sys("Note — " + why + ". This card gates only at the fast run (your rule of 3 Nov); press the ⚡ FAST RUN chip on its entry row for EVERY ENTRY, the Round 95 behaviour."); }
+        }
+        return false;
+      }
+    }
     if (cur === d){ this._entryWhy = ""; return false; }
     const why = "waiting for the tick to touch " + d + " on " + sym + " (last digit " + cur + ")";
     if (this._entryWhy !== why){ this._entryWhy = why; this.sys("Holding — entry point " + why); }
@@ -7062,7 +7195,7 @@ async function sweepFeedOpen(sym){
       msg => {
         if (typeof msg.pip_size === "number") feed.pip = msg.pip_size;
         if (msg.msg_type === "history" && msg.history) msg.history.prices.forEach(q => sweepPush(feed, q));
-        else if (msg.msg_type === "tick" && msg.tick){ if (msg.tick.symbol && msg.tick.symbol !== sym) return; if (typeof msg.tick.pip_size === "number") feed.pip = msg.tick.pip_size; sweepPush(feed, msg.tick.quote); }
+        else if (msg.msg_type === "tick" && msg.tick){ if (msg.tick.symbol && msg.tick.symbol !== sym) return; if (typeof msg.tick.pip_size === "number") feed.pip = msg.tick.pip_size; sweepPush(feed, msg.tick.quote); markPulse(sym, msg.tick.quote); }
       }
     );
     if (first && first.req_id) feed.reqId = first.req_id;
@@ -10414,6 +10547,9 @@ async function doAuthorize(token, silent, remember){
   resubscribeBalance();
   renderAccount();
   renderSignalCard();
+  /* Round 98: this route normally gets fullname from the authorize reply itself — if that field ever comes back
+     blank (a token without the read scope, say), the same background name hunt covers it. */
+  if (!state.account.fullname) fetchGreetName();
   if (!silent){
     toast("Authorized: " + state.account.loginid + " (" + (state.account.isVirtual ? "DEMO" : "LIVE") + ") — balance " + fmt(state.account.balance) + " " + state.account.currency, "success");
     if (!state.account.scopes.includes("trade")) toast("Token has no Trade scope — buying is blocked. Create a token with Read + Trade scopes.", "warn", 9000);
@@ -10458,6 +10594,10 @@ function normalizeAccounts(json){
   return arr.map(a => ({
     id: a.id || a.account_id || a.loginid || "",
     currency: a.currency || "",
+    /* Round 98: Deriv's /accounts does not carry the profile name today (measured: id, balance, currency, group,
+       status, account_type — nothing else), but a field added there is the cheapest place for it to arrive, so it
+       is picked up if present and ignored if not. */
+    name: String(a.fullname || a.full_name || a.display_name || a.name || "").trim(),
     isVirtual: a.is_virtual !== undefined ? !!a.is_virtual
       : (a.account_type === "demo" || a.type === "demo" || /^(VRTC|VR)/i.test(a.id || a.account_id || "")),
     scopes: a.scopes || a.scope || []
@@ -10548,7 +10688,7 @@ async function authorizeWithToken(token, appId, mode, silent, remember, preferre
     isVirtual: acct.isVirtual,
     scopes: (acct.scopes && acct.scopes.length) ? acct.scopes
       : (isOAuth ? oauthScopes().split(/[\s,+]+/).filter(Boolean) : ["read", "trade"]),
-    fullname: ""
+    fullname: acct.name || ""
   };
   if (isOAuth){
     /* An OAuth client must not leave a personal token behind for the next person at this browser. */
@@ -10562,6 +10702,7 @@ async function authorizeWithToken(token, appId, mode, silent, remember, preferre
   }
   resubscribeBalance();
   renderAccount(); renderSignalCard();
+  fetchGreetName();   // Round 98: the OTP session this sign-in runs on carries no name, so ask for it in the background
   if (!silent){
     /* Round 38 rule: the login id stays out of the UI — say which SIDE opened, and where to change it. */
     toast((isOAuth ? "Signed in — trading the " : "Authorized — trading the ") + (acct.isVirtual ? "DEMO" : "REAL")
@@ -10922,6 +11063,7 @@ async function logout(){
     // New API: there is no logout message — just drop the session and go back to the public feed.
     const wasOAuth = state.authMode === "oauth";
     state.token = ""; state.account = null; state.authMode = null;
+    greetTried = "";                                   // Round 98: the next client who signs in here gets their own name, not a remembered one
     store.del("dt_token"); store.del("dt_acct");
     if (wasOAuth){ oauthClear(); state.oauth = null; }   // the tab forgets the granted token immediately
     api.otpProvider = null;
@@ -10932,13 +11074,82 @@ async function logout(){
   }
   try { await api.send({ logout: 1 }); } catch(e){}
   state.token = ""; state.account = null; state.authMode = null; store.del("dt_token");
+  greetTried = "";                                     // Round 98: forget the name that went with that token
   renderAccount(); renderSignalCard(); renderBots();
   toast("Logged out", "info");
 }
 /* Round 74: declared before renderAccount() because that renderer reads it on every balance tick. */
 let resetBusy = false;
+/* ================= Round 98 — "Welcome <your name>" =================
+   Your rule of 3 Nov: "there is welcome trader at the top so change trader into every client name they authorize
+   my site from their deriv account … replay with their names they set in deriv".
+
+   What the greeting reads is ONE field: state.account.fullname — the name the client typed on their own Deriv
+   profile, never anything this site invents. Three privacy rules it honours:
+     · the name is memory-only. It is never written to localStorage, never in a toast, never in the activity log,
+       so a shared or handed-over browser cannot read the previous client's name off it;
+     · the login id stays out of the UI exactly as in Round 38 — a name is not an account number;
+     · asking for it costs the trading session nothing: it is a background read on a throwaway socket, and if it
+       fails the header simply keeps saying "trader". Where a name cannot come: LOGOUT and the signed-out page. */
+function greetWord(){
+  const src = String((state.account && state.account.fullname) || "").trim();
+  if (!src) return "";
+  /* First word only — a greeting, not an account statement, and a full name would push the header onto a second
+     row on a phone. Letters, marks, apostrophes and hyphens survive; anything else (a stray bracket, an emoji in
+     a profile name) is dropped, so the header can never be fed markup by a profile field. */
+  const w = src.split(/\s+/)[0].replace(/[^\p{L}\p{M}'’-]/gu, "").slice(0, 16);
+  if (!w) return "";
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
+function renderGreeting(){
+  const el = $("#greetName"); if (!el) return;
+  const w = greetWord();
+  const txt = w || "trader";
+  if (el.textContent !== txt) el.textContent = txt;
+  el.classList.toggle("isname", !!w);
+  el.title = w ? "Signed in with the Deriv account named " + w : "Welcome — sign in with your Deriv account and this becomes the name you set on it";
+}
+/* One shot at Deriv's own name for the token this tab is trading, on a socket that is opened, asked and closed
+   immediately. It is not the trading socket — that one stays exactly where it is — and the token is only ever
+   sent to Deriv's own API hosts, the same two WS_ENDPOINTS the copy-trading follower route already uses. */
+function nameViaAuthorize(token, url){
+  return new Promise(resolve => {
+    const fin = v => { if (done) return; done = true; clearTimeout(to); try { ws.close(); } catch(e){} resolve(v); };
+    let ws, done = false;
+    const to = setTimeout(() => fin(""), 7000);
+    try { ws = new WebSocket(url); } catch(e){ clearTimeout(to); resolve(""); return; }
+    ws.onopen = () => { try { ws.send(JSON.stringify({ authorize: token, req_id: 1 })); } catch(e){ fin(""); } };
+    /* Only this request's own reply is read, and only the name is taken out of it. Nothing else the reply carries
+       (balance, login id, scopes) is looked at, and the reply object is dropped as soon as the name is. */
+    ws.onmessage = ev => {
+      let j = null;
+      try { j = JSON.parse(ev.data); } catch(e){ return; }
+      if (!j || j.req_id !== 1) return;
+      fin(String((j.authorize && j.authorize.fullname) || "").trim());
+    };
+    ws.onerror = () => fin("");
+    ws.onclose = () => fin("");
+  });
+}
+let greetTried = "", greetBusy = false;
+async function fetchGreetName(){
+  const a = state.account;
+  if (!a || a.fullname || !state.token) return;             // already have it, or there is no credential to ask with
+  if (greetTried === state.token || greetBusy) return;      // one attempt per token per tab — a stubborn host is not retried forever
+  greetTried = state.token; greetBusy = true;
+  const id = api.appId || store.get("dt_app_id") || "1089";
+  try {
+    /* index 0 is the Options host, which has no authorize method at all (Round 88 found the same for the copier),
+       so the name hunt starts at the first APIv3 endpoint. Both are tried; whichever answers first wins. */
+    for (let i = 1; i < WS_ENDPOINTS.length && state.account === a && !a.fullname; i++){
+      const nm = await nameViaAuthorize(state.token, WS_ENDPOINTS[i].build(id));
+      if (nm && state.account === a){ a.fullname = nm; renderGreeting(); }
+    }
+  } catch(e){} finally { greetBusy = false; }
+}
 function renderAccount(){
   const a = state.account;
+  renderGreeting();   // Round 98: every account repaint — sign-in, switch, balance, logout — re-decides the greeting
   $("#acctChip").classList.toggle("on", !!a);
   $("#authBtn").textContent = a ? "LOGOUT" : "LOGIN";
   renderAcctSelect();
@@ -11186,12 +11397,17 @@ function init(){
   /* Round 95 — the entry-point digit pickers. The stored digit is restored onto the bot object BEFORE the
      rows are built, so a page reload comes back with the same gate armed. One delegated listener on the
      document (not ten per-card listeners) so a rebuilt card can never lose its picker. */
-  BOTS.forEach(b => { b.entry = entryLoad(b.id); });
+  BOTS.forEach(b => { b.entry = entryLoad(b.id); b.entryMode = entryModeLoad(b.id); });
   buildEntryRows();
   document.addEventListener("click", e => {
-    const btn = e.target.closest(".edig"); if (!btn) return;
-    const row = btn.closest(".entryrow"); if (!row) return;
+    /* One delegated listener for the whole desk, so a rebuilt card can never lose its picker (Round 95's design).
+       Round 98: the WHEN chip lives in the same row but is deliberately NOT an .edig — it carries no digit and takes
+       no rank colour — so it is matched first and toggles the gate mode instead of arming one. */
+    const chip = e.target.closest(".emode"), btn = e.target.closest(".edig"), el = chip || btn;
+    if (!el) return;
+    const row = el.closest(".entryrow"); if (!row) return;
     const b = BOTS.find(x => x.id === row.id.slice(6)); if (!b) return;
+    if (chip){ setEntryMode(b, entryModeOf(b) === "fast" ? "all" : "fast"); return; }
     const d = +btn.dataset.d;
     setEntry(b, d < 0 || b.entry === d ? null : d);   // OFF always clears; touching an armed digit clears it too
   });
