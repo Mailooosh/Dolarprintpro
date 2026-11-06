@@ -1049,6 +1049,140 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
   .btn-theme{padding:7px 10px;font-size:11.5px;margin-left:auto}
   #authBtn{margin-left:0}
 }
+/* ================= Round 101: first-preview landing =================
+   The promo screen a visitor meets before the desk. It is chrome, not a trading setting: it owns one
+   localStorage key (dt_landing), stays out of CFG_IDS, and covers the whole page at z-index 10000 while
+   it is up. Its colours are literal rather than var() on purpose — the artwork has to look the same in
+   white mode and dark mode, and it must never be able to repaint the terminal behind it. */
+#landing{position:fixed;inset:0;z-index:10000;overflow:auto;background:#05070d;color:#f2f5fb;
+  font-family:var(--font);-webkit-overflow-scrolling:touch}
+#landing::before{content:"";position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(58% 52% at 76% 12%,rgba(40,112,255,.44),transparent 62%),
+             radial-gradient(52% 46% at 8% 94%,rgba(255,28,64,.40),transparent 60%),
+             radial-gradient(46% 42% at 44% 46%,rgba(150,44,255,.18),transparent 72%)}
+#landing::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 46px),
+             repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 46px)}
+.ldearth{position:fixed;right:14%;top:-60px;width:340px;height:340px;border-radius:50%;pointer-events:none;
+  opacity:.6;background:radial-gradient(circle at 36% 30%,rgba(168,214,255,.7),rgba(16,42,92,.92) 56%,rgba(4,8,20,.96));
+  box-shadow:0 0 90px rgba(60,140,255,.42),inset -18px -26px 60px rgba(0,0,0,.7),inset 0 0 40px rgba(90,160,255,.25)}
+/* the banner icons are inline SVG, not emoji: a headless or font-stripped browser has no colour emoji,
+   and a flat stroke glyph is what the artwork actually uses. currentColor keeps them tintable. */
+.ldtile i svg,.ldt i svg,.ldlogin svg,.ldstart svg,.ldglobe svg{display:block;width:21px;height:21px;
+  fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ldglobe svg{width:18px;height:18px}
+.ldlogin svg,.ldstart svg{width:19px;height:19px}
+.ldwrap{position:relative;z-index:1;display:flex;flex-direction:column;gap:20px;width:min(1200px,95vw);
+  margin:0 auto;padding:20px 0 30px;min-height:100%}
+.ldtop{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ldbrand{display:flex;align-items:center;gap:10px}
+.ldmark{width:38px;height:38px;border-radius:10px;background:linear-gradient(160deg,#ff3a5f,#c1103a);
+  display:flex;align-items:center;justify-content:center;font:900 23px/1 var(--font);color:#fff;
+  box-shadow:0 6px 16px rgba(255,58,95,.5)}
+.ldmark.sm{width:20px;height:20px;border-radius:6px;font:900 12px/1 var(--font);box-shadow:none}
+.ldname{font:800 24px/1 var(--font);letter-spacing:-.015em;color:#fff}
+.ldnav{display:flex;align-items:center;gap:9px;font:700 13px var(--font);color:#dfe7f2;margin-left:8px}
+.ldnav .dot{width:5px;height:5px;border-radius:50%;background:#ff3a5f;box-shadow:0 0 9px #ff3a5f}
+.ldspacer{margin-left:auto}
+.ldlogin{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border:0;border-radius:999px;
+  background:linear-gradient(180deg,#00e07f,#00a85c);color:#03220f;font:900 15px var(--font);letter-spacing:.05em;
+  cursor:pointer;white-space:nowrap;box-shadow:0 0 0 2px rgba(0,224,127,.3),0 10px 26px rgba(0,190,110,.42)}
+.ldlogin:hover:not(:disabled){filter:brightness(1.07)}
+.ldlogin:disabled{opacity:.6;cursor:default}
+.ldlogin .arr{font-size:15px}
+.ldglobe{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;font-size:16px;color:#cfe0ff}
+.ldx{width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);
+  color:#cdd8e8;font:700 14px var(--font);cursor:pointer}
+.ldx:hover{color:#fff;border-color:rgba(255,255,255,.5)}
+.ldmain{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:26px;align-items:center;flex:1}
+.ldh1{font:900 italic clamp(34px,5.2vw,62px)/1 var(--font);letter-spacing:-.02em;color:#fff;
+  text-shadow:0 0 26px rgba(255,60,90,.55)}
+.ldh1 em{color:#ff2d55;font-style:italic}
+.ldwith{display:flex;align-items:center;gap:12px;font:800 clamp(19px,2.5vw,28px)/1 italic var(--font);
+  color:#fff;margin:8px 0 10px;letter-spacing:.03em}
+.ldwith::before,.ldwith::after{content:"";flex:0 0 62px;height:2px;border-radius:2px;background:#fff;opacity:.85}
+.ldwith::after{background:linear-gradient(90deg,#fff,transparent)}
+.ldsite{display:inline-block;padding:9px 20px;border-radius:16px;color:#fff;letter-spacing:-.01em;
+  background:linear-gradient(180deg,#ff2d55,#b40f34);box-shadow:0 0 34px rgba(255,45,85,.55);
+  font:900 italic clamp(26px,4vw,48px)/1.15 var(--font)}
+.ldtag{margin:14px 0 20px;font:800 clamp(15px,1.8vw,21px)/1.3 var(--font);color:#eaf1fb}
+.ldtag em{color:#ffc400;font-style:italic;text-shadow:0 0 16px rgba(255,196,0,.45)}
+.ldtiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.ldtile{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 7px;border-radius:12px;
+  text-align:center;background:rgba(10,16,28,.74);border:1px solid rgba(255,255,255,.14)}
+.ldtile span{font:700 11.5px/1.3 var(--font);color:#e8eff8}
+.ldtile i{font-size:19px;font-style:normal;line-height:1;color:#e8eff8}
+.ldtile i.r{color:#ff3b52}.ldtile i.g{color:#00e07f}.ldtile i.a{color:#ffc400}
+.ldstart{display:inline-flex;align-items:center;gap:12px;padding:14px 24px;border-radius:999px;
+  background:linear-gradient(180deg,#ff3352,#c0072e);color:#fff;text-decoration:none;white-space:nowrap;
+  font:900 clamp(16px,2vw,21px) var(--font);box-shadow:0 0 30px rgba(255,45,85,.6),0 10px 26px rgba(0,0,0,.45)}
+.ldstart:hover{filter:brightness(1.08)}
+.ldstart .arw{width:27px;height:27px;border-radius:50%;background:#fff;color:#c0072e;
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.ldnote{margin:11px 0 0;font:600 11.5px/1.55 var(--font);color:#93a6c0;max-width:540px}
+.ldnote b{color:#dbe6f4}
+.ldenter{margin-top:12px;padding:0;background:none;border:0;color:#cfe0ff;font:800 11.5px var(--font);
+  letter-spacing:.1em;cursor:pointer;text-decoration:underline}
+.ldenter:hover{color:#fff}
+.ldstage{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:16px;min-height:300px}
+.ldlap{width:min(420px,62vw);border-radius:14px 14px 7px 7px;padding:12px;
+  background:linear-gradient(180deg,#0b1220,#060a12);border:1px solid rgba(255,255,255,.2);
+  box-shadow:0 26px 60px rgba(0,0,0,.6),0 0 40px rgba(60,140,255,.25)}
+.ldlap .lbar,.ldphone .lbar{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.ldlap .lbar b,.ldphone .lbar b{font:800 12px var(--font);color:#e8eff8}
+.ldlap .lbar em{margin-left:auto;font:700 10px var(--mono);font-style:normal;color:#8fa3bf}
+.ldchart{display:flex;align-items:flex-end;gap:5px;height:84px;padding:8px 7px 7px;border-radius:8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1)}
+.ldchart b{position:relative;flex:1;min-width:5px;border-radius:2px}
+.ldchart b::before{content:"";position:absolute;left:50%;top:-7px;bottom:-7px;width:1px;background:currentColor;opacity:.8}
+.ldchart b.u{background:#00d982;color:#00d982;box-shadow:0 0 8px rgba(0,217,130,.5)}
+.ldchart b.d{background:#ff3b52;color:#ff3b52;box-shadow:0 0 8px rgba(255,59,82,.5)}
+.ldstake{display:flex;align-items:center;gap:8px;margin-top:10px}
+.ldstake .lbl{font:700 9.5px var(--font);letter-spacing:.08em;text-transform:uppercase;color:#8fa3bf}
+.ldstake .amt{font:800 12.5px var(--mono);color:#fff;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:5px 9px}
+.ldbtn{flex:1;text-align:center;border-radius:8px;padding:8px 6px;font:800 12px var(--font);color:#04120a}
+.ldbtn.up{background:#00d982}.ldbtn.dn{background:#ff3b52;color:#fff}
+.ldphone{width:154px;border-radius:20px;padding:12px 10px;
+  background:linear-gradient(180deg,#0b1220,#05090f);border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 26px 50px rgba(0,0,0,.6)}
+.ldphone .pbal{font:700 9px var(--font);letter-spacing:.08em;text-transform:uppercase;color:#8fa3bf}
+.ldphone .pamt{font:800 17px var(--mono);color:#00e07f;margin:2px 0 9px}
+.ldphone .ptabs{display:flex;gap:5px;margin-bottom:9px}
+.ldphone .ptabs span{flex:1;text-align:center;font:700 8.5px var(--font);color:#cfe0ff;padding:5px 2px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px}
+.ldmkts{display:flex;flex-direction:column;gap:5px}
+.ldmkt{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font:700 10.5px var(--font);
+  color:#dbe6f4;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.ldmkt i{width:19px;height:19px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-style:normal;color:#04101c}
+.ldmkt em{margin-left:auto;font:700 9.5px var(--mono);font-style:normal;color:#8fa3bf}
+.ldtrust{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:14px;
+  background:rgba(8,12,20,.82);border:1px solid rgba(255,255,255,.14)}
+.ldt{display:flex;align-items:center;gap:9px;font:800 12.5px/1.25 var(--font);color:#eaf1fb}
+.ldt i{font-size:18px;font-style:normal;color:#dfe9f7}
+.ldsep{width:1px;height:28px;background:rgba(255,255,255,.2)}
+.ldcta{margin-left:auto;text-align:right;font:900 italic 17px/1.3 var(--font);color:#fff}
+.ldcta span{color:#ff3352}
+@media (max-width:900px){
+  .ldmain{grid-template-columns:minmax(0,1fr);gap:20px}
+  .ldnav{display:none}
+  .ldearth{display:none}
+  .ldglobe{display:none}
+  .ldstage{min-height:0}
+  .ldlap{width:min(360px,88vw)}
+  .ldphone{display:none}
+  .ldtiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .ldtiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ldname{font-size:20px}
+  .ldlogin{padding:10px 15px;font-size:13.5px}
+  .ldtrust{gap:10px}
+  .ldsep{display:none}
+  .ldcta{margin-left:0;text-align:left}
+}
 </style>
 <script>
 /* Round 82: theme bootstrap. This runs before the first paint, so a trader who chose dark mode never
@@ -1062,6 +1196,83 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
 </script>
 </head>
 <body>
+
+<!-- ============ ROUND 101: FIRST-PREVIEW LANDING ============
+     The promo screen a new visitor meets before the desk. LOG IN runs the exact same Deriv OAuth path
+     as the auth card further down (startOAuthLogin) — sign-in itself is unchanged. GET STARTED opens the
+     owner's Deriv referral link in a new tab, so a brand-new account is created on Deriv's own site and
+     this page never sees a registration, a password or a token. The artwork is static CSS: no images, no
+     animation, nothing that trades. ✕ / ENTER THE TERMINAL writes dt_landing=off so it never interrupts
+     a returning client, and a browser that already holds a session skips it outright. -->
+<div id="landing">
+  <div class="ldearth" aria-hidden="true"></div>
+  <div class="ldwrap">
+    <div class="ldtop">
+      <div class="ldbrand"><span class="ldmark">d</span><span class="ldname">DolarPrintPro</span></div>
+      <div class="ldnav"><span>Trade</span><span class="dot"></span><span>Analyze</span><span class="dot"></span><span>Automate</span><span class="dot"></span><span>Profit</span></div>
+      <div class="ldspacer"></div>
+      <button class="ldlogin" id="ldLogin" type="button" title="Sign in with your own Deriv account through Deriv's login page — this site never sees a password or a token"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.6-3.6 4-5.2 7-5.2s5.4 1.6 7 5.2"/></svg> LOG IN <span class="arr">→</span></button>
+      <span class="ldglobe" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.8 2.6 15.4 0 18M12 3c-2.6 2.8-2.6 15.4 0 18"/></svg></span>
+      <button class="ldx" id="ldClose" type="button" aria-label="Close this preview and go to the terminal">✕</button>
+    </div>
+
+    <div class="ldmain">
+      <div class="ldhero">
+        <div class="ldh1">TRADE <em>SMARTER</em></div>
+        <div class="ldwith">WITH</div>
+        <div><span class="ldsite">dolarprintpro.site</span></div>
+        <div class="ldtag">Smarter Strategies. <em>Bigger Opportunities.</em></div>
+        <div class="ldtiles">
+          <div class="ldtile"><i class="r"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 6-8"/><path d="M18 6h3v3"/></svg></i><span>Volatility<br>10/25/50/75/100</span></div>
+          <div class="ldtile"><i><svg viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800" fill="currentColor" stroke="none">123</text></svg></i><span>Digits<br>Over/Under</span></div>
+          <div class="ldtile"><i class="g"><svg viewBox="0 0 24 24"><path d="M7 20V7M4 10l3-3 3 3"/><path d="M17 4v13M14 14l3 3 3-3"/></svg></i><span>Rise/Fall<br>Higher/Lower</span></div>
+          <div class="ldtile"><i><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></i><span>Multipliers</span></div>
+          <div class="ldtile"><i class="a"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></i><span>More Markets</span></div>
+        </div>
+        <a class="ldstart" id="ldStart" href="https://t.deriv.link?t=7RYEQTX4GVYL" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5l18-7.5-7 18-2.6-7.4z"/><path d="M11.4 14.6L21 4"/></svg> Get Started Now <span class="arw">→</span></a>
+        <div class="ldnote"><b>New here?</b> Get Started opens Deriv's own sign-up page through this site's referral link — the account, the verification and the money all stay with Deriv. <b>Already a Deriv client?</b> Press LOG IN and this terminal runs on your own account, demo or real.</div>
+        <button class="ldenter" id="ldEnter" type="button">ENTER THE TERMINAL →</button>
+      </div>
+
+      <div class="ldstage" aria-hidden="true">
+        <div class="ldlap">
+          <div class="lbar"><span class="ldmark sm">d</span><b>DolarPrintPro</b><em>VOL 100 (1s)</em></div>
+          <div class="ldchart">
+            <b class="d" style="height:34%"></b><b class="u" style="height:46%"></b><b class="d" style="height:38%"></b>
+            <b class="u" style="height:54%"></b><b class="u" style="height:62%"></b><b class="d" style="height:48%"></b>
+            <b class="u" style="height:66%"></b><b class="u" style="height:74%"></b><b class="d" style="height:58%"></b>
+            <b class="u" style="height:80%"></b><b class="u" style="height:88%"></b><b class="d" style="height:70%"></b>
+            <b class="u" style="height:92%"></b>
+          </div>
+          <div class="ldstake"><span class="lbl">Stake</span><span class="amt">$1.00</span><span class="ldbtn up">↑ Up</span><span class="ldbtn dn">↓ Down</span></div>
+        </div>
+        <div class="ldphone">
+          <div class="lbar"><span class="ldmark sm">d</span><b>deriv</b></div>
+          <div class="pbal">Demo balance</div>
+          <div class="pamt">10,000.00</div>
+          <div class="ptabs"><span>Trade</span><span>Deposit</span><span>Withdraw</span></div>
+          <div class="ldmkts">
+            <div class="ldmkt"><i style="background:#ff3352">↑</i>Volatility 10<em>1s</em></div>
+            <div class="ldmkt"><i style="background:#4d9fff">↓</i>Volatility 25<em>1s</em></div>
+            <div class="ldmkt"><i style="background:#00d982">↑</i>Volatility 50<em>1s</em></div>
+            <div class="ldmkt"><i style="background:#a855f7">◆</i>Digit Match<em>1t</em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ldtrust">
+      <div class="ldt"><i><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.6C19 16 16 19.6 12 21c-4-1.4-7-5-7-9.4V6z"/><path d="M9 12l2 2 4-4"/></svg></i>Secure &amp;<br>Reliable</div>
+      <span class="ldsep"></span>
+      <div class="ldt"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.8 2.6 15.4 0 18M12 3c-2.6 2.8-2.6 15.4 0 18"/></svg></i>Global<br>Access</div>
+      <span class="ldsep"></span>
+      <div class="ldt"><i><svg viewBox="0 0 24 24"><path d="M13 2L5 13h5l-1 9 8-11h-5z"/></svg></i>Fast<br>Trading</div>
+      <span class="ldsep"></span>
+      <div class="ldt"><i><svg viewBox="0 0 24 24"><path d="M4 14a8 8 0 0116 0"/><rect x="3" y="13" width="4" height="7" rx="2"/><rect x="17" y="13" width="4" height="7" rx="2"/></svg></i>24/7 Deriv<br>Support</div>
+      <div class="ldcta">Build Your Trading Success<br>with <span>Deriv</span></div>
+    </div>
+  </div>
+</div>
 
 <header>
   <div class="hrow">
@@ -1665,6 +1876,10 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
     <label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-size:12px;cursor:pointer;user-select:none">
       <input type="checkbox" id="fastExec" checked style="accent-color:var(--red);width:15px;height:15px;cursor:pointer">
       <b style="color:var(--text)">Fast execution</b>&nbsp;— snap the 0.5s bot heartbeat onto every tick (untick to sleep the full half second between decisions)
+    </label>
+    <label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-size:12px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="preQuote" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
+      <b style="color:var(--text)">Pre-quote</b>&nbsp;— &nbsp;<span id="preQuoteStat" style="color:var(--dim)">hold a live price for each order shape in the background, so an entry costs ONE Deriv trip instead of two (untick to quote every entry)</span>
     </label>
     <label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-size:12px">
       <b style="color:var(--text)">Virtual trades before live</b>
@@ -2604,6 +2819,7 @@ const state = {
   tickRetryTimer: null, tickRetryDelay: 0, symbolsLoaded: false,
   winSel: 100,
   fastExec: true,          // fast execution: snap the bots' ~0.5s heartbeat onto the next tick instead of sleeping it
+  preQuote: true,          // Round 100: hold a live background proposal per order shape so an entry costs one trip
   candleTicks: 5,          // ticks aggregated into one candlestick
   account: null, token: "", balanceSubId: null, balanceReqId: null, balancePollId: null,
   nameBlocked: false,      // Round 99: Deriv answered 403 on its one name-bearing endpoint — this sign-in lacks account_manage
@@ -3555,6 +3771,7 @@ function onScanMsg(sym, feed, msg){
     if (typeof t.pip_size === "number") feed.pip = t.pip_size;
     scanPush(feed, t.quote);
     markPulse(sym, t.quote);            // Round 98: a bot locked to a scanner market is gated on THAT market's pace
+    pulseTicks();                       // Round 100: and it WAKES on that market's cursor, not the monitored one's
   }
 }
 async function scanFeedOpen(sym){
@@ -3873,26 +4090,193 @@ async function loadBot(){
   }
 }
 
+/* ================= Round 100 — one round trip from decision to contract =================
+   Measured on this connection: a Deriv request round trip is 293–330 ms, and the old path paid TWO of
+   them in series before an order existed — proposal, then buy. On a VOL …(1s) market, which moves once
+   a second, that is a whole tick of latency, and it shows up twice: the buy leaves 0.66 s after the
+   gate opened, and the id it carries was QUOTED on the tick before the one the bot decided on.
+   FIX: hold a LIVE proposal subscription per order shape. `subscribe: 1` is what registers a buyable id
+   on this API. Measured here, that stream does NOT re-push a stake-basis digit quote on its own (one id
+   held for 4.5 s on a 1 Hz market), so the cache re-quotes itself on a timer — PROP_REFRESH_MS — and any
+   id older than PROP_FRESH_MS is refused rather than trusted. When a gate opens, the only trip left is
+   the buy, and the id it carries was quoted within the last second or two instead of the tick before.
+   It is a background cache, never a dependency: the subscription is created without waiting for it,
+   capped at PROP_WARM_MAX shapes, dropped when a shape goes unused for PROP_KEEP_MS, released when the
+   socket drops, and wiped when the bots stop or the account switches. Any miss — the first order of a run,
+   a stake that just moved on the ladder, a socket that dropped, an id Deriv refuses — falls back to the
+   old two-trip path and warms again for next time, and PROP_REFUSE_MAX refusals in a row switch the whole
+   cache off. WHAT gets bought never changes here, only how long it takes to get there. */
+const PROP_KEEP_MS = 12000;    // a shape nobody traded for this long is forgotten (its stream is released)
+const PROP_FRESH_MS = 2600;    // older than this, the cached id is NOT trusted — re-quote and pay two trips
+const PROP_REFRESH_MS = 1400;  // re-quote on a timer: MEASURED, a stake-basis digit stream does not re-push
+const PROP_QUOTE_MS = 6000;    // a background quote Deriv never answers is dropped, not waited on
+const PROP_WARM_MAX = 8;       // hard cap on live proposal streams, so many bots cannot exhaust the socket
+const PROP_REFUSE_MAX = 3;     // Deriv refused a cached id this many buys in a row => stop guessing
+const propWarm = new Map();    // "sym|type|barrier|dur|stake" -> { plan, sym, cur, gen, sent, reqId, subId, id, ask, payout, at, used, timer }
+const propStat = { hits: 0, misses: 0, refused: 0, streak: 0, off: false };
+function propKeyOf(plan, sym){
+  return [sym, plan.type, plan.barrier === undefined || plan.barrier === null ? "-" : plan.barrier,
+    plan.duration, round2(plan.stake)].join("|");
+}
+function propForget(key){
+  const w = propWarm.get(key);
+  if (!w) return;
+  propWarm.delete(key);
+  if (w.timer) clearTimeout(w.timer);
+  w.gen++;                            // any reply still in flight belongs to a generation nobody holds
+  if (w.subId) api.send({ forget: w.subId }).catch(() => {});
+  /* Only release the local slot once that stream has ANSWERED. While the request is still in flight the
+     handler must stay, because its reply is the only thing that can forget the subscription it creates —
+     and a request Deriv never answers self-cleans at PROP_QUOTE_MS anyway. Dropping it here leaked one
+     slot per interrupted re-quote (measured: pending 2 → 4 with an empty cache). */
+  if (w.subId && w.reqId) api.drop(w.reqId);
+}
+function propClearAll(){ for (const k of Array.from(propWarm.keys())) propForget(k); }
+function propArm(key){
+  const w = propWarm.get(key);
+  if (!w) return;
+  if (w.timer) clearTimeout(w.timer);
+  /* The re-quote loop must not starve the socket the buys themselves use: with many shapes warm each one
+     waits longer, so the background traffic stays bounded no matter how full the cache is. */
+  const stretch = Math.max(1, Math.min(3, propWarm.size / 4));
+  w.timer = setTimeout(() => { w.timer = null; propQuote(key); }, Math.round(PROP_REFRESH_MS * stretch));
+}
+/* Ask for a quote again. This is the heart of the speed-up: measured here, a stake-basis DIGIT proposal
+   does NOT re-push (one id sat unchanged for 4.5 s on a 1 Hz market and 5 s on R_25), and buying an id
+   cancels its stream — so nothing but our own timer can keep the cache holding the CURRENT tick's price. */
+function propQuote(key){
+  const w = propWarm.get(key);
+  if (!w || !api.connected || !state.account){ if (w) propForget(key); return; }
+  const gen = ++w.gen;
+  w.sent = Date.now();
+  if (w.subId) api.send({ forget: w.subId }).catch(() => {});
+  if (w.subId && w.reqId) api.drop(w.reqId);
+  w.reqId = null; w.subId = null;
+  /* A reply for a quote we no longer own must release BOTH halves of itself: the local slot and the
+     server-side subscription it just created. Nothing else will, because the object that asked for it is gone. */
+  const orphan = msg => {
+    if (msg && msg.req_id) api.drop(msg.req_id);
+    if (msg && msg.subscription && msg.subscription.id) api.send({ forget: msg.subscription.id }).catch(() => {});
+  };
+  const mine = () => propWarm.get(key) === w && w.gen === gen;
+  const take = msg => {
+    if (!mine()) return;
+    if (msg.req_id) w.reqId = msg.req_id;                  // bound before the promise settles, so a fast
+    if (msg.subscription && msg.subscription.id) w.subId = msg.subscription.id;   // bot sees a live slot
+    const pr = msg.proposal;
+    if (pr && pr.id){ w.id = pr.id; w.ask = num(pr.ask_price); w.payout = num(pr.payout); w.at = Date.now(); }
+  };
+  api.subscribe(propAsk(w.plan, w.sym, w.cur), take, PROP_QUOTE_MS).then(first => {
+    if (!mine()){ orphan(first); return; }
+    take(first);
+    propArm(key);
+  }).catch(() => {
+    if (!mine()) return;
+    w.id = null; propArm(key);                             // a dropped request is retried, never waited on
+  });
+}
+function propPrune(){
+  const now = Date.now();
+  for (const [k, w] of Array.from(propWarm)){
+    /* A shape whose first reply has not landed yet is IN FLIGHT, not dead — its req id is only bound by the
+       reply. Treat it as dead only once the quote timeout itself has passed. */
+    const dead = w.reqId ? !api.pending.has(w.reqId) : now - (w.sent || 0) > PROP_QUOTE_MS + 1000;
+    if (dead || now - w.used > PROP_KEEP_MS) propForget(k);
+  }
+}
+function propEvict(){
+  let bk = null, bw = null;
+  for (const [k, w] of propWarm){ if (!bw || w.used < bw.used){ bk = k; bw = w; } }
+  if (bk) propForget(bk);
+}
+function propAsk(plan, sym, currency){
+  const req = {
+    proposal: 1, amount: round2(plan.stake), basis: "stake", contract_type: plan.type,
+    currency, duration: plan.duration, duration_unit: "t", underlying_symbol: sym, subscribe: 1
+  };
+  if (plan.barrier !== undefined && plan.barrier !== null) req.barrier = String(plan.barrier);
+  return req;
+}
+function propOn(){ return !!state.preQuote && !propStat.off; }
+/* One line of plain numbers under the switch, because whether Deriv accepts a cached id is something only
+   the user's own next run can prove — so the page says it out loud instead of claiming a speed-up. */
+function propBadge(){
+  const el = $("#preQuoteStat"); if (!el) return;
+  if (!state.preQuote){ el.textContent = "OFF — every entry quotes its price first (two Deriv trips)"; return; }
+  if (propStat.off){ el.textContent = "PAUSED — Deriv refused " + propStat.refused + " pre-quotes in a row; untick and tick this box to retry"; return; }
+  const t = propStat.hits + propStat.misses;
+  el.textContent = t ? propStat.hits + " of " + t + " entries bought in ONE trip" +
+    (propStat.refused ? " · " + propStat.refused + " refused and re-quoted" : "") + " · " + propWarm.size + " shape(s) priced ahead"
+    : "hold a live price for each order shape in the background, so an entry costs ONE Deriv trip instead of two (untick to quote every entry)";
+}
+function propRefuse(){
+  propStat.refused++; propStat.streak++;
+  if (propStat.streak < PROP_REFUSE_MAX) return;
+  /* Three cached ids refused back to back on this account means guessing costs more than it saves: every
+     entry falls back to the old two-trip path until PRE-QUOTE is flipped again. */
+  propStat.off = true;
+  propClearAll();
+  toast("Deriv refused 3 pre-quotes in a row — the bots now quote every entry again. Tick PRE-QUOTE to retry.", "warn");
+}
+function warmProposal(plan, sym){
+  if (!propOn() || !api.connected || !state.account) return;
+  propPrune();
+  const key = propKeyOf(plan, sym);
+  const had = propWarm.get(key);
+  if (had){
+    had.used = Date.now();
+    if (!had.id) propQuote(key);      // just spent at buy time — ask again NOW, not on the next timer
+    return;
+  }
+  if (propWarm.size >= PROP_WARM_MAX) propEvict();
+  if (propWarm.has(key)) return;
+  propWarm.set(key, { plan, sym, cur: (state.account && state.account.currency) || "USD", gen: 0, sent: 0,
+    reqId: null, subId: null, id: null, ask: 0, payout: 0, at: 0, used: Date.now(), timer: null });
+  propQuote(key);
+}
 /* ================= trade core ================= */
 /* one leg of a cycle: proposal + buy, NO settlement wait */
 async function openPosition(plan){
   const currency = (state.account && state.account.currency) || "USD";
   const sym = plan.symbol || state.symbol;      // all-market bot passes an explicit symbol
-  const req = {
-    proposal: 1, amount: round2(plan.stake), basis: "stake", contract_type: plan.type,
-    currency, duration: plan.duration, duration_unit: "t", underlying_symbol: sym
-  };
-  if (plan.barrier !== undefined && plan.barrier !== null) req.barrier = String(plan.barrier);
+  const key = propKeyOf(plan, sym);
   /* The current Options API session rejects a one-off proposal id at buy time
-     ("Unknown contract proposal"). Requesting the proposal WITH subscribe:1 registers
-     a buyable id — same quirk class as proposal_open_contract. Forget the sub after buying. */
-  req.subscribe = 1;
-  const first = await api.subscribe(req, () => {});
-  const pr = first.proposal;
-  const propSubId = (first.subscription && first.subscription.id) || null;
-  const buy = (await api.send({ buy: pr.id, price: pr.ask_price })).buy;
+     ("Unknown contract proposal"), which is why even the fallback path asks WITH subscribe:1. */
+  let pr = null, propSubId = null, propReqId = null, warm = false;
+  const w = propWarm.get(key);
+  if (propOn() && w && w.id && api.pending.has(w.reqId) && Date.now() - w.at < PROP_FRESH_MS){
+    pr = { id: w.id, ask_price: w.ask, payout: w.payout };
+    warm = true; w.id = null; w.used = Date.now();     // spent — the buy kills the stream, re-quoted below
+    propStat.hits++;
+  } else {
+    propStat.misses++;
+    if (w && propOn()) propForget(key);                 // a stale shape is re-quoted, not trusted
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {});
+    pr = first.proposal;
+    propSubId = (first.subscription && first.subscription.id) || null;
+    propReqId = first.req_id || null;
+  }
+  let buy;
+  try {
+    buy = (await api.send({ buy: pr.id, price: pr.ask_price })).buy;
+  } catch(e){
+    if (!warm) throw e;
+    /* Deriv re-priced or cancelled that id under us: drop the shape and pay the old two trips once. */
+    propRefuse();
+    propForget(key);
+    warmProposal(plan, sym);
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {});
+    pr = first.proposal;
+    const retry = await api.send({ buy: pr.id, price: pr.ask_price });
+    if (first.req_id) api.drop(first.req_id);
+    if (first.subscription && first.subscription.id) api.send({ forget: first.subscription.id }).catch(() => {});
+    buy = retry.buy;
+  }
+  if (warm) propStat.streak = 0;                        // a warm id that DID buy resets the refusal count
   if (propSubId) api.send({ forget: propSubId }).catch(() => {});
-  api.drop(first.req_id);   // the proposal sub is dead at buy time — release its local slot too, or every trade leaks one
+  if (propReqId) api.drop(propReqId);   // the proposal sub is dead at buy time — release its local slot too, or every trade leaks one
+  warmProposal(plan, sym);              // re-quote this shape in the background so the NEXT entry is one trip
+  propBadge();
   const entry = {
     t: Date.now(), source: plan.source, symbol: sym,
     type: plan.type + (plan.barrier !== undefined && plan.barrier !== null ? " " + plan.barrier : ""),
@@ -3908,7 +4292,7 @@ async function openPosition(plan){
   copierBroadcast(entry, plan);
   renderActivity(); renderSummary();
   return { plan, entry, contractId: buy.contract_id, stake: num(pr.ask_price),
-    ratio: num(pr.payout) / Math.max(num(pr.ask_price), 0.01) };
+    ratio: num(pr.payout) / Math.max(num(pr.ask_price), 0.01), fast: warm };
 }
 async function settlePosition(pos){
   const plan = pos.plan, c = await watchContract(pos.contractId);
@@ -3920,7 +4304,7 @@ async function settlePosition(pos){
   copyBroadcast(pos.entry, "EXIT", plan);
   renderActivity(); renderSummary();
   return { won: c.won, profit: c.profit, payout: c.payout, entry: c.entry, exit: c.exit,
-    balanceAfter: c.balanceAfter,
+    balanceAfter: c.balanceAfter, fast: !!pos.fast,
     contractId: pos.contractId, stake: pos.stake, ratio: pos.ratio };
 }
 async function executeTrade(plan){ return settlePosition(await openPosition(plan)); }
@@ -5260,7 +5644,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
   "b12_stake","b12_dur","b12_win","b12_rec","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
-  "fastExec","virtCount","winStreak","cashSound","aiVoice"];
+  "fastExec","preQuote","virtCount","winStreak","cashSound","aiVoice"];
 function loadSettings(){
   let saved = {};
   try { saved = JSON.parse(store.get("dt_cfg") || "{}") || {}; } catch(e){}
@@ -5443,8 +5827,10 @@ const BOT_TRADE_GAP_MS = 0;
    main thread, and the card is still only repainted on the old 0.5 s cadence (see BaseBot.loop) so the DOM
    does not churn 10× as often. HONEST LIMIT: with ⚡ Fast execution ticked (the default) waitGap snaps onto
    the next tick pulse, and the gate can only change when a tick arrives, so below one tick interval this
-   poll no longer buys anything — it is the floor for when the feed is quiet. What is left per contract is
-   Deriv's own 3 serial round trips (~0.5 s each on this line) plus the contract's tick life. */
+   poll no longer buys anything — it is the floor for when the feed is quiet. What was left per contract was
+   Deriv's own serial round trips (~0.3–0.33 s measured each on this line): proposal, buy, then the
+   settlement watch. Round 100 removes the FIRST of those from the hot path (PRE-QUOTE holds the price
+   ahead of the decision), so a steady-state entry is the buy trip alone plus the contract's tick life. */
 const BOT_HOLD_MS = 50;
 async function waitGap(ms){
   const total = ms == null ? BOT_STEP_MS : ms;   // `||` here used to turn an explicit 0 back into 500
@@ -5867,7 +6253,16 @@ class BaseBot {
         this.countStreak(res);
         playCash(res.won);        // Round 77: register on a win, denying tone on a loss
         applyBalanceAfter(res);
-        this.sys((res.virtual ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + plan.type + (plan.barrier != null ? " " + plan.barrier : "") + " · exit digit " + lastDigitChar(res.exit) + " · " + fmtS(res.profit));
+        /* Round 100: a martingale step moves the stake, and a moved stake is a NEW order shape — left alone,
+           every recovery entry pays two Deriv trips again. cfg() only reads the card, so asking it for the
+           next stake has no side effects; a wrong guess is one background stream nobody uses, gone in 12 s. */
+        if (!res.virtual && propOn() && this.cfg){
+          const lim = this.cfg() || {};
+          const nxt = Object.assign({}, plan);
+          nxt.stake = res.won ? +lim.stake : Math.min(round2(+plan.stake * (+lim.mult || 1)), +lim.maxStake || Infinity);
+          if (round2(nxt.stake) !== round2(plan.stake)) warmProposal(nxt, plan.symbol || state.symbol);
+        }
+        this.sys((res.virtual ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + plan.type + (plan.barrier != null ? " " + plan.barrier : "") + " · exit digit " + lastDigitChar(res.exit) + " · " + fmtS(res.profit) + (res.fast ? " · ⚡ 1 TRIP" : " · quoted 2 TRIP"));
         if (this.checkLimits()) break;
       } catch(e){
         this.failStreak++;
@@ -7199,7 +7594,7 @@ async function sweepFeedOpen(sym){
       msg => {
         if (typeof msg.pip_size === "number") feed.pip = msg.pip_size;
         if (msg.msg_type === "history" && msg.history) msg.history.prices.forEach(q => sweepPush(feed, q));
-        else if (msg.msg_type === "tick" && msg.tick){ if (msg.tick.symbol && msg.tick.symbol !== sym) return; if (typeof msg.tick.pip_size === "number") feed.pip = msg.tick.pip_size; sweepPush(feed, msg.tick.quote); markPulse(sym, msg.tick.quote); }
+        else if (msg.msg_type === "tick" && msg.tick){ if (msg.tick.symbol && msg.tick.symbol !== sym) return; if (typeof msg.tick.pip_size === "number") feed.pip = msg.tick.pip_size; sweepPush(feed, msg.tick.quote); markPulse(sym, msg.tick.quote); pulseTicks(); }   // Round 100: a locked bot wakes on ITS market
       }
     );
     if (first && first.req_id) feed.reqId = first.req_id;
@@ -8632,7 +9027,7 @@ const bot12 = new DiffersBot();
 const BOTS = [bot1, bot2, bot3, bot4, bot5, bot6, bot7, bot8, bot9, bot10, bot11, bot12];
 const anyBotRunning = () => BOTS.some(b => b.running);
 const anyBotBusy = () => BOTS.some(b => b.busy);
-function stopAllBots(reason){ BOTS.forEach(b => b.stop(reason)); }
+function stopAllBots(reason){ BOTS.forEach(b => b.stop(reason)); propClearAll(); }   // Round 100: stopped bots leave no background quote stream open
 /* ================= the SYNCHRONIZATION desk =================
    Gate (cube + welcome + ENTER) in front, then one bot and one button: TRADE AI NOW. That press is
    the ONLY moment this feature looks at other markets — it opens every volatility feed once, ranks
@@ -10535,6 +10930,40 @@ function openAuth(){
 function closeAuth(){
   $("#authModal").classList.add("hidden");
 }
+
+/* ================= Round 101: first-preview landing =================
+   Two buttons, and neither invents a new path:
+   · LOG IN calls startOAuthLogin() — the identical call the auth card's own button makes, so the PKCE
+     request, the scopes, the redirect URI and the session storage are exactly as they were. When OAuth
+     cannot run from this copy (a file:// page, no app id baked in) it falls back to openAuth() so the
+     client still gets the explanation instead of a dead button.
+   · Get Started is a plain anchor to the owner's Deriv referral link, opened in a new tab with
+     rel="noopener noreferrer" — this page never posts anything to it and it carries no account data.
+   The layer dismisses itself once an account is live (renderAccount) and stays away once dismissed. */
+const LANDING_KEY = "dt_landing";
+function landingHide(){ const el = $("#landing"); if (el) el.classList.add("hidden"); }
+function landingOff(){ store.set(LANDING_KEY, "off"); landingHide(); }
+function landingSessionLive(){
+  const s = oauthLoad();
+  if (s && s.t && num(s.exp) > Date.now()) return true;
+  return !!store.get("dt_token");
+}
+function landingInit(){
+  const el = $("#landing");
+  if (!el) return;
+  /* A code/error in the address bar means Deriv just bounced this tab back mid-sign-in: the client
+     came for the terminal, so the preview must not stand in front of the callback. */
+  if (store.get(LANDING_KEY) === "off" || landingSessionLive() || /[?&](code|error|error_description)=/.test(location.search)){
+    landingHide();
+    return;
+  }
+  $("#ldLogin").addEventListener("click", () => {
+    if (oauthEnvProblem() || !oauthClientId()) openAuth();
+    else startOAuthLogin();
+  });
+  $("#ldClose").addEventListener("click", landingOff);
+  $("#ldEnter").addEventListener("click", landingOff);
+}
 async function doAuthorize(token, silent, remember){
   const res = await api.send({ authorize: token });
   const a = res.authorize || {};
@@ -11254,6 +11683,7 @@ async function fetchGreetName(){
 function renderAccount(){
   const a = state.account;
   renderGreeting();   // Round 98: every account repaint — sign-in, switch, balance, logout — re-decides the greeting
+  if (a) landingHide();   // Round 101: a live session is the whole point of the preview — get out of the way
   $("#acctChip").classList.toggle("on", !!a);
   $("#authBtn").textContent = a ? "LOGOUT" : "LOGIN";
   renderAcctSelect();
@@ -11494,6 +11924,9 @@ function showTab(name){
   if (b) b.click();
 }
 function init(){
+  /* Round 101: the first-preview screen is wired first, before anything that can throw — a visitor who
+     cannot reach the desk must still get a working LOG IN button. */
+  landingInit();
   /* Round 79 — every bot card gets Deriv Bot's own run panel (Run/Stop bar + Summary | Transactions |
      Journal). Built before anything renders, and it only MOVES elements the cards already had, so no
      id, listener or stored setting is duplicated anywhere.                              */
@@ -11557,6 +11990,16 @@ function init(){
   loadSettings();
   state.fastExec = $("#fastExec").checked;
   $("#fastExec").addEventListener("change", () => { state.fastExec = $("#fastExec").checked; saveSettings(); });
+  /* Round 100: PRE-QUOTE is the user's veto over the warm-proposal cache. Turning it off releases every
+     background stream immediately; turning it back on clears the refusal counter that switched it off. */
+  state.preQuote = $("#preQuote").checked;
+  $("#preQuote").addEventListener("change", () => {
+    state.preQuote = $("#preQuote").checked;
+    propStat.off = false; propStat.streak = 0;
+    if (!state.preQuote) propClearAll();
+    propBadge(); saveSettings();
+  });
+  propBadge();
   $("#virtCount").addEventListener("change", saveSettings);
   $$("#candleBtns .wbtn").forEach(b => b.addEventListener("click", () => {
     $$("#candleBtns .wbtn").forEach(x => x.classList.toggle("active", x === b));
