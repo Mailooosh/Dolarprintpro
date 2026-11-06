@@ -2383,6 +2383,9 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
     <div class="note hidden" id="oauthStatus"></div>
     <div class="oauthhero">
       <button class="btn btn-blue" id="oauthLoginBtn">LOG IN WITH DERIV</button>
+      <!-- Round 102: appears only when Deriv already handed this tab a token that never became a
+           session, so a busy-service blip is finished off without another sign-in. -->
+      <button class="btn btn-ghost hidden" id="oauthRetryBtn" type="button">TRY AGAIN</button>
     </div>
     <details class="adv gear">
       <summary>⚙</summary>
@@ -10916,6 +10919,11 @@ function drawPriceChart(){
 
 /* ================= auth (classic tokens) ================= */
 function openAuth(){
+  /* Round 102: the preview layer sits above every modal, so a sign-in card opened while it is up would
+     be invisible — which is exactly the dead-button case the landing's own LOG IN falls back to. The
+     card is dismissed only for this visit: no dt_landing key is written, so a visitor who signs in on
+     another day still gets the preview. */
+  landingHide();
   const ai = $("#appIdInput");
   if (ai && !ai.value) ai.value = store.get("dt_app_id") || "";
   const cid = $("#oauthClientId");
@@ -11025,6 +11033,29 @@ async function derivRest(path, opts = {}){
     throw err;
   }
   return json !== null ? json : {};
+}
+/* Deriv's edge opens a circuit breaker while it rotates a health probe and answers
+   503 {"errors":[{"code":"CircuitBreakerBusy","message":"Service temporarily unavailable…"}]} — seen
+   on a client sign-in on 2026-11-06, and the very same call succeeds a second later. Anything that
+   only reads is worth repeating; nothing that buys a contract may use this, so it is opt-in.       */
+function apiTransient(e){
+  const c = String((e && e.code) || ""), m = String((e && e.message) || "");
+  return c === "NetworkError" || /^HTTP(408|429|500|502|503|504|509)$/.test(c)
+    || /CircuitBreakerBusy|temporarily unavailable|health probe/i.test(m);
+}
+async function apiRetry(fn, tries, onWait){
+  let last = null;
+  for (let i = 1; i <= tries; i++){
+    try { return await fn(i); }
+    catch(e){
+      last = e;
+      if (!apiTransient(e) || i === tries) break;
+      const wait = 500 * Math.pow(2, i - 1);
+      if (onWait) onWait(i, tries, wait);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+  throw last;
 }
 function normalizeAccounts(json){
   const d = json && (json.data !== undefined ? json.data : json);
@@ -11206,7 +11237,7 @@ const OAUTH_CLIENT_ID   = "34iyncRMY1FxE4TWisRR1";
 const OAUTH_REDIRECT_PATH = "/callback";
 const OAUTH_KEY       = "dt_oauth";        /* sessionStorage { t, exp, cid, rid, acct } */
 const OAUTH_STATE_KEY = "dt_oauth_state";  /* sessionStorage { v, verifier, cid, rid, scopes, at } */
-let oauthTimer = null, oauthWarned = false;
+let oauthTimer = null, oauthWarned = false, oauthResuming = false;
 /* A sign-in result the client must still be able to read after Deriv bounced back to the page.
    Without this the generic status refresh at the end of init() overwrites "state check failed"
    or "Signed in as DOE…", which is exactly when the message matters most. */
@@ -11269,20 +11300,22 @@ function oauthSetStatus(msg, kind){
   el.classList.toggle("hidden", !msg);
   el.classList.toggle("bad", kind === "bad");
   el.classList.toggle("good", kind === "good");
+  /* Round 102: the retry button exists only while there is something to retry — a token Deriv gave
+     us that never became a session. Once the client is trading, or the token is dead, it is gone. */
+  const rb = $("#oauthRetryBtn");
+  if (rb) rb.classList.toggle("hidden", !oauthPending() || !!state.account);
 }
 function oauthPinned(msg, kind){ oauthNote = { msg: msg, kind: kind }; oauthSetStatus(msg, kind); }
 function oauthRefreshUi(){
   const r = $("#oauthRedirect");
   if (r) r.textContent = oauthRedirectUri();
-  if (oauthNote){ oauthSetStatus(oauthNote.msg, oauthNote.kind); return; }
   const problem = oauthEnvProblem();
   const btn = $("#oauthLoginBtn");
-  if (problem){
-    if (btn) btn.disabled = true;
-    oauthSetStatus(problem, "bad");
-    return;
-  }
-  if (btn) btn.disabled = false;
+  /* Round 102: the button mirrors whether a sign-in CAN run in this browser, whatever message is
+     showing — a pinned result used to leave its state to chance. */
+  if (btn) btn.disabled = !!problem;
+  if (oauthNote){ oauthSetStatus(oauthNote.msg, oauthNote.kind); return; }
+  if (problem){ oauthSetStatus(problem, "bad"); return; }
   if (!oauthClientId()){
     oauthSetStatus("No Deriv app id is built into this copy. Open the ⚙ row below, then Owner settings, and put the App ID / Client ID of your registered Deriv OAuth app there — the Redirect URI shown there must also be registered on that same app.", "");
     return;
@@ -11310,6 +11343,62 @@ function oauthClear(){
 function oauthRemainingMs(){
   const s = oauthLoad();
   return (s && s.exp) ? s.exp - Date.now() : 0;
+}
+/* ================= Round 102: a sign-in that stalls finishes itself =================
+   The sign-in has two halves: Deriv handing this tab a token, and this tab turning that token into a
+   trading session (/accounts → OTP → WebSocket). The first half cannot be replayed — an authorization
+   code is single-use — but the second half is all reads and fresh mints, so it is retried here and
+   never in oauthExchange. While it is still unfinished the token stays in sessionStorage with pend=1,
+   which is what makes TRY AGAIN (and the next page load) resume instead of walking the client back
+   through Deriv's sign-in page for nothing.                                                       */
+function oauthPending(){
+  const s = oauthLoad();
+  return !!(s && s.t && s.pend && num(s.exp) > Date.now());
+}
+async function oauthFinalize(token){
+  return apiRetry(() => authorizeWithToken(token, "", "oauth", false, false, null), 4,
+    (i, tries, wait) => oauthSetStatus("Deriv's service is busy — retrying in " +
+      Math.round(wait / 1000) + "s (" + i + " of " + tries + ")…", ""));
+}
+/* One readable sentence, not a JSON body: on a phone the raw Deriv error is a wall of braces that says
+   nothing, and it is the same three things over and over. The real object still goes to console.error.
+   Which button to press is named from the state at that moment — TRY AGAIN only exists while a half-
+   finished token is still held, and telling a client to press a button that is not there is worse than
+   the raw code.                                                                                 */
+function oauthFriendly(e){
+  const c = String((e && e.code) || ""), m = String((e && e.message) || "");
+  const again = oauthPending() ? "TRY AGAIN" : "LOG IN WITH DERIV";
+  if (/CircuitBreakerBusy|temporarily unavailable|health probe/i.test(m) || /^HTTP5/.test(c))
+    return "Deriv's service was busy for a moment, so the sign-in could not finish. Nothing was lost — press " + again + ".";
+  if (c === "NetworkError") return "This browser could not reach Deriv. Check the connection and press " + again + ".";
+  if (/^HTTP(401|403)$/.test(c)) return "Deriv refused that sign-in token. Press LOG IN WITH DERIV to start again.";
+  if (/^HTTP4/.test(c)) return "Deriv refused that request (" + c + "). Press LOG IN WITH DERIV to start again.";
+  return (m || "unknown error").replace(/\s+/g, " ").slice(0, 180);
+}
+async function oauthResume(){
+  const s = oauthLoad();
+  if (!s || !s.t || num(s.exp) <= Date.now()) return false;
+  if (state.account || oauthResuming || state.authBusy) return false;
+  oauthResuming = true;
+  oauthSetStatus("Reconnecting to Deriv…", "");
+  try {
+    await oauthFinalize(s.t);
+    oauthSave({ pend: 0 });
+    /* The same words the normal callback ends on — and saying them is what takes the stale
+       "Reconnecting…" line and the retry button away. authorizeWithToken already toasted which side
+       opened, so this card's remaining job is to get out of the way. */
+    oauthPinned("Signed in on the " + (state.account && state.account.isVirtual ? "DEMO" : "REAL") +
+      " account. The session ends by itself after about an hour.", "good");
+    closeAuth();
+    showTab("dashboard");
+    return true;
+  } catch(e){
+    console.error("Sign-in could not be resumed:", e);
+    if (!apiTransient(e)) oauthSave({ pend: 0 });   // a refusal is final — stop offering the retry
+    oauthPinned(oauthFriendly(e), "bad");
+    openAuth();
+    return false;
+  } finally { oauthResuming = false; }
 }
 async function startOAuthLogin(){
   oauthNote = null;                       // the client is acting again — drop any carried-over result
@@ -11415,9 +11504,23 @@ async function handleOAuthCallback(){
   try { sessionStorage.removeItem(OAUTH_STATE_KEY); } catch(e){}
   oauthSetStatus("Exchanging the Deriv code for a session…", "");
   const ex = await oauthExchange(code, rec);
-  oauthSave({ t: ex.token, exp: Date.now() + ex.expMs - 60000, cid: rec.cid, rid: rec.rid });
+  oauthSave({ t: ex.token, exp: Date.now() + ex.expMs - 60000, cid: rec.cid, rid: rec.rid, pend: 1 });
   state.oauth = { clientId: rec.cid, scopes: rec.scopes, expiresInSec: Math.round(ex.expMs / 1000) };
-  const acct = await authorizeWithToken(ex.token, "", "oauth", false, false, null);
+  let acct;
+  try {
+    acct = await oauthFinalize(ex.token);
+  } catch(e){
+    /* Deriv has already said yes: the token is real and still in this tab, so the client is not walked
+       back through their sign-in page for a blip on the way to the WebSocket. The retry button is here,
+       and the next load retries by itself. */
+    console.error("Sign-in did not complete:", e);
+    if (!apiTransient(e)) oauthSave({ pend: 0 });
+    oauthPinned(oauthFriendly(e), "bad");
+    toast("Sign-in did not complete: " + oauthFriendly(e), "error", 9000);
+    openAuth();
+    return false;
+  }
+  oauthSave({ pend: 0 });
   if (acct){
     /* No login id in the UI (Round 38 rule) and no paragraph — the session simply opens. */
     oauthPinned("Signed in on the " + (acct.isVirtual ? "DEMO" : "REAL") + " account. The session ends by itself after about an hour.", "good");
@@ -12046,6 +12149,13 @@ function init(){
   $("#authModal").addEventListener("click", e => { if (e.target === $("#authModal")) closeAuth(); });
   // per-client Deriv OAuth sign-in
   $("#oauthLoginBtn").addEventListener("click", () => startOAuthLogin());
+  /* Round 102: finish a sign-in Deriv already approved. The token is still in this tab, so this never
+     goes back through their sign-in page; the button hides itself as soon as a session exists. */
+  $("#oauthRetryBtn").addEventListener("click", e => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    oauthResume().catch(() => {}).then(() => { b.disabled = false; });
+  });
   $("#oauthCopyBtn").addEventListener("click", () => {
     const uri = oauthRedirectUri();
     const told = () => toast("Redirect URI copied — paste it into your Deriv OAuth app settings", "success");
@@ -12347,6 +12457,8 @@ function init(){
     auth: { start: startOAuthLogin, callback: handleOAuthCallback, session: oauthLoad, clear: oauthClear,
             redirect: oauthRedirectUri, env: oauthEnvProblem, refresh: oauthRefreshUi, expire: oauthExpired,
             clientId: oauthClientId, scopes: oauthScopes,
+            /* Round 102: the stalled-sign-in repair, readable and drivable from the console. */
+            resume: oauthResume, pending: oauthPending, friendly: oauthFriendly, transient: apiTransient,
             authorize: authorizeWithToken },
     scanPop: { open: scanPopOpen, close: scanPopClose, render: scanPopRender, state: scanPop, defs: SCAN_POP },
     copy: { state: COPY, add: copyAddFromText, broadcast: copyBroadcast, test: copyTest, payload: copyPayload,
@@ -12369,10 +12481,15 @@ function init(){
   /* If Deriv just redirected a client back here with an authorization code, finish that sign-in.
      Awaiting nothing here: a failure must never stop the rest of the page from working. */
   handleOAuthCallback().catch(e => {
-    const msg = (e && e.code ? e.code + " — " : "") + (e && e.message ? e.message : String(e));
+    console.error("Sign-in did not complete:", e);
+    const msg = oauthFriendly(e);
     oauthPinned("Sign-in did not complete: " + msg, "bad");
     toast("Sign-in did not complete: " + msg, "error", 9000);
     openAuth();
+  }).then(() => {
+    /* Round 102: a sign-in that got its token but lost the last leg finishes itself on this load rather
+       than leaving the client staring at a red box until they happen to find a button. */
+    if (oauthPending()) oauthResume().catch(() => {});
   });
 }
 document.addEventListener("DOMContentLoaded", init);
