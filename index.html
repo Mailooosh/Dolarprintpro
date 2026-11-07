@@ -293,8 +293,12 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .wbtns{display:flex;gap:5px}
 .wbtn{padding:4px 10px;border-radius:5px;border:1px solid var(--line2);background:transparent;color:var(--muted);font:600 11px var(--mono);cursor:pointer}
 .wbtn.active{background:var(--dv-soft);border-color:var(--dv);color:var(--dv-hi)}
-/* Bot 11's RUN sits in the window-selector row — offset it so it reads as a control, not a 7th tick chip. */
-.winrun{margin-left:9px;white-space:nowrap}
+/* Bot 11's floating RUN keeps the same button renderer and press path as the card. Inline coordinates,
+   rather than a transient class, survive renderBot() replacing the button's className. */
+.winrun{margin:0;white-space:nowrap}
+#b11_mini{position:fixed;left:12px;top:120px;right:auto;z-index:80;min-height:36px;touch-action:none;
+  user-select:none;-webkit-user-select:none;cursor:grab;box-shadow:0 7px 22px rgba(3,7,12,.24),0 0 0 1px var(--line2)}
+#b11_mini[data-dragging="true"]{cursor:grabbing;opacity:.92;box-shadow:0 12px 30px rgba(3,7,12,.34),0 0 0 2px var(--dv)}
 #distBars{position:relative;display:flex;gap:6px;align-items:stretch;height:170px;margin-top:14px}
 .dcol{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
 .dcol .pct{font:700 11px var(--mono);color:var(--muted);margin-bottom:4px}
@@ -814,10 +818,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .b11run{margin:9px 11px;padding:9px 10px;font-size:12px}
   .b11run .b11kv{gap:2px 12px}
   .b11run .b11kv span{white-space:normal}
-  /* Six tick chips plus Bot 11's RUN measure ~380px, which is wider than a 360px card's content box —
-     on phone widths the group breaks onto its own line instead of pushing the page sideways. */
+  /* Six tick chips wrap on narrow cards; Bot 11's RUN is a separate fixed control. */
   #winBtns{flex-wrap:wrap;gap:4px}
-  #winBtns .winrun{margin-left:0}
+  #b11_mini{min-height:42px;padding:9px 12px}
   .drunbar{padding:8px;gap:8px}
   /* RUN/STOP takes the row, Reset rides beside it, the status strip drops to its own line below */
   .drunbar .btn-big{flex:1 1 auto;min-width:0;padding:12px 14px;font-size:13.5px}
@@ -1321,6 +1324,9 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
   <button class="tabbtn" data-tab="copy">COPY TRADING</button>
 </nav>
 
+<button class="btn btn-xs btn-green winrun" id="b11_mini" type="button" data-word="BOT 11"
+  title="Click to start or stop BOT 11 with the Custom Run settings. Drag with a mouse or finger to move this button; dragging never starts or stops a run.">▶ RUN BOT 11</button>
+
 <div class="wrap">
 
 <!-- ============ DASHBOARD ============ -->
@@ -1335,7 +1341,6 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
         <button class="wbtn" data-w="250">250</button>
         <button class="wbtn" data-w="500">500</button>
         <button class="wbtn" data-w="1000">1000</button>
-        <button class="btn btn-xs btn-green winrun" id="b11_mini" type="button" data-word="BOT 11" title="Start or stop BOT 11 · Custom Run below — same one press as the RUN in that card: it locks the run from the settings there and buys on the window you picked here">▶ RUN BOT 11</button>
       </span>
       <span class="r" id="distMeta"></span>
     </h3>
@@ -9120,6 +9125,77 @@ function closeRunPop(){
   const m = $("#runPop");
   if (m) m.classList.add("hidden");
 }
+const B11_FLOAT_KEY = "dt_b11_float_v1";
+function initB11Float(){
+  const mini = $("#b11_mini");
+  let drag = null, suppressClickUntil = 0;
+  const place = (left, top) => {
+    const pad = 6, r = mini.getBoundingClientRect();
+    const x = Math.min(Math.max(pad, left), Math.max(pad, window.innerWidth - r.width - pad));
+    const y = Math.min(Math.max(pad, top), Math.max(pad, window.innerHeight - r.height - pad));
+    mini.style.left = x + "px";
+    mini.style.top = y + "px";
+    return { left: x, top: y };
+  };
+  const save = () => {
+    const r = mini.getBoundingClientRect();
+    store.set(B11_FLOAT_KEY, JSON.stringify({ left: Math.round(r.left), top: Math.round(r.top) }));
+  };
+  let saved = null;
+  try { saved = JSON.parse(store.get(B11_FLOAT_KEY) || "null"); } catch (e) {}
+  if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) place(saved.left, saved.top);
+  else {
+    const anchor = $("#winBtns").getBoundingClientRect(), r = mini.getBoundingClientRect();
+    place(anchor.right + 9, anchor.top + (anchor.height - r.height) / 2);
+  }
+  const finish = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const moved = drag.moved, id = drag.id;
+    drag = null;
+    delete mini.dataset.dragging;
+    if (mini.hasPointerCapture(id)) mini.releasePointerCapture(id);
+    if (moved){
+      suppressClickUntil = performance.now() + 800;
+      save();
+      e.preventDefault();
+    }
+  };
+  mini.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || e.isPrimary === false) return;
+    suppressClickUntil = 0;
+    const r = mini.getBoundingClientRect();
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: r.left, top: r.top, moved: false };
+    mini.setPointerCapture(e.pointerId);
+  });
+  mini.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved){
+      if (Math.hypot(dx, dy) < (e.pointerType === "touch" ? 8 : 5)) return;
+      drag.moved = true;
+      mini.dataset.dragging = "true";
+    }
+    place(drag.left + dx, drag.top + dy);
+    e.preventDefault();
+  });
+  mini.addEventListener("pointerup", finish);
+  mini.addEventListener("pointercancel", finish);
+  mini.addEventListener("lostpointercapture", finish);
+  mini.addEventListener("click", e => {
+    if (e.detail !== 0 && performance.now() < suppressClickUntil){
+      suppressClickUntil = 0;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    $("#b11_toggle").click();
+  });
+  window.addEventListener("resize", () => {
+    const r = mini.getBoundingClientRect();
+    place(r.left, r.top);
+    save();
+  });
+}
 function initB11UI(){
   b11FillContracts();
   $("#b11_trade").addEventListener("change", () => {
@@ -9148,8 +9224,6 @@ function initB11UI(){
     if (!bot11.run && !b11CreateRun({ quiet: true })) return;
     bot11.start({ skipConfirm: true });
   });
-  /* The small RUN in the distribution header drives the control above rather than duplicating it. */
-  $("#b11_mini").addEventListener("click", () => $("#b11_toggle").click());
   /* Round 86 — the monitor. Its own RUN/STOP delegates to the card button so one press path decides
      everything, and the scrim covering the page is exactly why that control lives inside it. */
   $("#b11_pop").addEventListener("click", () => openRunPop(bot11));
@@ -9167,6 +9241,7 @@ function initB11UI(){
     if (!$("#runPop").classList.contains("hidden")) closeRunPop();
   });
   renderBot(bot11);
+  initB11Float();
 }
 /* ================= BOT 12 · DIFFERS BOT (the user's rule of 2 Nov 2026) =================
    Asked for in one sentence: "ai picks the least appearing digit which is redbar and if it goes a loss
