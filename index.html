@@ -1379,10 +1379,11 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <label>Stake cap<input type="number" id="b11_maxstake" value="10" min="1" step="1" title="Martingale stake never exceeds this — the ladder resets to base stake instead"></label>
       <label>Take profit<input type="number" id="b11_tp" value="5" min="0" step="0.5" title="Stop the bot once run P/L reaches +this (0 = off)"></label>
       <label>Stop loss<input type="number" id="b11_sl" value="10" min="0" step="0.5" title="Stop the bot once run P/L falls to −this (0 = off)"></label>
+      <label>Move with the volatility I pick<input type="checkbox" id="b11_followvol" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="Round 104 (your rule of 6 Nov): everything you change on THIS card — contract type, stake, martingale, cap, window, duration, TP, SL, the AI floor — is applied to the run by itself, and so is the market in the header: while Bot 11 is trading, switching volatility moves the same run onto the new market and it carries on, holding until that market has enough ticks to name the contract. Untick it to go back to the old rule, where changing the volatility stops Bot 11 and waits for you to press RUN again. Nothing else changes either way"></label>
     </div>
     <div class="b11bar">
-      <button class="btn" id="b11_create" title="Saves the settings on this card as the run Bot 11 trades: the contract is named from the current window and locked. RUN saves them for you and starts trading in the same press.">SAVE CHANGES</button>
-      <span class="sub" id="b11_createSub">Names the contract from the current window and saves it as the run. RUN would have done this for you — press it only to see the read-out first.</span>
+      <button class="btn" id="b11_create" title="Reads the contract from the current window and creates the run from this card — the button that exists before there IS a run, and the one that re-validates a fresh one. Every edit you make afterwards is applied by itself (Round 104), so pressing it is only for seeing the read-out.">SAVE CHANGES</button>
+      <span class="sub" id="b11_createSub">Creates the run from this card. You no longer need it after that — change any setting and Bot 11 applies it to the run on its own.</span>
     </div>
     <div class="b11run" id="b11_run">No run created yet.</div>
     <!-- Round 91: the run panel (Summary / Transactions / Journal) is built by buildRunPanels() and lands
@@ -3143,8 +3144,12 @@ async function loadSymbols(){
   if (!syn.some(s => symKey(s) === state.symbol)) state.symbol = symKey(syn[0]);
   sel.value = state.symbol;
 }
-async function changeSymbol(sym){
+async function changeSymbol(sym, opts){
   if (sym === state.symbol) return;
+  /* Round 104: stopping everything on a market change is the long-standing safety, and six callers lean on
+     it to start THEIR bot on the market they picked. Only the header dropdown — the trader's own move —
+     counts here, and only Bot 11 carries across, because that is the card whose run you edit by hand. */
+  const carryB11 = !!(opts && opts.byUser) && bot11.running && !!bot11.run;
   state.symbol = sym; store.set("dt_symbol", sym);
   const sel = $("#symbolSelect");   // keep the header dropdown in sync with auto-picks too
   if (sel && sel.querySelector('option[value="' + sym + '"]')) sel.value = sym;
@@ -3153,6 +3158,12 @@ async function changeSymbol(sym){
   renderBots();
   await subscribeTicks();
   scanSyncFeeds();   // move scanner feeds around the new main symbol
+  if (carryB11 && $("#b11_followvol").checked){
+    b11SyncNow();                       // the run now belongs to this market, not the one it was locked on
+    bot11.start({ skipConfirm: true });
+    toast("Bot 11 moved to " + sym + " with the same run and is trading it — it waits for " + sym +
+      "'s ticks before the first contract", "info", 8000);
+  }
 }
 function onNewTick(){
   renderTickPanel(); renderDistribution(); renderCoverage(); renderMatrix(); renderRiseFall(); renderLoadBotStatus(); drawPriceChart();
@@ -5885,7 +5896,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
   /* b11_contract is NOT here on purpose: its option list is rebuilt when the family changes, and a
      restored stale value would leave an empty select. It persists as its own dt_b11_contract key. */
-  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
+  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl","b11_followvol",
   "b12_stake","b12_dur","b12_win","b12_rec","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","preQuote","virtCount","winStreak","cashSound","aiVoice"];
@@ -8831,6 +8842,7 @@ function b11FillContracts(){
 }
 function b11CreateRun(opts){
   if (bot11.running){ toast("Bot 11 is running — press STOP before you re-lock its run", "warn", 6000); return null; }
+  if (b11ApplyTimer){ clearTimeout(b11ApplyTimer); b11ApplyTimer = null; }   // the snapshot below already carries the live card
   const c = cfg11(), r = b11Read(c);
   bot11.run = null; bot11.lossStreak = 0; bot11.runLossAmt = 0; bot11.side = "";
   if (!r.ok){
@@ -8847,6 +8859,51 @@ function b11CreateRun(opts){
   renderBot(bot11);
   return bot11.run;
 }
+/* Round 104 (your rule of 6 Nov: "automatically detect when i change vol and contract type and all the
+   other option e.g stake — no need to click save changes"). The card is the run: every field on it, plus
+   the market in the header, is pushed into the locked snapshot as soon as you change it, WHILE THE BOT IS
+   TRADING, so the next decision (~0.05 s) already uses your new numbers. SAVE CHANGES still exists and
+   still creates/validates a run, but it is no longer the thing that makes an edit take effect. */
+const B11_FIELD_TXT = { trade: "family", kind: "contract", win: "window", confOn: "AI gate", minConf: "AI minimum",
+  barrier: "barrier", dur: "duration", stake: "stake", mult: "martingale", maxStake: "stake cap",
+  tp: "take profit", sl: "stop loss" };
+function b11ValTxt(k, v){
+  if (k === "trade") return B11_LAB_TXT[v] || String(v);
+  if (k === "mult") return "×" + fmt(v);
+  if (k === "stake" || k === "maxStake" || k === "tp" || k === "sl") return fmt(v);
+  if (k === "win" || k === "dur") return v + " tick" + (+v === 1 ? "" : "s");
+  if (k === "minConf") return v + "%";
+  if (k === "confOn") return v ? "on" : "off";
+  return String(v);
+}
+function b11Apply(){
+  if (!bot11.run) return;                       // no run yet: the card is already what the bot reads
+  const before = bot11.run.cfg, now = cfg11(), diff = [];
+  Object.keys(now).forEach(k => { if (String(before[k]) !== String(now[k])) diff.push(k); });
+  const moved = bot11.run.market !== state.symbol;
+  if (!diff.length && !moved) return;
+  bot11.run.cfg = now; bot11.run.market = state.symbol;
+  /* A different CONTRACT is a different bet, so a recovery ladder built against the old one cannot carry
+     across it — the same rule AUTO already applies when it flips a side. Stakes, the cap, TP/SL, the window,
+     the duration and the AI floor are sizes and thresholds, not bets: the ladder stays exactly where it is
+     and simply recomputes off your new base. */
+  const newBet = diff.some(k => k === "trade" || k === "kind" || k === "barrier");
+  if (newBet){ bot11.lossStreak = 0; bot11.runLossAmt = 0; bot11.side = ""; }
+  const parts = diff.map(k => B11_FIELD_TXT[k] + " " + b11ValTxt(k, before[k]) + " → " + b11ValTxt(k, now[k]));
+  if (moved) parts.unshift("market → " + state.symbol);
+  bot11.sys("Applied from the card as you changed it — " + parts.join(", ") +
+    (newBet ? " · that is a different contract, so the ladder starts again at base stake" : ""));
+  toast("Bot 11 picked up " + parts.slice(0, 3).join(", ") + (parts.length > 3 ? " +" + (parts.length - 3) + " more" : "") +
+    " — no SAVE CHANGES needed", "info", 6000);
+  renderBot(bot11);
+}
+/* Typing is the one hazard in "apply it live": a field mid-edit ("0." or empty) clamps to its minimum, so
+   applying on every keystroke could trade a stake nobody typed. The apply therefore waits for 400 ms of
+   quiet, which also turns a run of keystrokes into one journal line instead of seven. Selects, the market
+   dropdown and SAVE CHANGES apply at once — nothing half-typed can reach them. */
+let b11ApplyTimer = null;
+function b11Sync(){ if (!bot11.run) return; if (b11ApplyTimer) clearTimeout(b11ApplyTimer); b11ApplyTimer = setTimeout(b11Apply, 400); }
+function b11SyncNow(){ if (b11ApplyTimer){ clearTimeout(b11ApplyTimer); b11ApplyTimer = null; } b11Apply(); }
 /* Round 97 — the DIFFERS BOT's live window read and its exposure line, both repainted by renderBot() so the
    card can never drift from what planNext() is about to buy. No new CSS classes: it writes into the two
    blocks the card already has, and every number in it is the same one the bot trades on. */
@@ -8921,12 +8978,13 @@ function renderB11Panels(b){
     box.className = "b11run";
     box.innerHTML = "No run locked. The settings above are live — press <b>▶ RUN</b> and this card snapshots them into a run and trades it at once (no dialog, no second option). " +
       "Press <b>SAVE CHANGES</b> only if you want to see the numbers first.";
-    if (cs) cs.textContent = "Names the contract from the current window and saves it as the run. RUN would have done this for you — press it only to see the read-out first.";
+    if (cs) cs.textContent = "Creates the run from this card. You no longer need it after that — change any setting and Bot 11 applies it to the run on its own.";
     return;
   }
-  /* b.cfg() IS the locked snapshot, so "did the card change after locking" has to be measured against
-     cfg11() — the live inputs — or the run can never look stale and the trader edits settings that do nothing. */
-  const rc = b.run.cfg, r = b11Read(rc), same = JSON.stringify(rc) === JSON.stringify(cfg11());
+  /* b.cfg() IS the run's own snapshot, and Round 104 keeps it equal to the card a moment after you stop
+     typing, so this line is now the "applying" window rather than the old "your edit is being ignored"
+     warning — it disappears by itself, and the run never trades numbers nobody typed. */
+  const rc = b.run.cfg, r = b11Read(rc), pending = JSON.stringify(rc) !== JSON.stringify(cfg11()) || b.run.market !== state.symbol;
   const kv = [
     ["MARKET", b.run.market + (b.run.market === state.symbol ? "" : " → now " + state.symbol), b.run.market === state.symbol ? "" : "down"],
     ["FAMILY", B11_LAB_TXT[rc.trade] || rc.trade, ""],
@@ -8944,9 +9002,10 @@ function renderB11Panels(b){
     ["THIS WINDOW", r.ok ? fmt(r.p, 1) + "% ⇒ EV " + fmtS(r.ev) + " per 1.00" : r.why, r.ok ? (r.ev >= 0 ? "up" : "down") : ""]
   ];
   box.className = "b11run locked";
-  box.innerHTML = "<b>Locked run</b><span class=\"b11tag\">" + (b.running ? (b.busy ? "TRADING · ORDER LIVE" : "TRADING") : "STANDBY") +
+  box.innerHTML = "<b>Live run</b><span class=\"b11tag\">" + (b.running ? (b.busy ? "TRADING · ORDER LIVE" : "TRADING") : "STANDBY") +
     "</span><span class=\"b11tag\">created " + new Date(b.run.made).toLocaleTimeString() + "</span>" +
-    (same ? "" : "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ The settings on this card have changed since the run was saved — the run still trades what it was created with. Press <b>SAVE CHANGES</b> to save the new values over it (press STOP first if it is running).</div>") +
+    "<span class=\"b11tag\">follows this card</span>" +
+    (pending ? "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ Applying the settings you just changed to the run — Bot 11 does it a moment after you stop typing, no button needed.</div>" : "") +
     "<div class=\"b11kv\">" + kv.map(x => "<span>" + x[0] + " <b class=\"" + x[2] + "\">" + x[1] + "</b></span>").join("") + "</div>" +
     (r.ok ? "" : "<div class=\"note\" style=\"margin:6px 0 0\">It cannot place a contract right now: " + r.why + ".</div>") +
     (rc.confOn && r.ok && (r.conf == null || r.conf < rc.minConf)
@@ -9059,14 +9118,22 @@ function closeRunPop(){
 function initB11UI(){
   b11FillContracts();
   $("#b11_trade").addEventListener("change", () => {
-    b11FillContracts(); saveSettings(); renderBots();
+    b11FillContracts(); saveSettings(); b11SyncNow(); renderBots();
     const c11 = cfg11();
     toast("Bot 11 family set to " + B11_LAB_TXT[c11.trade] + " — contract type " +
       (c11.kind === "AUTO" ? "AUTO, re-read from your window on every 0.5 second decision" : c11.kind + ", locked until you change it"), "info", 6000);
   });
   $("#b11_contract").addEventListener("change", () => {
     const m = b11KindMap(); m[cfg11().trade] = $("#b11_contract").value; store.set("dt_b11_contract", JSON.stringify(m));
-    renderBots();
+    b11SyncNow(); renderBots();
+  });
+  /* Round 104: the market dropdown is a programmatic change path too, so the follow-vol switch is read here
+     rather than assumed; changing the volatility re-targets the run on its own (see changeSymbol). */
+  $("#b11_followvol").addEventListener("change", () => {
+    saveSettings(); renderBots();
+    toast($("#b11_followvol").checked
+      ? "Bot 11 will move to a new volatility by itself — change the market in the header and it carries this run across and keeps trading"
+      : "Bot 11 will stop when you change the volatility and wait for you to press RUN on the new market", "info", 7000);
   });
   $("#b11_create").addEventListener("click", () => b11CreateRun());
   /* ONE press. No run locked -> lock it from the live settings, then start it with skipConfirm:
@@ -12407,7 +12474,7 @@ function init(){
     saveSettings();
   }));
   // symbol
-  $("#symbolSelect").addEventListener("change", e => changeSymbol(e.target.value));
+  $("#symbolSelect").addEventListener("change", e => changeSymbol(e.target.value, { byUser: true }));
   // auth
   $("#authBtn").addEventListener("click", () => { if (state.account) logout(); else openAuth(); });
   $("#acctSelect").addEventListener("change", e => {
@@ -12527,7 +12594,7 @@ function init(){
    "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
    "b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
    "b12_win","b12_dur","b12_stake","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl"]
-    .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { renderBots(); saveSettings(); }); });
+    .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { if (id.indexOf("b11_") === 0) b11Sync(); renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
   /* the every-tick switch is a checkbox: re-render the card so its label shows the new mode at once */
   $("#b10_every").addEventListener("change", () => { renderBots(); saveSettings(); toast($("#b10_every").checked
