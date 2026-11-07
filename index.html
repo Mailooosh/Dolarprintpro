@@ -2665,6 +2665,163 @@ const WS_ENDPOINTS = [
   { label: "ws.derivws.com", build: id => "wss://ws.derivws.com/websockets/v3?app_id=" + encodeURIComponent(id) },
   { label: "ws.binaryws.com", build: id => "wss://ws.binaryws.com/websockets/v3?app_id=" + encodeURIComponent(id) }
 ];
+/* ================= Round 103 — the proposal pace gate =================
+   Deriv answers too many `proposal` requests on one connection with
+   {"code":"RateLimit","message":"You have reached the rate limit for proposal…"} — the error a client
+   reported on 2026-11-05. The requests that cause it are all ours, and they come from everywhere at once:
+   the Round 100 pre-quote cache re-prices up to 8 shapes on timers (measured ≈3 a second with NOTHING
+   trading), the AI desks fire bursts of 9–12 read-only payout quotes, every cache miss adds another per
+   entry, and each quote drags a `forget` behind it. Ten call sites cannot each be trusted to behave, so the
+   limit lives in the one place they all pass through — the socket.
+   Deriv publishes the number (developers.deriv.com/docs/limits): "Calls counted together: proposal,
+   proposal_open_contract, buy, sell. Per minute: 360. Per hour: 14,400." That is the real ceiling, and it is
+   why pacing proposals alone was not enough — one entry costs a price request, a buy and the contract's own
+   request, so a bot trading every half-second spends the minute budget on its own. Two things follow: the
+   window below counts ALL FOUR call types whatever they come from, and when it runs out it is background
+   pricing that is dropped, never the order path.
+   On top of the window, the pace still learns from Deriv's answers: a refusal costs a cool-down, three
+   refusals cost a whole slot of the per-second capacity, and 20 accepted requests give the slot back.
+   Requests that stand between the trader and an order (tier "hot") are only ever spaced, never dropped;
+   background pricing is dropped instead of queued, because a price that arrives late is a price about a
+   tick that has already gone.
+   WHAT gets bought is untouched by any of this.                                                  */
+const PACE_CAP = 5;          // proposals per second we ask for, at most (and the ceiling we climb back to)
+const PACE_BG_CAP = 3;       // of those, the share background pricing may use
+const PACE_BG_WAIT = 4000;   // background work that cannot go out inside this long is skipped, not queued
+const PACE_COOL_MS = 1500;   // a refusal costs this long before the next proposal goes out (doubles, capped)
+const PACE_COOL_MAX = 12000;
+const PACE_RECOVER = 20;     // this many accepted proposals earn a capacity slot back
+const PACE_MIN_BUDGET = 300;    // of Deriv's 360 counted calls a minute — 60 left for whatever else asks
+const PACE_HOUR_BUDGET = 12000; // of Deriv's 14,400 an hour
+/* The four call types Deriv counts together. Everything else on the socket — ticks, history, pings, forgets —
+   is not part of this budget and must not be made to wait for it. */
+function paceCounted(r){
+  return !!(r && (r.proposal || r.buy || r.sell || r.proposal_open_contract));
+}
+function paceMake(label){
+  return { label, cap: PACE_CAP, q: [], pump: null, pumpAt: 0, next: 0, nextBg: 0, coolUntil: 0,
+    strikes: 0, clean: 0, sent: 0, held: 0, drops: 0, limits: 0, log: [], iMin: 0, iHour: 0 };
+}
+function paceReset(p){
+  if (p.pump) clearTimeout(p.pump);
+  p.pump = null; p.pumpAt = 0; p.q.length = 0;
+  p.cap = PACE_CAP; p.next = 0; p.nextBg = 0; p.coolUntil = 0; p.strikes = 0; p.clean = 0;
+  p.sent = 0; p.held = 0; p.drops = 0; p.limits = 0; p.log.length = 0; p.iMin = 0; p.iHour = 0;
+}
+/* The shared window. Entries leave it on their own, so the two head indexes only ever move forward and the
+   array is compacted once an hour's worth has gone past — nothing is scanned per request. */
+const PACE_MIN_MS = 60000, PACE_HOUR_MS = 3600000;
+function paceTrim(p, now){
+  while (p.iHour < p.log.length && now - p.log[p.iHour] >= PACE_HOUR_MS) p.iHour++;
+  while (p.iMin < p.log.length && now - p.log[p.iMin] >= PACE_MIN_MS) p.iMin++;
+  if (p.iHour > 2000){ const cut = p.iHour; p.log.splice(0, cut); p.iMin -= cut; p.iHour = 0; }
+}
+/* Recorded when the bytes actually go to Deriv — a request this app dropped never spent the account's budget. */
+function paceStamp(p, request, now){
+  if (!p || !paceCounted(request)) return;
+  p.log.push(now); paceTrim(p, now);
+}
+function paceBusy(p, now){ paceTrim(p, now); return p.log.length - p.iMin; }
+/* The earliest instant a counted call may go out without pushing this connection past Deriv's own ceiling,
+   or 0 when there is room. Order path and pricing both have to answer to it. */
+function paceBudgetLine(p, now){
+  if (!p) return 0;
+  paceTrim(p, now);
+  if (p.log.length - p.iHour >= PACE_HOUR_BUDGET) return p.log[p.iHour] + PACE_HOUR_MS;
+  if (p.log.length - p.iMin >= PACE_MIN_BUDGET) return p.log[p.iMin] + PACE_MIN_MS;
+  return 0;
+}
+function paceIsRate(e){
+  return String((e && e.code) || "") === "RateLimit" || /rate limit/i.test(String((e && e.message) || ""));
+}
+/* The earliest a request of this tier may go out. Background pricing waits behind its own share of the
+   budget; a request that stands between the trader and an order waits only behind the single last send. */
+function paceLineFor(p, tier, now){
+  const base = tier === "hot" ? Math.max(p.next, p.coolUntil) : Math.max(p.next, p.nextBg, p.coolUntil);
+  const budget = paceBudgetLine(p, now === undefined ? Date.now() : now);
+  return budget > base ? budget : base;
+}
+function paceDropErr(){
+  return Object.assign(new Error("Deriv is at its request limit, so this background price check was skipped"), { code: "PaceSkip" });
+}
+function paceDropStale(p, now){
+  for (let i = p.q.length - 1; i >= 0; i--){
+    const it = p.q[i];
+    if (it.tier !== "hot" && now - it.added > it.maxWait){
+      p.q.splice(i, 1); p.drops++; it.reject(paceDropErr());
+    }
+  }
+}
+function pacePump(p, at, now){
+  if (p.pump) clearTimeout(p.pump);
+  p.held++;
+  p.pumpAt = at;
+  p.pump = setTimeout(() => { p.pump = null; p.pumpAt = 0; paceFlush(p, Date.now()); }, Math.max(1, at - now));
+}
+function paceFlush(p, now){
+  if (p.pump) return;                       // a timer already owns the next slot
+  paceDropStale(p, now);
+  if (!p.q.length) return;
+  const hotIdx = p.q.findIndex(x => x.tier === "hot");
+  const idx = hotIdx >= 0 ? hotIdx : 0;     // an order's price request cuts in front of pricing work
+  const it = p.q[idx];
+  const line = paceLineFor(p, it.tier, now);
+  if (now < line) return pacePump(p, line, now);
+  const step = 1000 / Math.max(1, p.cap);
+  p.q.splice(idx, 1);
+  p.next = now + step;
+  p.nextBg = it.tier === "bg" ? Math.max(now + Math.max(step, 1000 / Math.max(1, PACE_BG_CAP)), p.next)
+                              : Math.max(p.nextBg, p.next);
+  p.sent++;
+  it.resolve();
+  const t2 = Date.now();
+  paceDropStale(p, t2);
+  if (p.q.length) pacePump(p, Math.max(paceLineFor(p, p.q.findIndex(x => x.tier === "hot") >= 0 ? "hot" : "bg"), t2), t2);
+}
+/* Resolves when this proposal may go out; rejects only background work that went stale while it waited. */
+function paceAsk(p, tier, maxWait){
+  return new Promise((resolve, reject) => {
+    p.q.push({ tier, maxWait, added: Date.now(), resolve, reject });
+    /* Re-arm the pump for the order path: a background slot must never decide when a trade may ask for a price. */
+    if (tier === "hot" && p.pump && p.pumpAt > paceLineFor(p, "hot")){ clearTimeout(p.pump); p.pump = null; p.pumpAt = 0; }
+    paceFlush(p, Date.now());
+  });
+}
+function paceRefused(p){
+  const now = Date.now();
+  p.limits++; p.strikes++; p.clean = 0;
+  const cool = Math.min(PACE_COOL_MAX, PACE_COOL_MS * Math.pow(2, Math.min(p.strikes - 1, 3)));
+  /* The cool-down belongs ONLY to coolUntil, which paceLineFor already folds into both tiers. Stamping it
+     into the send-spacing too made the line monotonic, so an old long refusal kept holding the queue after
+     a newer short one — a 1.5s pause measured as 6s. Never shorten a cool-down already in force. */
+  p.coolUntil = Math.max(p.coolUntil, now + cool);
+  /* Three refusals inside one cool-down means the cap itself is above what this account is being allowed,
+     not that we were one millisecond early — so give Deriv a whole slot rather than waiting again. */
+  if (p.strikes >= 3 && p.cap > 1){ p.cap--; p.strikes = 0; }
+  if (p.pump){ clearTimeout(p.pump); p.pump = null; p.pumpAt = 0; }
+  paceFlush(p, Date.now());
+  return cool;
+}
+function paceAccepted(p){
+  if (p.strikes){ p.strikes = 0; return; }
+  if (++p.clean >= PACE_RECOVER && p.cap < PACE_CAP){ p.cap++; p.clean = 0; }
+}
+function paceCoolMs(p){ return p ? Math.max(0, p.coolUntil - Date.now()) : 0; }
+function paceGate(p, request, opts, go){
+  if (!request || !request.proposal) return go();          // buys, ticks, forgets: never touched
+  const tier = opts && opts.hot ? "hot" : "bg";
+  const maxWait = opts && opts.maxWait !== undefined ? opts.maxWait : (tier === "hot" ? Infinity : PACE_BG_WAIT);
+  return paceAsk(p, tier, maxWait).then(go);
+}
+/* Deriv's error sentences are written for developers. A client needs the next move, not the JSON. */
+function apiHuman(e){
+  const c = String((e && e.code) || ""), m = String((e && e.message) || "");
+  if (paceIsRate(e)) return "Deriv allows a fixed number of price and order requests a minute and we reached it — the app is pacing itself now, so this passes by itself. If it keeps happening, untick Pre-quote in Settings.";
+  if (c === "PaceSkip") return "A background price check was skipped to stay inside Deriv's request limit.";
+  if (c === "Timeout") return "Deriv did not answer that request in time and it was dropped.";
+  if (c === "Disconnected" || c === "NetworkError") return "The connection to Deriv dropped — reconnecting.";
+  return (m || "unknown error").replace(/\s+/g, " ").slice(0, 180);
+}
 class DerivAPI {
   constructor(){
     this.ws = null; this.appId = store.get("dt_app_id") || "1089";
@@ -2672,6 +2829,7 @@ class DerivAPI {
     this.connected = false; this.pingTimer = null; this._manual = false;
     this.hostIdx = 0; this.failCount = 0;
     this.otpProvider = null;   // account sessions: async () => fresh single-use session URL
+    this.prop = paceMake("main");   // Round 103: one proposal budget per connection
     this.onConnect = () => {}; this.onDisconnect = () => {};
   }
   async connect(){
@@ -2746,10 +2904,14 @@ class DerivAPI {
     if (msg.error){
       const err = new Error(msg.error.message || "Unknown API error");
       err.code = msg.error.code || "APIError";
+      /* Round 103: the number that sets the pace is Deriv's, so it is learned here rather than guessed at
+         by whichever call site happened to be the unlucky one. Only a request's first reply counts. */
+      if (h.prop && !h.settled){ if (paceIsRate(err)) paceRefused(this.prop); else paceAccepted(this.prop); }
       if (!h.settled){ h.settled = true; h.reject(err); }
       this.pending.delete(rid);
       return;
     }
+    if (h.prop && !h.settled) paceAccepted(this.prop);
     if (h.onUpdate) h.onUpdate(msg);
     if (!h.settled){ h.settled = true; h.resolve(msg); }
     if (!h.onUpdate) this.pending.delete(rid);
@@ -2761,25 +2923,42 @@ class DerivAPI {
     }
     this.pending.clear();
   }
-  send(request, timeoutMs){
+  /* Round 103: everything that is not a proposal still goes out on the line it always used. A proposal asks
+     the pace gate for a slot first; a socket that is already down fails now rather than after a wait. */
+  send(request, timeoutMs, opts){
+    if (!this._paced(request)) return this._send(request, timeoutMs);
+    return paceGate(this.prop, request, opts, () => this._send(request, timeoutMs));
+  }
+  subscribe(request, onUpdate, timeoutMs, opts){
+    if (!this._paced(request)) return this._subscribe(request, onUpdate, timeoutMs);
+    return paceGate(this.prop, request, opts, () => this._subscribe(request, onUpdate, timeoutMs));
+  }
+  _paced(request){
+    if (!request || !request.proposal) return false;
+    if (!this.ws || this.ws.readyState !== 1) return false;
+    return true;
+  }
+  _send(request, timeoutMs){
     if (!this.ws || this.ws.readyState !== 1) return Promise.reject(Object.assign(new Error("not connected"), { code: "Disconnected" }));
     const req_id = ++this.reqId;
     const ms = timeoutMs === undefined ? 20000 : timeoutMs;
     return new Promise((resolve, reject) => {
-      const h = { resolve, reject, settled: false, timer: null };
+      const h = { resolve, reject, settled: false, timer: null, prop: !!(request && request.proposal) };
       this.pending.set(req_id, h);
       this._armTimeout(h, req_id, ms);
+      paceStamp(this.prop, request, Date.now());   // Round 103: Deriv's budget counts buy/sell too
       this.ws.send(JSON.stringify(Object.assign({}, request, { req_id })));
     });
   }
-  subscribe(request, onUpdate, timeoutMs){
+  _subscribe(request, onUpdate, timeoutMs){
     if (!this.ws || this.ws.readyState !== 1) return Promise.reject(Object.assign(new Error("not connected"), { code: "Disconnected" }));
     const req_id = ++this.reqId;
     const ms = timeoutMs === undefined ? 20000 : timeoutMs;
     return new Promise((resolve, reject) => {
-      const h = { resolve, reject, onUpdate, settled: false, timer: null };
+      const h = { resolve, reject, onUpdate, settled: false, timer: null, prop: !!(request && request.proposal) };
       this.pending.set(req_id, h);
       this._armTimeout(h, req_id, ms);   // only guards the FIRST message — updates keep flowing after it clears
+      paceStamp(this.prop, request, Date.now());   // Round 103: Deriv's budget counts buy/sell too
       this.ws.send(JSON.stringify(Object.assign({}, request, { req_id })));
     });
   }
@@ -4135,14 +4314,19 @@ function propForget(key){
   if (w.subId && w.reqId) api.drop(w.reqId);
 }
 function propClearAll(){ for (const k of Array.from(propWarm.keys())) propForget(k); }
-function propArm(key){
+function propArm(key, delay){
   const w = propWarm.get(key);
   if (!w) return;
   if (w.timer) clearTimeout(w.timer);
+  /* Round 103: this is also where a shape nobody trades any more dies. propPrune only ran inside
+     warmProposal — which stops being called the moment the bots do — so an individual STOP left its shapes
+     re-pricing on timers indefinitely: measured ~3 Deriv requests a second with NOTHING trading, which is
+     exactly the traffic that trips the proposal limit. The cache now reaps itself where it re-arms. */
+  if (Date.now() - w.used > PROP_KEEP_MS){ propForget(key); return; }
   /* The re-quote loop must not starve the socket the buys themselves use: with many shapes warm each one
      waits longer, so the background traffic stays bounded no matter how full the cache is. */
   const stretch = Math.max(1, Math.min(3, propWarm.size / 4));
-  w.timer = setTimeout(() => { w.timer = null; propQuote(key); }, Math.round(PROP_REFRESH_MS * stretch));
+  w.timer = setTimeout(() => { w.timer = null; propQuote(key); }, Math.round(delay || PROP_REFRESH_MS * stretch));
 }
 /* Ask for a quote again. This is the heart of the speed-up: measured here, a stake-basis DIGIT proposal
    does NOT re-push (one id sat unchanged for 4.5 s on a 1 Hz market and 5 s on R_25), and buying an id
@@ -4150,6 +4334,12 @@ function propArm(key){
 function propQuote(key){
   const w = propWarm.get(key);
   if (!w || !api.connected || !state.account){ if (w) propForget(key); return; }
+  /* Round 103: while Deriv is refusing us, pricing ahead is the work that can wait — an order cannot. This
+     skips the round instead of queueing a quote nobody has asked for, and comes back after the cool-down.
+     The same applies when the minute's budget is already spent by real trading: Deriv counts proposal, buy,
+     sell and proposal_open_contract together, so a bot that is trading has first claim on all 360. */
+  const cool = Math.max(paceCoolMs(api.prop), paceBudgetLine(api.prop, Date.now()) - Date.now());
+  if (cool > PROP_REFRESH_MS){ propArm(key, cool + 250); return; }
   const gen = ++w.gen;
   w.sent = Date.now();
   if (w.subId) api.send({ forget: w.subId }).catch(() => {});
@@ -4169,7 +4359,7 @@ function propQuote(key){
     const pr = msg.proposal;
     if (pr && pr.id){ w.id = pr.id; w.ask = num(pr.ask_price); w.payout = num(pr.payout); w.at = Date.now(); }
   };
-  api.subscribe(propAsk(w.plan, w.sym, w.cur), take, PROP_QUOTE_MS).then(first => {
+  api.subscribe(propAsk(w.plan, w.sym, w.cur), take, PROP_QUOTE_MS, { maxWait: 2000 }).then(first => {
     if (!mine()){ orphan(first); return; }
     take(first);
     propArm(key);
@@ -4203,14 +4393,28 @@ function propAsk(plan, sym, currency){
 function propOn(){ return !!state.preQuote && !propStat.off; }
 /* One line of plain numbers under the switch, because whether Deriv accepts a cached id is something only
    the user's own next run can prove — so the page says it out loud instead of claiming a speed-up. */
+/* Round 103: pacing is invisible until it bites, and invisible pacing reads as a fault. Say what the gate is
+   doing, and that Pre-quote below is the switch that stops the background traffic if the background traffic
+   is what Deriv is refusing. */
+function paceLine(){
+  const p = api.prop, now = Date.now();
+  const busy = paceBusy(p, now);
+  /* Deriv counts 360 trading calls a minute for the whole connection, so under any real use this is the
+     number that matters; it is only shown once it is actually being spent, to keep the card quiet at rest. */
+  if (!p.limits && !p.held && !p.drops && busy < 120) return "";
+  return " · pace " + p.cap + "/s" + (p.limits ? " · Deriv refused " + p.limits + "×" : "") +
+    (p.drops ? " · " + p.drops + " background quote(s) skipped" : "") +
+    (busy >= 120 ? " · " + busy + " of " + PACE_MIN_BUDGET + " Deriv calls this minute" : "") +
+    (paceCoolMs(p) > 400 ? " · waiting " + Math.ceil(paceCoolMs(p) / 1000) + "s" : "");
+}
 function propBadge(){
   const el = $("#preQuoteStat"); if (!el) return;
   if (!state.preQuote){ el.textContent = "OFF — every entry quotes its price first (two Deriv trips)"; return; }
-  if (propStat.off){ el.textContent = "PAUSED — Deriv refused " + propStat.refused + " pre-quotes in a row; untick and tick this box to retry"; return; }
+  if (propStat.off){ el.textContent = "PAUSED — Deriv refused " + propStat.refused + " pre-quotes in a row; untick and tick this box to retry" + paceLine(); return; }
   const t = propStat.hits + propStat.misses;
   el.textContent = t ? propStat.hits + " of " + t + " entries bought in ONE trip" +
-    (propStat.refused ? " · " + propStat.refused + " refused and re-quoted" : "") + " · " + propWarm.size + " shape(s) priced ahead"
-    : "hold a live price for each order shape in the background, so an entry costs ONE Deriv trip instead of two (untick to quote every entry)";
+    (propStat.refused ? " · " + propStat.refused + " refused and re-quoted" : "") + " · " + propWarm.size + " shape(s) priced ahead" + paceLine()
+    : "hold a live price for each order shape in the background, so an entry costs ONE Deriv trip instead of two (untick to quote every entry)" + paceLine();
 }
 function propRefuse(){
   propStat.refused++; propStat.streak++;
@@ -4254,7 +4458,7 @@ async function openPosition(plan){
   } else {
     propStat.misses++;
     if (w && propOn()) propForget(key);                 // a stale shape is re-quoted, not trusted
-    const first = await api.subscribe(propAsk(plan, sym, currency), () => {});
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true });
     pr = first.proposal;
     propSubId = (first.subscription && first.subscription.id) || null;
     propReqId = first.req_id || null;
@@ -4268,7 +4472,7 @@ async function openPosition(plan){
     propRefuse();
     propForget(key);
     warmProposal(plan, sym);
-    const first = await api.subscribe(propAsk(plan, sym, currency), () => {});
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true });
     pr = first.proposal;
     const retry = await api.send({ buy: pr.id, price: pr.ask_price });
     if (first.req_id) api.drop(first.req_id);
@@ -4756,6 +4960,7 @@ class CopierAPI {
     this.token = token; this.ws = null; this.connected = false; this.host = "";
     this.reqId = 0; this.pending = new Map(); this.usedIdx = -1; this.pingTimer = null;
     this.appId = store.get("dt_app_id") || "1089";
+    this.prop = paceMake("follower");   // Round 103: the follower's socket has its own Deriv budget
   }
   /* One attempt per host, in order, and then it stops. DerivAPI behind the main app reconnects forever
      because a dropped market feed only costs a stale chart; a dropped follower socket costs somebody
@@ -4811,10 +5016,12 @@ class CopierAPI {
     if (msg.error){
       const err = new Error(msg.error.message || "Deriv refused this request");
       err.code = msg.error.code || "APIError";
+      if (h.prop && !h.settled){ if (paceIsRate(err)) paceRefused(this.prop); else paceAccepted(this.prop); }
       if (!h.settled){ h.settled = true; h.reject(err); }
       this.pending.delete(rid);
       return;
     }
+    if (h.prop && !h.settled) paceAccepted(this.prop);
     if (h.onUpdate) h.onUpdate(msg);
     if (!h.settled){ h.settled = true; h.resolve(msg); }
     if (!h.onUpdate) this.pending.delete(rid);
@@ -4836,23 +5043,35 @@ class CopierAPI {
     for (const h of this.pending.values()){ if (!h.settled){ h.settled = true; h.reject(e); } }
     this.pending.clear();
   }
-  send(request, ms){
+  /* Round 103: same pace gate as the leader's socket, own budget — a follower that mirrors twelve bots has
+     to ask Deriv for twelve prices a second, and that is exactly the traffic this limit exists for. */
+  send(request, ms, opts){
+    if (!request || !request.proposal || !this.ws || this.ws.readyState !== 1) return this._send(request, ms);
+    return paceGate(this.prop, request, opts, () => this._send(request, ms));
+  }
+  subscribe(request, onUpdate, ms, opts){
+    if (!request || !request.proposal || !this.ws || this.ws.readyState !== 1) return this._subscribe(request, onUpdate, ms);
+    return paceGate(this.prop, request, opts, () => this._subscribe(request, onUpdate, ms));
+  }
+  _send(request, ms){
     if (!this.ws || this.ws.readyState !== 1) return Promise.reject(Object.assign(new Error("not connected"), { code: "Disconnected" }));
     const req_id = ++this.reqId;
     return new Promise((resolve, reject) => {
-      const h = { resolve, reject, settled: false, timer: null };
+      const h = { resolve, reject, settled: false, timer: null, prop: !!(request && request.proposal) };
       this.pending.set(req_id, h);
       this._armTimeout(h, req_id, ms === undefined ? 15000 : ms);
+      paceStamp(this.prop, request, Date.now());   // Round 103: Deriv's budget counts buy/sell too
       this.ws.send(JSON.stringify(Object.assign({}, request, { req_id })));
     });
   }
-  subscribe(request, onUpdate, ms){
+  _subscribe(request, onUpdate, ms){
     if (!this.ws || this.ws.readyState !== 1) return Promise.reject(Object.assign(new Error("not connected"), { code: "Disconnected" }));
     const req_id = ++this.reqId;
     return new Promise((resolve, reject) => {
-      const h = { resolve, reject, onUpdate, settled: false, timer: null };
+      const h = { resolve, reject, onUpdate, settled: false, timer: null, prop: !!(request && request.proposal) };
       this.pending.set(req_id, h);
       this._armTimeout(h, req_id, ms === undefined ? 15000 : ms);
+      paceStamp(this.prop, request, Date.now());   // Round 103: Deriv's budget counts buy/sell too
       this.ws.send(JSON.stringify(Object.assign({}, request, { req_id })));
     });
   }
@@ -4890,7 +5109,11 @@ function copierCanCopy(f){
     && !(f.want === "demo" && f.side === "real");
 }
 function copierErrText(e){
-  const m = e && e.message ? String(e.message) : String(e || "failed");
+  const c = String((e && e.code) || "");
+  let m;
+  if (paceIsRate(e)) m = "Deriv's request limit — it will retry by itself";
+  else if (c === "PaceSkip") m = "skipped to stay inside Deriv's request limit";
+  else m = e && e.message ? String(e.message) : String(e || "failed");
   return m.length > 90 ? m.slice(0, 89) + "…" : m;
 }
 function copierFeedLine(msg, cls){
@@ -4981,7 +5204,12 @@ async function copierPlace(f, job){
   };
   if (plan.barrier !== undefined && plan.barrier !== null) req.barrier = String(plan.barrier);
   req.subscribe = 1;
-  const first = await f.api.subscribe(req, () => {}, 12000);
+  /* Round 103: a proposal Deriv refused for pacing has bought NOTHING, so the caller may try the same copy
+     again. A refusal from any later step must never be retried — that is how one entry becomes two
+     contracts, which is why the flag is set here and nowhere else. */
+  let first;
+  try { first = await f.api.subscribe(req, () => {}, 12000, { hot: true }); }
+  catch(e){ throw Object.assign(e || new Error("Deriv refused the price request"), { notPlaced: true }); }
   const pr = first.proposal || {};
   const propSubId = (first.subscription && first.subscription.id) || null;
   const res = await f.api.send({ buy: pr.id, price: pr.ask_price }, 12000);
@@ -5004,6 +5232,19 @@ async function copierPump(f){
         f.state = "ok";
         copierFeedLine(f.name + " · " + r.type + " on " + symLabel(r.sym) + " · " + fmt(r.stake) + " " + f.currency + " · OK", "ok");
       } catch(e){
+        /* Round 103: Deriv's proposal cap is our own scheduling, not a failed copy — a job that never got as
+           far as a price request goes back on the queue and waits out the cool-down. Three tries, then it is
+           reported and dropped like any other failure, so a refusal cannot loop forever. */
+        if (e && e.notPlaced && paceIsRate(e)){
+          job.tries = (job.tries || 0) + 1;
+          if (job.tries <= 3){
+            f.q.unshift(job);
+            copierFeedLine(f.name + " · hit Deriv's request limit · copy queued again (try " + job.tries + " of 3)", "bad");
+            renderCopier();
+            await sleep(Math.max(1500, paceCoolMs(f.api && f.api.prop) + 200));
+            continue;
+          }
+        }
         f.fails++; COPIER.fails++; f.last = Date.now(); f.info = copierErrText(e);
         copierFeedLine(f.name + " · " + f.info + " · FAILED", "bad");
         const code = String((e && e.code) || "");
@@ -6268,11 +6509,26 @@ class BaseBot {
         this.sys((res.virtual ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + plan.type + (plan.barrier != null ? " " + plan.barrier : "") + " · exit digit " + lastDigitChar(res.exit) + " · " + fmtS(res.profit) + (res.fast ? " · ⚡ 1 TRIP" : " · quoted 2 TRIP"));
         if (this.checkLimits()) break;
       } catch(e){
-        this.failStreak++;
-        this.sys("Error: " + (e.code || "") + " " + e.message);
-        if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
-        if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + e.message, "error"); break; }
-        await sleep(e.code === "RateLimit" ? 30000 : 2500);
+        /* Round 103: a refused price request is OUR pacing, not the trader's mistake — it must not eat the
+           fail streak, must not stop the bot on the fifth blip, and must not print an API sentence nobody can
+           act on. The wait is the pace gate's own cool-down, so the next attempt lands when Deriv allows it. */
+        if (paceIsRate(e)){
+          this.paceFails = (this.paceFails || 0) + 1;
+          this.sys(apiHuman(e));
+          if (!this._paceSaid || Date.now() - this._paceSaid > 60000){
+            this._paceSaid = Date.now();
+            toast(this.name + " is pacing itself — Deriv only allows so many price and order requests a minute", "warn", 7000);
+          }
+          if (this.paceFails >= 5){ this.stop("Deriv kept refusing our price requests — see Pre-quote in Settings"); break; }
+          await sleep(Math.min(30000, Math.max(3000, paceCoolMs(api.prop) + 500)));
+        } else {
+          this.paceFails = 0;
+          this.failStreak++;
+          this.sys("Error: " + (e.code || "") + " " + e.message);
+          if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
+          if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + apiHuman(e), "error"); break; }
+          await sleep(2500);
+        }
       } finally { this.busy = false; }
       await waitGap(BOT_TRADE_GAP_MS);   // Round 87: the next order leaves the moment this one settles
     }
@@ -6665,11 +6921,26 @@ class MatchesBot extends BaseBot {
         if (this.checkLimits()) break;                    // TP / SL take precedence over the first-hit bank
         if (this.hitFlag){ this.bankOnHit(); break; }  // the user's rule: one hit ends the run
       } catch(e){
-        this.failStreak++;
-        this.sys("Error: " + (e.code || "") + " " + e.message);
-        if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
-        if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + e.message, "error"); break; }
-        await sleep(e.code === "RateLimit" ? 30000 : 2500);
+        /* Round 103: a refused price request is OUR pacing, not the trader's mistake — it must not eat the
+           fail streak, must not stop the bot on the fifth blip, and must not print an API sentence nobody can
+           act on. The wait is the pace gate's own cool-down, so the next attempt lands when Deriv allows it. */
+        if (paceIsRate(e)){
+          this.paceFails = (this.paceFails || 0) + 1;
+          this.sys(apiHuman(e));
+          if (!this._paceSaid || Date.now() - this._paceSaid > 60000){
+            this._paceSaid = Date.now();
+            toast(this.name + " is pacing itself — Deriv only allows so many price and order requests a minute", "warn", 7000);
+          }
+          if (this.paceFails >= 5){ this.stop("Deriv kept refusing our price requests — see Pre-quote in Settings"); break; }
+          await sleep(Math.min(30000, Math.max(3000, paceCoolMs(api.prop) + 500)));
+        } else {
+          this.paceFails = 0;
+          this.failStreak++;
+          this.sys("Error: " + (e.code || "") + " " + e.message);
+          if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
+          if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + apiHuman(e), "error"); break; }
+          await sleep(2500);
+        }
       } finally { this.busy = false; }
       renderBot(this);
       await waitGap(BOT_TRADE_GAP_MS);   // Round 87: same zero gap after a multi-leg cycle
@@ -12475,7 +12746,13 @@ function init(){
     /* Round 82: the theme switch, exposed so it can be driven from the console during verification
        without a human clicking, and read without digging through localStorage. */
     theme: { get: () => THEME.now, set: t => themeApply(t, true), toggle: () => themeApply(THEME.now === "light" ? "dark" : "light", true),
-             ink: el => inkFor(el || null), popups: () => SIG_POPUPS } };
+             ink: el => inkFor(el || null), popups: () => SIG_POPUPS },
+    /* Round 103: the proposal pace gate, readable and drivable from the console — `state` is the live budget
+       for this socket, and the rest are the pure functions, so verification can prove the spacing without a
+       single request leaving the machine. */
+    pace: { state: api.prop, make: paceMake, reset: paceReset, ask: paceAsk, refuse: paceRefused,
+            accept: paceAccepted, isRate: paceIsRate, human: apiHuman, cool: paceCoolMs, line: paceLine,
+            stamp: paceStamp, busy: paceBusy, counted: paceCounted, budget: paceBudgetLine } };
   setConn("connecting");
   api.connect().catch(() => toast("Could not reach Deriv — will keep retrying", "error"));
   /* If Deriv just redirected a client back here with an authorization code, finish that sign-in.
