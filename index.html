@@ -6063,12 +6063,11 @@ function waitTick(maxMs){
   });
 }
 const fastMode = () => !!state.fastExec;
-/* ---- the bots' heartbeat: every running bot decides ~twice per second ----
-   waitGap always holds for at least `ms`, so no two actions happen faster than that;
-   in fast execution mode the remaining time is snapped onto tick pulses instead of a blind sleep.
-   Round 83: 1000 → 500 on the user's request ("my bots are very slow … faster after every 0.5 second").
-   The real floor per order is still Deriv's own settlement of the 1-tick contract plus that market's tick
-   rate — this halves the WAITING time between two decisions, not the life of a contract. */
+/* ---- the bots' heartbeat: every running bot decides on the next tick ----
+   In fast execution mode `ms` is only the quiet-feed timeout: the FIRST tick releases the wait.
+   Round 106 fixes the old loop, which woke for a tick and then slept out the rest of the fixed timer anyway.
+   With fast execution off, `ms` remains an ordinary sleep. Contract settlement and Deriv's request limits
+   still govern the order path; this changes only how soon an entry condition is read again. */
 const BOT_STEP_MS = 500;
 /* Round 87: "run after every 0s" — the hold between a contract SETTLING and the next order going out.
    This is not a request flood: the previous order is always fully settled before this timer even starts,
@@ -6090,10 +6089,9 @@ const BOT_TRADE_GAP_MS = 0;
 const BOT_HOLD_MS = 50;
 async function waitGap(ms){
   const total = ms == null ? BOT_STEP_MS : ms;   // `||` here used to turn an explicit 0 back into 500
-  const target = Date.now() + total;
+  if (total <= 0) return;
   if (!fastMode()){ await sleep(total); return; }
-  let left = target - Date.now();
-  while (left > 0){ await waitTick(left); left = target - Date.now(); }
+  await waitTick(total);
 }
 /* ================= Round 95 — the entry point you touch =================
    Your rule of 2 Nov: "add an entry point option where I can choose the digit touched by the cursor for the
