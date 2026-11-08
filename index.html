@@ -402,7 +402,8 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .botcard.blkstyle .runbar{border-radius:0;border:none;border-top:1px solid var(--line);margin:0;padding:8px 14px}
 .runbar .rdot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:0 0 auto}
 .runbar.on .rdot{background:var(--green);box-shadow:0 0 0 3px var(--green-soft);animation:pulse 1.6s infinite}
-.runbar.busy .rdot{background:var(--amber);animation:pulse 1s infinite}
+.runbar.busy .rdot,.runbar.pace .rdot{background:var(--amber);animation:pulse 1s infinite}
+.runbar.pace .rstate{color:var(--amber)}
 .runbar .rstate{color:var(--text)}
 .runbar.on .rstate{color:var(--green)}
 .runbar .rmeta{margin-left:auto;display:flex;align-items:center;gap:12px;font:500 11px var(--mono);color:var(--dim);flex-wrap:wrap}
@@ -2817,7 +2818,7 @@ function paceGate(p, request, opts, go){
 /* Deriv's error sentences are written for developers. A client needs the next move, not the JSON. */
 function apiHuman(e){
   const c = String((e && e.code) || ""), m = String((e && e.message) || "");
-  if (paceIsRate(e)) return "Deriv allows a fixed number of price and order requests a minute and we reached it — the app is pacing itself now, so this passes by itself. If it keeps happening, untick Pre-quote in Settings.";
+  if (paceIsRate(e)) return "Deriv's price/request limit was reached. This bot is HOLDING, NOT stopped: no new order is placed while requests are refused, and the SAME run resumes automatically when pricing is accepted again. Run P/L and recovery stake stay unchanged. If this keeps happening, untick Pre-quote in Settings.";
   if (c === "PaceSkip") return "A background price check was skipped to stay inside Deriv's request limit.";
   if (c === "Timeout") return "Deriv did not answer that request in time and it was dropped.";
   if (c === "Disconnected" || c === "NetworkError") return "The connection to Deriv dropped — reconnecting.";
@@ -6303,6 +6304,7 @@ function paintEntryNow(){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
+    this.paceFails = 0; this.paceHeld = false;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
     /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
@@ -6324,6 +6326,7 @@ class BaseBot {
     }
     const resume = !!(opts && opts.resume);   // an automatic restart of the SAME session — the session P/L base survives, so the user's TP/SL target is not reset
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
+    this.paceFails = 0; this.paceHeld = false;
     this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
     this.startPl = this.stats.pl;
     if (!resume) this.sessionPl = this.stats.pl;
@@ -6427,12 +6430,32 @@ class BaseBot {
     if (!this.running) return;
     this.running = false;
     this.busy = false;
+    this.paceHeld = false; this.paceFails = 0;
     this.sys("Stopped" + (reason ? " — " + reason : ""));
     this.onStop();
     renderBot(this);
     if (opts && opts.limit) this.afterLimitStop(reason, opts.kind);   // only the bot's own limits may hand it back to itself
   }
   sys(msg){ this.syslog.unshift({ t: Date.now(), msg }); if (this.syslog.length > 30) this.syslog.pop(); }
+  async holdForPace(e){
+    this.paceFails++;
+    if (!this.paceHeld){ this.paceHeld = true; renderBot(this); }
+    if (this.paceFails === 1) this.sys(apiHuman(e));
+    if (this.paceFails === 5 || this.paceFails % 25 === 0){
+      this.sys("Holding, NOT stopped — " + this.paceFails + " price requests refused. Run P/L is unchanged at " + fmtS(this.limitPl()) +
+        "; no new order is placed until Deriv accepts pricing again. Your TP, SL and STOP still apply.");
+    }
+    if (!this._paceSaid || Date.now() - this._paceSaid > 60000){
+      this._paceSaid = Date.now();
+      toast(this.name + " is holding, not stopped — it will resume when Deriv accepts price requests again", "warn", 7000);
+    }
+    renderBot(this);
+    await sleep(Math.min(30000, Math.max(3000, paceCoolMs(api.prop) + 500)));
+  }
+  paceRecovered(){
+    if (this.paceHeld) this.sys("Pricing accepted again — the same run resumed at " + fmtS(this.limitPl()) + " after " + this.paceFails + " refused price request(s); it was never stopped.");
+    this.paceHeld = false; this.paceFails = 0;
+  }
   /* Round 95 — the digit you touched. Checked BEFORE the bot's own strategy, so a gated bot does not even run
      its analysis while the tick is on another digit. The hold is re-read at BOT_HOLD_MS because with
      ⚡ Fast execution (the default) waitGap snaps onto the next tick pulse — exactly the cadence a digit entry
@@ -6494,6 +6517,7 @@ class BaseBot {
           if (this.virtualLeft === 0) toast(this.name + ": virtual warm-up complete — switching to LIVE orders", "success", 8000);
         }
         this.failStreak = 0;
+        if (!res.virtual) this.paceRecovered();
         this.stats.trades++;
         this.stats.pl += res.profit;
         /* Round 75: the two numbers DBot's Summary shows that we did not keep — everything staked
@@ -6520,20 +6544,11 @@ class BaseBot {
         this.sys((res.virtual ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + plan.type + (plan.barrier != null ? " " + plan.barrier : "") + " · exit digit " + lastDigitChar(res.exit) + " · " + fmtS(res.profit) + (res.fast ? " · ⚡ 1 TRIP" : " · quoted 2 TRIP"));
         if (this.checkLimits()) break;
       } catch(e){
-        /* Round 103: a refused price request is OUR pacing, not the trader's mistake — it must not eat the
-           fail streak, must not stop the bot on the fifth blip, and must not print an API sentence nobody can
-           act on. The wait is the pace gate's own cool-down, so the next attempt lands when Deriv allows it. */
+        /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
         if (paceIsRate(e)){
-          this.paceFails = (this.paceFails || 0) + 1;
-          this.sys(apiHuman(e));
-          if (!this._paceSaid || Date.now() - this._paceSaid > 60000){
-            this._paceSaid = Date.now();
-            toast(this.name + " is pacing itself — Deriv only allows so many price and order requests a minute", "warn", 7000);
-          }
-          if (this.paceFails >= 5){ this.stop("Deriv kept refusing our price requests — see Pre-quote in Settings"); break; }
-          await sleep(Math.min(30000, Math.max(3000, paceCoolMs(api.prop) + 500)));
+          await this.holdForPace(e);
         } else {
-          this.paceFails = 0;
+          this.paceHeld = false; this.paceFails = 0;
           this.failStreak++;
           this.sys("Error: " + (e.code || "") + " " + e.message);
           if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
@@ -6912,6 +6927,7 @@ class MatchesBot extends BaseBot {
       try {
         const legs = virt ? await simulateLegs(cyc.plans) : await executeLegs(cyc.plans);
         this.failStreak = 0;
+        if (!virt) this.paceRecovered();
         legs.forEach(l => { if (this.settleLeg(l, virt)) this.hitFlag = true; });
         if (virt){
           this.virtualLeft--;
@@ -6932,20 +6948,11 @@ class MatchesBot extends BaseBot {
         if (this.checkLimits()) break;                    // TP / SL take precedence over the first-hit bank
         if (this.hitFlag){ this.bankOnHit(); break; }  // the user's rule: one hit ends the run
       } catch(e){
-        /* Round 103: a refused price request is OUR pacing, not the trader's mistake — it must not eat the
-           fail streak, must not stop the bot on the fifth blip, and must not print an API sentence nobody can
-           act on. The wait is the pace gate's own cool-down, so the next attempt lands when Deriv allows it. */
+        /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
         if (paceIsRate(e)){
-          this.paceFails = (this.paceFails || 0) + 1;
-          this.sys(apiHuman(e));
-          if (!this._paceSaid || Date.now() - this._paceSaid > 60000){
-            this._paceSaid = Date.now();
-            toast(this.name + " is pacing itself — Deriv only allows so many price and order requests a minute", "warn", 7000);
-          }
-          if (this.paceFails >= 5){ this.stop("Deriv kept refusing our price requests — see Pre-quote in Settings"); break; }
-          await sleep(Math.min(30000, Math.max(3000, paceCoolMs(api.prop) + 500)));
+          await this.holdForPace(e);
         } else {
-          this.paceFails = 0;
+          this.paceHeld = false; this.paceFails = 0;
           this.failStreak++;
           this.sys("Error: " + (e.code || "") + " " + e.message);
           if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
@@ -9002,7 +9009,7 @@ function renderB11Panels(b){
     ["THIS WINDOW", r.ok ? fmt(r.p, 1) + "% ⇒ EV " + fmtS(r.ev) + " per 1.00" : r.why, r.ok ? (r.ev >= 0 ? "up" : "down") : ""]
   ];
   box.className = "b11run locked";
-  box.innerHTML = "<b>Live run</b><span class=\"b11tag\">" + (b.running ? (b.busy ? "TRADING · ORDER LIVE" : "TRADING") : "STANDBY") +
+  box.innerHTML = "<b>Live run</b><span class=\"b11tag\">" + (b.running ? (b.paceHeld ? "HOLDING · PRICE LIMIT" : (b.busy ? "TRADING · ORDER LIVE" : "TRADING")) : "STANDBY") +
     "</span><span class=\"b11tag\">created " + new Date(b.run.made).toLocaleTimeString() + "</span>" +
     "<span class=\"b11tag\">follows this card</span>" +
     (pending ? "<div class=\"note\" style=\"margin:6px 0 0;color:var(--amber)\">⚠ Applying the settings you just changed to the run — Bot 11 does it a moment after you stop typing, no button needed.</div>" : "") +
@@ -9075,8 +9082,8 @@ function renderRunPop(){
   $("#runPopTitle").textContent = b.name;
   $("#runPopSub").textContent = b.subText();
   const pill = $("#runPopPill");
-  pill.className = "dpill on" + (b.running && !b.busy ? " w" : "");
-  pill.textContent = b.running ? (b.busy ? "ORDER LIVE" : "RUNNING") : "STOPPED";
+  pill.className = "dpill on" + (b.running && !b.busy && !b.paceHeld ? " w" : "");
+  pill.textContent = b.running ? (b.paceHeld ? "HOLDING · PRICE LIMIT" : (b.busy ? "ORDER LIVE" : "RUNNING")) : "STOPPED";
   const tg = $("#runPopToggle");
   tg.textContent = b.running || b.busy ? "■ STOP" : "▶ RUN";
   tg.className = "btn btn-xs " + (b.running || b.busy ? "btn-red" : "btn-green");
@@ -10785,8 +10792,9 @@ function renderBot(b){
   }
   const rb = $("#" + p + "_runbar"), rs = $("#" + p + "_state"), rm = $("#" + p + "_runmeta");
   if (rb && rs && rm){
-    rb.className = "runbar" + (b.running ? " on" : (b.busy ? " busy" : ""));
-    rs.textContent = b.running ? (b.busy ? "Bot is running — an order is on Deriv" : "Bot is running")
+    rb.className = "runbar" + (b.running ? (b.paceHeld ? " pace" : " on") : (b.busy ? " busy" : ""));
+    rs.textContent = b.running ? (b.paceHeld ? "Holding — Deriv price limit · still running, no new orders"
+      : (b.busy ? "Bot is running — an order is on Deriv" : "Bot is running"))
       : (b.busy ? "Stopped — an order is still settling on Deriv"
       : (b.restartAt ? "Stopped — the next run is queued" : "Bot stopped"));
     const cur = (state.account && state.account.currency) || "USD";
