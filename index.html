@@ -7169,19 +7169,46 @@ function syncReadText(c){
   if (!c) return "no ticks on this market yet — nothing counted, nothing bought";
   const cov = c.label + " covers " + fmt(c.p, 1) + "% of " + c.n + " ticks against " + fmt(c.be, 2) +
     "% break-even, " + fmt(c.sigma, 2) + "σ, EV " + fmtS(c.ev) + " per 1.00";
-  if (c.ok) return "the AI takes " + c.label + " on the " + c.why + " — " +
+  if (c.ok) return "the RED-digit/coverage read favours " + c.label + " on the " + c.why + " — " +
     (c.heatOk ? heatSetupTxt(c.heat) + "; " : "") + cov;
   return heatSetupTxt(c.heat) + " · " + cov +
     (c.edge.bad ? " — the coverage read refuses it too (" + c.edge.reasons.join(" + ") + ")" : "");
 }
-/* One market read in, one verdict out: the cycle is refused only when NEITHER the RED-digit
-   competition nor the coverage edge carries the side the AI picked. */
+/* Bot 8's strict parity shape: 3–4 of the four highest digits must win the side being bought,
+   and every one of the three lowest digits must belong to the opposite parity. */
+function syncParity(h, key){
+  const mine = d => key === "even" ? d % 2 === 0 : d % 2 === 1;
+  const rival = key === "even" ? "ODD" : "EVEN";
+  if (!h) return { ok: false, key, topCount: 0, top: [], bottom: [], reasons: ["WINDOW THIN"] };
+  const top = h.rank.slice(0, 4), bottom = h.rank.slice(-3);
+  const topCount = top.filter(x => mine(x.d)).length;
+  const bottomOk = bottom.every(x => !mine(x.d));
+  const reasons = [];
+  if (topCount < 3) reasons.push("NEED 3–4 " + key.toUpperCase() + " IN TOP 4");
+  if (!bottomOk) reasons.push("BOTTOM 3 MUST ALL BE " + rival);
+  return { ok: reasons.length === 0, key, topCount, top, bottom, reasons };
+}
+function syncParityTxt(p){
+  if (!p || !p.top.length) return "the four highest and three lowest digits cannot be read yet";
+  const fmtRank = x => x.d + " " + fmt(x.p, 1) + "%";
+  const rival = p.key === "even" ? "ODD" : "EVEN";
+  return p.topCount + " " + p.key.toUpperCase() + " in top 4 [" + p.top.map(fmtRank).join(", ") +
+    "]; bottom 3 [" + p.bottom.map(fmtRank).join(", ") + "] must all be " + rival;
+}
+/* Both sides are checked: an opposite-parity setup remains eligible when the leading side fails. */
 function syncVerdict(a){
   const b = a && a.best;
   if (!b) return { bad: true, reasons: ["NO TICKS ON THIS MARKET"], needP: 0, gap: -100, best: null };
-  if (b.ok) return { bad: false, reasons: [], needP: b.edge.needP, gap: b.edge.gap, best: b };
-  const reasons = b.heatOk ? [] : ["NO RED-DIGIT SETUP"];
-  b.edge.reasons.forEach(r => reasons.push(r));
+  const eligible = syncRank(a.cands.filter(c => c.ok && c.parity && c.parity.ok));
+  if (eligible.length){
+    const best = eligible[0];
+    return { bad: false, reasons: [], needP: best.edge.needP, gap: best.edge.gap, best };
+  }
+  const reasons = b.parity ? b.parity.reasons.slice() : ["STRICT PARITY RULE FAILED"];
+  if (!b.ok){
+    if (!b.heatOk) reasons.push("NO RED-DIGIT SETUP");
+    b.edge.reasons.forEach(r => reasons.push(r));
+  }
   return { bad: true, reasons, needP: b.edge.needP, gap: b.edge.gap, best: b };
 }
 function syncAnalyze(sym, win, topN, sig){
@@ -7200,7 +7227,7 @@ function syncAnalyze(sym, win, topN, sig){
   const side = (type, label, key, rival, hits) => {
     const p = n ? hits / n * 100 : 0;
     const be = 100 / payout;
-    return { type, label, key, n, payout, heat: heatSetup(h, key, rival),
+    return { type, label, key, n, payout, heat: heatSetup(h, key, rival), parity: syncParity(h, key),
       p: round2(p), be: round2(be), ev: round2(payout * p / 100 - 1), gap: round2(p - be),
       sigma: n ? round2((p - 50) / (50 / Math.sqrt(n))) : 0 };
   };
@@ -7227,9 +7254,8 @@ class SyncBot extends BaseBot {
     if (c.maxstake > 0 && next > c.maxstake) next = base;   // cap exceeded → reset to base
     return next;
   }
-  /* one cycle = ONE contract on whichever parity the AI's read favours — the RED-digit competition
-     first, the coverage edge as the other route in; null means "no ticks" or "no clean read" and
-     the 1s heartbeat re-checks it */
+  /* one cycle = ONE contract on a side that clears both the strict parity shape and an existing
+     RED-digit/coverage route; null means "no ticks" or "no clean read" and the heartbeat re-checks it */
   planNext(){
     const c = cfg8(), a = this.analysis();
     this.play = a;
@@ -7239,8 +7265,8 @@ class SyncBot extends BaseBot {
     const steps = c.steps || 4;
     if (this.lossStreak >= steps) this.lossStreak = 0;       // max rungs reached → reset
     const stake = this.stakeFor(this.lossStreak);
-    return { type: a.best.type, barrier: null, stake, duration: c.dur,
-      source: this.source, symbol: state.symbol, label: a.best.label };
+    return { type: d.best.type, barrier: null, stake, duration: c.dur,
+      source: this.source, symbol: state.symbol, label: d.best.label };
   }
   onSettled(res, plan){
     if (!res.won) {
@@ -7256,50 +7282,51 @@ class SyncBot extends BaseBot {
     const was = !!(this.danger && this.danger.bad);
     this.danger = d;
     if (was === d.bad) return;
-    const b = a && a.best;
+    const b = d.best || (a && a.best);
     if (d.bad){
-      const line = "DANGER ZONE DETECTED — " + d.reasons.join(" + ") + " · " + syncReadText(b);
+      const line = "DANGER ZONE DETECTED — " + d.reasons.join(" + ") + " · " + syncParityTxt(b && b.parity) + " · " + syncReadText(b);
       this.sys(line);
-      toast("DANGER ZONE DETECTED — no RED-digit setup and no edge, nothing bought", "warn", 8000);
-      if (syncDesk.entered) syncSay("Danger zone detected. " + syncReadText(b), false);
-      speak("Danger zone detected. " + (b ? b.label + " loses the digit competition. " : "") +
-        "Nothing is bought until the highest digits are all red and all on one side, with no red digit on the other.",
+      toast("DANGER ZONE DETECTED — strict parity or entry gate failed, nothing bought", "warn", 8000);
+      if (syncDesk.entered) syncSay("Danger zone detected. " + syncParityTxt(b && b.parity) + ". " + syncReadText(b), false);
+      speak("Danger zone detected. Nothing is bought until three or four of the four highest digits win one parity, all three lowest digits win the opposite parity, and an entry gate clears.",
         { force: true, interrupt: true, rate: 0.9, pitch: 0.9, key: "b8danger", gap: 45000 });
     } else if (was){
-      this.sys("Entry clear — " + (b ? b.why + " · " + syncReadText(b) : "entry is clear"));
+      this.sys("Entry clear — " + (b ? b.why + " · " + syncParityTxt(b.parity) + " · " + syncReadText(b) : "entry is clear"));
       if (syncDesk.entered) syncSay(b ? "Entry clear — " + b.label + " on the " + b.why.toLowerCase() + ". Trading." : "Entry clear. Trading.", false);
       speak("Entry cleared. " + (b ? "Playing " + b.label + " on the " + (b.heatOk ? "red digit setup" : "coverage edge") + "." : ""),
         { force: true, key: "b8clear", gap: 20000 });
     }
   }
   preview(){
-    const c = cfg8(), b = this.play && this.play.best;
+    const c = cfg8(), d = this.danger || syncVerdict(this.play), b = d.best;
     const curStake = this.stakeFor(this.lossStreak);
     if (!this.running) return { label: this.busy && b ? "ORDER IN FLIGHT · " + b.label : "IDLE · AI CORE", cls: "mode-wait", stake: c.stake };
-    if (this.danger && this.danger.bad) return { label: "DANGER ZONE · NO RED SETUP", cls: "mode-rec", stake: curStake };
+    if (d.bad) return { label: "DANGER ZONE · ENTRY REFUSED", cls: "mode-rec", stake: curStake };
     if (!b) return { label: "WAITING · NO TICKS YET", cls: "mode-wait", stake: curStake };
     let lbl = "AI PLAYS " + b.label + " · " + (b.heatOk ? "DIGIT HEAT" : "EDGE") + " · " + state.symbol;
     if (this.lossStreak > 0) lbl += " · STEP " + (this.lossStreak + 1) + "/" + c.steps;
     return { label: lbl, cls: "mode-main", stake: curStake };
   }
   subText(){
-    const c = cfg8(), a = this.play || this.analysis(), b = a && a.best;
+    const c = cfg8(), a = this.play || this.analysis();
     const last = this.results.length ? this.results[this.results.length - 1] : null;
-    const d = this.danger || syncVerdict(a);
+    const d = this.danger || syncVerdict(a), b = d.best;
     const curStake = this.stakeFor(this.lossStreak);
     let txt = "EVEN/ODD · one contract per accepted entry at base " + fmt(c.stake) + ", " + c.dur + " tick" + (c.dur > 1 ? "s" : "") +
-      " · AI reads the last " + c.win + " ticks and takes the side that WINS THE DIGIT COMPETITION (its " + c.top + " highest digits all RED, none on the other side)" +
+      " · AI requires 3–4 of the four highest digits on the traded parity, all three lowest on the opposite parity, then a RED-digit or coverage gate" +
       (this.lossStreak > 0 ? " · MARTINGALE STEP " + (this.lossStreak + 1) + "/" + c.steps + " at " + fmtS(curStake) + " (×" + c.mult + ")" : "") +
       (d && d.bad ? " — ⚠ DANGER ZONE (" + d.reasons.join(" + ") + "), it REFUSES the entry" : "") +
-      (a ? " — " + synMatrixTxt(a) + " → " + (b.ok ? "plays " + b.label + " on the " + b.why.toLowerCase() +
+      (a ? " — " + synMatrixTxt(a) + " · " + syncParityTxt(b.parity) + " → " + (!d.bad ? "plays " + b.label + " on the " + b.why.toLowerCase() +
         " (" + fmt(b.p, 1) + "% vs " + fmt(b.be, 2) + "% break-even)"
-        : "buys nothing (" + b.label + " " + fmt(b.p, 1) + "% vs " + fmt(b.be, 2) + "% break-even, no setup)") : " · waiting for ticks") +
+        : "buys nothing (" + b.label + " " + fmt(b.p, 1) + "% vs " + fmt(b.be, 2) + "% break-even)") : " · waiting for ticks") +
       (last ? " · last " + (last.won ? "WON " : "LOST ") + fmtS(last.profit) : "");
     return txt;
   }
   describe(){
-    const c = cfg8(), a = this.analysis(), b = a && a.best;
-    const d = syncVerdict(a);
+    const c = cfg8(), a = this.analysis();
+    const d = syncVerdict(a), b = d.best;
+    const parity = "<br><b>Strict parity rule (required on every entry):</b> for <b>EVEN</b>, at least <b>3 of the 4 highest-percentage digits</b> must be even and <b>all 3 lowest-percentage digits must be odd</b>. For <b>ODD</b>, at least 3 of the top 4 must be odd and all 3 lowest must be even. Both sides are checked, and the old RED-digit/coverage gate must still clear." +
+      (b ? " <b>Right now:</b> " + syncParityTxt(b.parity) + " — <b>" + (b.parity.ok ? "shape passed" : "shape refused") + "</b>." : "");
     const heat = "<br><b>Entry (your Signal Center rule):</b> it ranks the digits of the last <b>" + c.win +
       " ticks</b> by share and buys only when the <b>" + c.top + " highest digits</b> all pass — every one of them must be a <b>RED bar</b> (≥" + fmt(DIGIT_HOT_PCT, 1) + "%, the same red the dashboard paints), <b>all of them must win the same parity</b>, and the losing parity must hold <b>no RED digit of its own</b> and cover the smaller share. That is exactly what makes a signal pop in the AI Signal Center, now driving this bot." +
       (b ? " <b>Right now:</b> " + heatSetupTxt(b.heat) + "." : "");
@@ -7315,9 +7342,9 @@ class SyncBot extends BaseBot {
       ". At EVEN/ODD's measured <b>×" + fmt(SYN_PAY_EO) + "</b> payout, ×2.2 wins back the first loss (net +0.82 on the second rung) but needs another win to recover deeper runs — the steps limit prevents runaway exposure.<br><b>Ladder example</b> (base 1.00, ×2.2, 4 steps): 1.00 → 2.20 → 4.84 → 10.65 → 23.43, cumulative −39.12 if all four lose. A win on rung 4 returns 23.43 × " + fmt(SYN_PAY_EO) + " = " + fmtS(round2(23.43 * SYN_PAY_EO)) + ", net +0.86 on that contract but still −38.26 on the run, so recovery takes several more wins.";
     return "<div class='note' style='margin:0'><b>Play:</b> twice a second it reads the last <b>" + c.win + " ticks</b> of " + state.symbol +
       " and counts the closing digit by <b>EVEN</b> / <b>ODD</b>, then buys <b>one contract on the side whose digits are winning</b> at " + fmt(c.stake) + " for " + c.dur + " tick" + (c.dur > 1 ? "s" : "") + "." +
-      (b ? " Right now it takes <b>" + b.label + "</b>: " + fmt(b.p, 1) + "% of the window against the " + fmt(b.be, 2) +
+      (b ? " Right now the selected read is <b>" + b.label + "</b>: " + fmt(b.p, 1) + "% of the window against the " + fmt(b.be, 2) +
         "% it needs, " + fmt(b.sigma, 1) + "σ away from a coin flip." : "") +
-      heat + cov + ladder +
+      parity + heat + cov + ladder +
       "<br><b>Market:</b> the bot never looks for a market on its own. The symbol only moves when you press <b>TRADE AI NOW</b>, which reads every volatility market once and takes the market with the cleanest RED-digit competition — and if <b>every</b> market loses it, it says so and changes nothing; pressing START on this card simply trades the symbol the header shows.<br><b>Measured reality</b> (read-only proposals on this symbol): EVEN and ODD both pay <b>×" + fmt(SYN_PAY_EO) + "</b> ⇒ " + fmt(SYN_BE_EO, 2) +
       "% of the window has to land on your side. A coin flip covers 50%, so at that quote each trade is worth ≈<b>−0.09</b> per 1.00 staked. A hot group of digits over 50–100 ticks is a <b>short sample</b> — the leaders change as new ticks arrive, and digit heat has no proven durable edge in any index. The rule waits for one side to actually own the RED digits instead of trading every tick; it does not turn a negative expectancy into a positive one. The martingale accelerates drawdown during losing streaks but caps exposure through the steps and stake-cap limits.<div class='warnstrip' style='margin:10px 0 0'>⚠ This places <b>real trades</b> — one contract per accepted entry — on account <b>" +
       ((state.account && state.account.loginid) || "—") + "</b> (" + (state.account && state.account.isVirtual ? "DEMO" : "LIVE") + ").</div><br><b>Session limits:</b> " + limitsText(c) + "</div>";
@@ -9505,11 +9532,11 @@ function syncSurvey(win, topN, sigArg){
   for (const sym of scanSymbols()){
     const a = syncAnalyze(sym, win, t, sig);
     if (!a) continue;
-    const b = a.best;
+    const d = syncVerdict(a), b = d.best;
     rows.push({ sym, n: b.n, p: b.p, pct: b.p, ev: b.ev, be: b.be, sigma: b.sigma, payout: b.payout,
       label: b.label, type: b.type, win: a.win, topN: a.topN, current: sym === state.symbol,
-      heat: b.heat, heatOk: b.heatOk, edgeOk: b.edgeOk, ok: b.ok, why: b.why, tier: b.tier, conf: b.conf,
-      edge: b.edge });
+      heat: b.heat, heatOk: b.heatOk, edgeOk: b.edgeOk, parity: b.parity, parityOk: b.parity.ok,
+      ok: !d.bad, reasons: d.reasons, why: b.why, tier: b.tier, conf: b.conf, edge: b.edge });
   }
   return syncRank(rows);
 }
@@ -9552,9 +9579,8 @@ function syncBarsUpdate(rows, ranked){
     row.querySelector(".pc").textContent = fmt(r.pct, 1) + "% " + r.label + " · " + red + " RED" + (r.heatOk ? " ✓" : "");
     row.title = r.label + " covered " + fmt(r.pct, 1) + "% of " + r.n +
       " ticks · needs " + fmt(r.be, 2) + "% · EV " + fmtS(r.ev) + " per 1.00" +
-      (r.heat ? " · " + heatSetupTxt(r.heat) : "") +
-      (r.ok ? " · BUYABLE on the " + r.why : " · DANGER ZONE: " +
-        (r.heatOk ? "" : "no RED-digit setup + ") + r.edge.reasons.join(" + ") +
+      " · " + syncParityTxt(r.parity) + (r.heat ? " · " + heatSetupTxt(r.heat) : "") +
+      (r.ok ? " · BUYABLE on the " + r.why : " · DANGER ZONE: " + r.reasons.join(" + ") +
         " (edge needs ≥" + fmt(r.edge.needP, 1) + "%)");
     row.classList.toggle("dz", !r.ok);
     row.classList.toggle("best", !!(ranked && r.sym === rows[0].sym));
@@ -9586,17 +9612,17 @@ function renderSync(){
   if (band && why){
     const on = !!(liveBad || liveBad9 || scanBad);
     band.classList.toggle("on", on);
-    why.textContent = liveBad ? "BOT 8 is refusing this entry — " + syncReadText(bot8.play && bot8.play.best)
+    why.textContent = liveBad ? "BOT 8 is refusing this entry — " + syncParityTxt(bot8.danger.best && bot8.danger.best.parity) + " · " + syncReadText(bot8.danger.best)
       : liveBad9 ? "BOT 9 is refusing this entry — " + syn9ReadText(syn9Side(bot9.play, bot9.side), bot9.danger) +
         " · the ladder holds its side, step and stake and waits"
-      : scanBad ? "no market won the digit competition and none carried a coverage edge — " + p.dangerText : "";
+      : scanBad ? "no market cleared the strict parity shape and an entry gate — " + p.dangerText : "";
   }
   const head = $("#syncHeadSub");
   if (head){
-    const live = bot8.play && bot8.play.best;
+    const liveD = bot8.play ? (bot8.danger || syncVerdict(bot8.play)) : null, live = liveD && liveD.best;
     const l9 = syn9Side(bot9.play, bot9.side), lab9 = bot9.side === "UNDER" ? "UNDER 6" : "OVER 3";
-    head.textContent = syncDesk.busy ? "AI CORE SCANNING · the " + cfg8().top + " highest digits of every volatility market, against the parity each side covers"
-      : liveBad ? "⚠ DANGER ZONE DETECTED ON " + state.symbol + " · BOT 8 · " + bot8.danger.reasons.join(" + ") + " · nothing is bought while no side wins the digit competition"
+    head.textContent = syncDesk.busy ? "AI CORE SCANNING · 3–4 matching digits in the top 4 and all 3 lowest on the opposite parity"
+      : liveBad ? "⚠ DANGER ZONE DETECTED ON " + state.symbol + " · BOT 8 · " + bot8.danger.reasons.join(" + ") + " · nothing is bought until the strict parity shape and an entry gate clear"
       : liveBad9 ? "⚠ NO ENTRY ON " + state.symbol + " · BOT 9 · " + bot9.danger.reasons.join(" + ") + " · the " + lab9 + " cycle is refused, the ladder waits"
       : bot9.running && bot9.lossStreak ? "BOT 9 RECOVERY · " + lab9 + " step " + bot9.lossStreak + "/" + cfg9().steps +
           " at " + fmt(bot9.nextStake()) + " · run −" + fmt(bot9.runLossAmt) + " on " + state.symbol
@@ -9649,38 +9675,37 @@ async function runSyncAI(){
     const gate = c.sig;
     const cleared = rows.filter(r => r.ok);
     const heatWins = rows.filter(r => r.heatOk).length;
+    const parityWins = rows.filter(r => r.parityOk).length;
     const rejected = rows.length - cleared.length;
     const lead = rows[0];
     const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
     const payTxt = quoted.length ? "payout quoted live on " + plural(quoted.length, "market") + ": " + fmt(lead ? lead.payout : SYN_PAY_EO) + "× on the leader"
       : "payout from the measured default: " + fmt(SYN_PAY_EO) + "×";
-    const head1 = "<b>" + plural(rows.length, "market") + " read over the last " + win + " ticks — the " + c.top +
-      " highest digits scored against the parity each side covers (" + payTxt + ").</b> " +
-      "<b>" + heatWins + " of " + plural(rows.length, "market") + " had a clean RED-digit setup</b>" +
-      (gate > 0 ? " and " + cleared.length + " " + (cleared.length === 1 ? "was buyable" : "were buyable") + " (setup or coverage edge)" : "") +
+    const head1 = "<b>" + plural(rows.length, "market") + " read over the last " + win + " ticks — 3–4 matching digits required in the top 4, with all 3 lowest on the opposite parity (" + payTxt + ").</b> " +
+      "<b>" + parityWins + " passed the strict parity shape</b>, <b>" + heatWins + " had a clean RED-digit setup</b>" +
+      (gate > 0 ? " and " + cleared.length + " " + (cleared.length === 1 ? "was buyable" : "were buyable") + " (parity + setup or coverage edge)" : "") +
       ". Best of the list: " + (lead ? symLabel(lead.sym) + " · " + lead.label + " " + fmt(lead.pct, 1) + "% ⇒ EV " + fmtS(lead.ev) + " per 1.00" : "none");
     /* NO GOOD ENTRY ANYWHERE: say DANGER ZONE DETECTED and buy nothing, change nothing */
     if (!cleared.length){
-      const top = rows[0], txt = syncReadText(top);
+      const top = rows[0], txt = syncParityTxt(top.parity) + " · " + syncReadText(top);
       bot8.aiPick = { sym: top.sym, label: symLabel(top.sym), side: top.label, type: top.type,
         pct: top.pct, ev: top.ev, be: top.be, sigma: top.sigma, payout: top.payout, n: top.n, win, dur,
         heatOk: false, why: top.why, at: Date.now(), markets: rows.length,
         quotes: quoted.length ? "live" : "default", dangerText: txt };
-      syncSay("Danger zone detected. No market won the digit competition.", false);
-      speak("Danger zone detected. I read " + rows.length + " markets and in none of them are the highest digits all red and all on one side with no red digit on the other. Nothing is bought and your market has not been changed.",
+      syncSay("Danger zone detected. No market cleared the strict parity and entry rules.", false);
+      speak("Danger zone detected. No market has three or four matching digits in the four highest, all three lowest on the opposite parity, and a clear entry gate. Nothing is bought and your market has not been changed.",
         { force: true, interrupt: true, rate: 0.9, pitch: 0.9 });
       $("#syncVerdict").innerHTML = head1 +
         "<br><b style='color:var(--red)'>DANGER ZONE DETECTED</b> — " +
-        (rows.length === 1 ? "the only market read failed" : "not one of the " + rows.length + " markets carried the rule") +
-        ": nowhere were the " + c.top + " highest digits all RED and all on one parity with the other side holding no RED digit of its own" +
-        (gate > 0 ? ", and nowhere did the stronger parity also clear the " + fmt(gate, 2) + "σ coverage edge" : "") +
+        (rows.length === 1 ? "the only market read failed" : "not one of the " + rows.length + " markets carried the complete rule") +
+        ": 3–4 matching digits in the top 4 and all 3 lowest on the opposite parity are mandatory, followed by the existing RED-digit or coverage gate" +
+        (gate > 0 ? " at " + fmt(gate, 2) + "σ" : "") +
         ". The least-bad was <b>" + top.label + " on " + symLabel(top.sym) + "</b>: " + fmt(top.pct, 1) +
-        "% against " + fmt(top.be, 2) + "% break-even, " + fmt(top.sigma, 2) + "σ · " + top.edge.reasons.join(" + ") + ".<br>" + txt +
+        "% against " + fmt(top.be, 2) + "% break-even, " + fmt(top.sigma, 2) + "σ · " + top.reasons.join(" + ") + ".<br>" + txt +
         " <b>No symbol was changed and no contract was bought.</b> Press START on the card anyway if you want it to trade this market regardless — the bot will keep refusing cycles its own read rejects.";
-      bot8.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets rejected (0 clean RED-digit setups) · best was " + top.label +
-        " on " + top.sym + " · " + fmt(top.pct, 1) + "% over " + top.n + " ticks (needs " + fmt(top.edge.needP, 1) + "% for the edge, break-even " +
-        fmt(top.be, 2) + "%, " + fmt(top.sigma, 2) + "σ, EV " + fmtS(top.ev) + ") · nothing bought");
-      toast("DANGER ZONE DETECTED — no market won the digit competition, nothing was bought", "warn", 9000);
+      bot8.sys("AI scan — DANGER ZONE DETECTED: all " + rows.length + " markets rejected (" + parityWins + " parity shapes, " + heatWins + " clean RED-digit setups) · best was " + top.label +
+        " on " + top.sym + " · " + fmt(top.pct, 1) + "% over " + top.n + " ticks · " + top.reasons.join(" + ") + " · nothing bought");
+      toast("DANGER ZONE DETECTED — no market cleared the strict parity and entry rules", "warn", 9000);
       syncReleaseFeeds();
       return;
     }
@@ -9698,15 +9723,16 @@ async function runSyncAI(){
     speak(spoken, { force: true, interrupt: true });
     $("#syncVerdict").innerHTML = head1 +
       "<br>The AI takes <b>" + best.label + " on " + symLabel(best.sym) + "</b> on the <b>" + best.why + "</b>" +
-      (best.heatOk ? ": " + heatSetupTxt(best.heat) : "") + ". That is " + fmt(best.pct, 1) + "% of the window against the " +
+      (best.heatOk ? ": " + heatSetupTxt(best.heat) : "") + ". <b>Strict parity passed:</b> " + syncParityTxt(best.parity) +
+      ". That is " + fmt(best.pct, 1) + "% of the window against the " +
       fmt(best.be, 2) + "% that is break-even at its " + fmt(best.payout) + "× payout ⇒ <b>" + fmtS(best.ev) + " expected per 1.00</b>, " +
       fmt(best.sigma, 2) + "σ from a coin flip" + (gate > 0 ? ", edge here needs ≥" + fmt(best.edge.needP, 1) + "%" : "") +
       (others > 0 ? " — and it beats the " + plural(others, "other market") + " read" : "") + ". <b>" + rejected + " of " + plural(rows.length, "market") +
       " were in the danger zone and rejected.</b> A won digit competition over " + best.n +
       " ticks is still a <b>small sample</b> — the leaders move as new ticks arrive, coverage moves with them, and " +
       "this does not turn a " + fmtS(best.ev) + "-per-1.00 structure into a proven edge.";
-    bot8.sys("AI scan done — " + rows.length + " markets · " + heatWins + " with a clean RED-digit setup · " + rejected +
-      " rejected by the danger read · chose " + best.label + " on " + best.sym + " on the " + best.why + " · " +
+    bot8.sys("AI scan done — " + rows.length + " markets · " + parityWins + " strict parity shapes · " + heatWins + " clean RED-digit setups · " + rejected +
+      " rejected by the danger read · chose " + best.label + " on " + best.sym + " on the " + best.why + " · " + syncParityTxt(best.parity) + " · " +
       fmt(best.pct, 1) + "% over " + best.n + " ticks (edge needs " + fmt(best.edge.needP, 1) + "%, break-even " + fmt(best.be, 2) + "%, EV " + fmtS(best.ev) + ", " +
       fmt(best.sigma, 2) + "σ) · runner-up " + (rows[1] ? rows[1].label + " on " + rows[1].sym + " " + fmt(rows[1].pct, 1) + "% " + rows[1].why : "none"));
     syncReleaseFeeds();
@@ -11034,12 +11060,13 @@ function renderBot(b){
   }
   if (p === "b8"){
     const c = cfg8(), cur = (state.account && state.account.currency) || "USD", a = b.play || b.analysis();
+    const d = b.danger || syncVerdict(a), live = d.best;
     const hotEl = $("#b8_hot");
     if (hotEl){
-      const pk = b.aiPick, d = b.danger || syncVerdict(a);
+      const pk = b.aiPick;
       const pick = pk ? (pk.dangerText
           ? "<b style='color:var(--red)'>DANGER ZONE DETECTED by the last scan:</b> none of the " + pk.markets +
-            " markets won the digit competition and none carried a coverage edge — " + pk.dangerText + " Nothing was bought and the market was not changed. (" +
+            " markets cleared the strict parity shape and an entry gate — " + pk.dangerText + " Nothing was bought and the market was not changed. (" +
             new Date(pk.at).toLocaleTimeString() + ")<br>"
           : "<b>AI pick:</b> " + pk.side + " on " + pk.sym + ", " + fmt(pk.pct, 1) +
             "% of " + pk.n + " ticks" + (pk.why ? " on the " + pk.why.toLowerCase() : "") + ", chosen from " + pk.markets + " markets at " + new Date(pk.at).toLocaleTimeString() +
@@ -11047,18 +11074,19 @@ function renderBot(b){
             (pk.sym === state.symbol ? "." : " — the header has since moved to " + state.symbol + ", which stops this bot.") +
             "<br>")
         : "<b>No market chosen by the AI yet</b> — press TRADE AI NOW to make it read every market once.<br>";
-      hotEl.innerHTML = pick + (a ? "<b>Live on " + state.symbol + "</b> — " + synMatrixTxt(a) + ". It plays <b>" + a.best.label +
-        "</b>: " + fmt(a.best.p, 1) + "% of the last " + a.best.n + " ticks against " + fmt(a.best.be, 2) +
-        "% break-even at its " + fmt(a.best.payout) + "× payout ⇒ " + fmtS(round2(a.best.ev * c.stake)) + " " + cur + " per trade on a " +
-        fmt(c.stake) + " stake, " + fmt(Math.abs(a.best.sigma), 1) + "σ from a coin flip.<br><b>Digit competition — " + a.topN + " highest of " + a.best.n + " ticks:</b> " +
-        heatSetupTxt(a.best.heat) + ". <b>Second route:</b> " +
-        (c.sig > 0 ? "above break-even and ≥" + fmt(c.sig, 2) + "σ = <b>" + fmt(d.needP, 1) + "%</b> over " + a.best.n + " ticks" : "<b>OFF</b> (σ = 0), the RED-digit rule alone decides") +
+      hotEl.innerHTML = pick + (a ? "<b>Live on " + state.symbol + "</b> — " + synMatrixTxt(a) + ". Selected read: <b>" + live.label +
+        "</b>: " + fmt(live.p, 1) + "% of the last " + live.n + " ticks against " + fmt(live.be, 2) +
+        "% break-even at its " + fmt(live.payout) + "× payout ⇒ " + fmtS(round2(live.ev * c.stake)) + " " + cur + " per trade on a " +
+        fmt(c.stake) + " stake, " + fmt(Math.abs(live.sigma), 1) + "σ from a coin flip.<br><b>Strict parity — top 4 and bottom 3:</b> " +
+        syncParityTxt(live.parity) + " — <b>" + (live.parity.ok ? "passed" : "refused") + "</b>.<br><b>Digit competition — " + a.topN + " highest of " + live.n + " ticks:</b> " +
+        heatSetupTxt(live.heat) + ". <b>Second route:</b> " +
+        (c.sig > 0 ? "above break-even and ≥" + fmt(c.sig, 2) + "σ = <b>" + fmt(d.needP, 1) + "%</b> over " + live.n + " ticks" : "<b>OFF</b> (σ = 0), the RED-digit rule alone decides") +
         " — " + (d.bad
-          ? "<b style='color:var(--red)'>DANGER ZONE DETECTED (" + d.reasons.join(" + ") + ") · " + syncReadText(a.best) + " · the bot waits and buys nothing</b>"
-          : "<b style='color:var(--green)'>entry accepted on the " + a.best.why + "</b>") + "."
+          ? "<b style='color:var(--red)'>DANGER ZONE DETECTED (" + d.reasons.join(" + ") + ") · " + syncReadText(live) + " · the bot waits and buys nothing</b>"
+          : "<b style='color:var(--green)'>entry accepted on the " + live.why + "</b>") + "."
         : "<b>Live:</b> waiting for ticks on " + state.symbol + ".");
     }
-    const payNow = a ? a.best.payout : SYN_PAY_EO;
+    const payNow = live ? live.payout : SYN_PAY_EO;
     $("#b8_expo").innerHTML = "<b>One contract per cycle</b> at " + fmt(c.stake) + " " + cur + " — a win returns ×" + fmt(payNow) +
       " (≈+" + fmt(round2((payNow - 1) * c.stake)) + "), a loss costs the whole " + fmt(c.stake) + ". <b>Measured quote on this symbol:</b> even/odd ×" +
       fmt(SYN_PAY_EO) + " ⇒ it needs " + fmt(SYN_BE_EO, 2) +
