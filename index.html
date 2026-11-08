@@ -4471,6 +4471,53 @@ function releaseQuote(first){
   if (first.req_id) api.drop(first.req_id);
   if (first.subscription && first.subscription.id) api.send({ forget: first.subscription.id }).catch(() => {});
 }
+/* Round 110 — STOP also closes what is ALREADY on the market. Every bought contract is registered
+   the moment Deriv returns its id; a STOP sells each still-open contract at the best price Deriv
+   offers. If Deriv refuses that early close, the contract settles at expiry and the card says so —
+   the log never claims a contract was closed when it was not. */
+const OPEN_CONTRACTS = new Map();
+function registerContract(ticket, pos){
+  const rec = { id: String(pos.contractId), ticket, pos, entry: pos.entry,
+    bot: (ticket && ticket.bot) || null, gen: ticket ? ticket.gen : 0, closing: false };
+  OPEN_CONTRACTS.set(rec.id, rec);
+  return rec;
+}
+function forgetContract(id){ OPEN_CONTRACTS.delete(String(id)); }
+function contractLive(rec){ return !!(rec && rec.entry && rec.entry.result === "OPEN"); }
+function paintBotSafe(b){ if (!b) return; try { renderBot(b); } catch(e){} }
+async function closeContract(rec){
+  if (!contractLive(rec) || rec.closing) return false;
+  rec.closing = true;
+  const bot = rec.bot;
+  if (bot){ bot.closing = (bot.closing || 0) + 1; paintBotSafe(bot); }
+  try {
+    await api.send({ sell: rec.id, price: 0 });
+    if (bot) bot.sys("STOP — Deriv accepted the early close of " + rec.id + "; the real exit posts when it settles");
+    return true;
+  } catch(e){
+    const code = String((e && e.code) || "");
+    const msg = String((e && e.message) || "");
+    /* already settled/gone: nothing to report — the settlement watcher already booked the real outcome */
+    const already = /^(ContractSold|ContractAlreadySold|ContractNotFound|InvalidContract|ContractExpired)$/i.test(code) ||
+      /already sold|already expired|not found|does not exist/i.test(msg);
+    if (!already && contractLive(rec) && bot){
+      bot.sys("Early close refused for " + rec.id + " (" + apiHuman(e) + ") — it will settle at expiry");
+      toast(bot.name + ": Deriv would not close the open contract early — it settles at expiry", "warn", 8000);
+    }
+    return false;
+  } finally {
+    rec.closing = false;
+    if (bot){ bot.closing = Math.max(0, (bot.closing || 1) - 1); paintBotSafe(bot); }
+  }
+}
+function closeOpenFor(bot){
+  const list = [];
+  OPEN_CONTRACTS.forEach(rec => { if (rec.bot === bot && contractLive(rec)) list.push(rec); });
+  if (!list.length) return 0;
+  bot.sys("STOP — closing " + list.length + " open contract" + (list.length === 1 ? "" : "s") + " at Deriv's market price");
+  list.forEach(rec => { closeContract(rec).catch(() => {}); });
+  return list.length;
+}
 /* one leg of a cycle: proposal + buy, NO settlement wait */
 async function openPosition(plan, ticket){
   assertTradeActive(ticket);
@@ -4525,24 +4572,41 @@ async function openPosition(plan, ticket){
   };
   activity.push(entry);
   ACT_OPEN.push(entry);   // Round 92: actBook() books this row exactly once, when it stops being OPEN
-  /* Round 81: ENTRY fires the moment the contract exists, before the log even repaints — a copier that
-     waits for settlement is a copier that buys the entry late. */
-  copyBroadcast(entry, "ENTRY", plan);
-  /* Round 88: the follower-side copier mirrors the same instant. Queued per account, never awaited —
-     a slow follower must not delay the leader's own log or its next entry. */
-  copierBroadcast(entry, plan);
+  /* Round 110: the buy crossed STOP while it was in flight, so this contract exists but no longer has a
+     run behind it. It is registered and closed below, and deliberately NOT mirrored — a follower that
+     bought an entry the leader is closing is a follower left holding a contract nobody will close. */
+  const live = tradeActive(ticket);
+  if (live){
+    /* Round 81: ENTRY fires the moment the contract exists, before the log even repaints — a copier that
+       waits for settlement is a copier that buys the entry late. */
+    copyBroadcast(entry, "ENTRY", plan);
+    /* Round 88: the follower-side copier mirrors the same instant. Queued per account, never awaited —
+       a slow follower must not delay the leader's own log or its next entry. */
+    copierBroadcast(entry, plan);
+  } else entry.stopped = true;
   renderActivity(); renderSummary();
-  return { plan, entry, contractId: buy.contract_id, stake: num(pr.ask_price),
+  const pos = { plan, entry, contractId: buy.contract_id, stake: num(pr.ask_price),
     ratio: num(pr.payout) / Math.max(num(pr.ask_price), 0.01), fast: warm };
+  const rec = registerContract(ticket, pos);
+  /* STOP landed before this id existed — this is the first moment it can be sold. */
+  if (!live) closeContract(rec).catch(() => {});
+  return pos;
 }
 async function settlePosition(pos){
-  const plan = pos.plan, c = await watchContract(pos.contractId);
+  const plan = pos.plan;
+  let c;
+  try {
+    c = await watchContract(pos.contractId);
+  } finally {
+    forgetContract(pos.contractId);   // Round 110: settled or given up — STOP can no longer sell it
+  }
   pos.entry.entry = c.entry; pos.entry.exit = c.exit;
   pos.entry.digit = (plan.type.startsWith("DIGIT") ? lastDigitChar(c.exit) : "—");
   pos.entry.result = c.won ? "WON" : "LOST"; pos.entry.profit = c.profit;
   /* Round 81: the settled leg is the moment a copier needs. Broadcast first, render after — a slow or
-     broken client must never delay the trader's own log. */
-  copyBroadcast(pos.entry, "EXIT", plan);
+     broken client must never delay the trader's own log. Round 110: an entry that crossed STOP was never
+     sent to a copier, so its exit is not sent either. */
+  if (!pos.entry.stopped) copyBroadcast(pos.entry, "EXIT", plan);
   renderActivity(); renderSummary();
   return { won: c.won, profit: c.profit, payout: c.payout, entry: c.entry, exit: c.exit,
     balanceAfter: c.balanceAfter, fast: !!pos.fast,
@@ -6324,7 +6388,7 @@ function paintEntryNow(){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.paceFails = 0; this.paceHeld = false; this.tradeGen = 0;
+    this.paceFails = 0; this.paceHeld = false; this.tradeGen = 0; this.closing = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
     /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
@@ -6449,12 +6513,13 @@ class BaseBot {
   stop(reason, opts){
     if (this.restartTimer){ clearTimeout(this.restartTimer); this.restartTimer = null; this.restartAt = 0; }   // a manual STOP / symbol change / logout cancels a queued auto-restart
     this.tradeGen++;   // invalidate every proposal/retry still awaiting a reply before leaving STOP
-    if (!this.running) return;
+    if (!this.running){ closeOpenFor(this); return; }   // Round 110: a second STOP still retries an open contract
     this.running = false;
     this.busy = false;
     this.paceHeld = false; this.paceFails = 0;
     this.sys("Stopped" + (reason ? " — " + reason : ""));
     this.onStop();
+    closeOpenFor(this);   // Round 110: an already-bought contract is sold now, not left to expiry
     renderBot(this);
     if (opts && opts.limit) this.afterLimitStop(reason, opts.kind);   // only the bot's own limits may hand it back to itself
   }
@@ -10892,7 +10957,7 @@ function renderBot(b){
   const lc = b.cfg();
   const limTxt = (b.running || b.restartAt) ? " · " + b.limitWord() + " " + fmtS(b.limitPl()) + (lc.tp > 0 ? " / TP +" + fmt(lc.tp) : "") + (lc.sl > 0 ? " / SL −" + fmt(lc.sl) : "") +
     (b.stopsOnLimits() ? "" : " · ONLY TP ENDS IT") : "";
-  $("#" + p + "_sub").textContent = b.subText() + limTxt + (b.virtualLeft > 0 ? " · VIRTUAL " + b.virtualLeft + " left" : "") + (b.busy ? " · trade in progress…" : "");
+  $("#" + p + "_sub").textContent = b.subText() + limTxt + (b.virtualLeft > 0 ? " · VIRTUAL " + b.virtualLeft + " left" : "") + (b.busy ? " · trade in progress…" : "") + (b.closing > 0 ? " · closing the open contract…" : "");
   $("#" + p + "_trades").textContent = b.stats.trades;
   $("#" + p + "_wins").textContent = b.stats.wins;
   $("#" + p + "_losses").textContent = b.stats.losses;
@@ -10914,11 +10979,13 @@ function renderBot(b){
   }
   const rb = $("#" + p + "_runbar"), rs = $("#" + p + "_state"), rm = $("#" + p + "_runmeta");
   if (rb && rs && rm){
-    rb.className = "runbar" + (b.running ? (b.paceHeld ? " pace" : " on") : (b.busy ? " busy" : ""));
+    const closing = b.closing > 0;
+    rb.className = "runbar" + (b.running ? (b.paceHeld ? " pace" : " on") : (b.busy || closing ? " busy" : ""));
     rs.textContent = b.running ? (b.paceHeld ? "Holding — Deriv price limit · still running, no new orders"
       : (b.busy ? "Bot is running — an order is on Deriv" : "Bot is running"))
+      : (closing ? "Stopped — closing the open contract on Deriv"
       : (b.busy ? "Stopped — an order is still settling on Deriv"
-      : (b.restartAt ? "Stopped — the next run is queued" : "Bot stopped"));
+      : (b.restartAt ? "Stopped — the next run is queued" : "Bot stopped")));
     const cur = (state.account && state.account.currency) || "USD";
     rm.innerHTML = "<span>MARKET <b>" + state.symbol + "</b></span>" +
       "<span>CONTRACTS <b>" + b.stats.trades + "</b></span>" +
