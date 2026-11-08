@@ -4459,8 +4459,21 @@ function warmProposal(plan, sym){
   propQuote(key);
 }
 /* ================= trade core ================= */
+function tradeActive(ticket){ return !ticket || (ticket.bot.running && ticket.bot.tradeGen === ticket.gen); }
+function stoppedTrade(){
+  const e = new Error("STOP pressed — the pending entry was cancelled before its buy was sent");
+  e.code = "BotStopped";
+  return e;
+}
+function assertTradeActive(ticket){ if (!tradeActive(ticket)) throw stoppedTrade(); }
+function releaseQuote(first){
+  if (!first) return;
+  if (first.req_id) api.drop(first.req_id);
+  if (first.subscription && first.subscription.id) api.send({ forget: first.subscription.id }).catch(() => {});
+}
 /* one leg of a cycle: proposal + buy, NO settlement wait */
-async function openPosition(plan){
+async function openPosition(plan, ticket){
+  assertTradeActive(ticket);
   const currency = (state.account && state.account.currency) || "USD";
   const sym = plan.symbol || state.symbol;      // all-market bot passes an explicit symbol
   const key = propKeyOf(plan, sym);
@@ -4476,30 +4489,34 @@ async function openPosition(plan){
     propStat.misses++;
     if (w && propOn()) propForget(key);                 // a stale shape is re-quoted, not trusted
     const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true });
+    if (!tradeActive(ticket)){ releaseQuote(first); throw stoppedTrade(); }
     pr = first.proposal;
     propSubId = (first.subscription && first.subscription.id) || null;
     propReqId = first.req_id || null;
   }
   let buy;
   try {
+    assertTradeActive(ticket);
     buy = (await api.send({ buy: pr.id, price: pr.ask_price })).buy;
   } catch(e){
+    if (!tradeActive(ticket)) throw stoppedTrade();
     if (!warm) throw e;
     /* Deriv re-priced or cancelled that id under us: drop the shape and pay the old two trips once. */
     propRefuse();
     propForget(key);
     warmProposal(plan, sym);
     const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true });
+    if (!tradeActive(ticket)){ releaseQuote(first); throw stoppedTrade(); }
     pr = first.proposal;
+    assertTradeActive(ticket);
     const retry = await api.send({ buy: pr.id, price: pr.ask_price });
-    if (first.req_id) api.drop(first.req_id);
-    if (first.subscription && first.subscription.id) api.send({ forget: first.subscription.id }).catch(() => {});
+    releaseQuote(first);
     buy = retry.buy;
   }
   if (warm) propStat.streak = 0;                        // a warm id that DID buy resets the refusal count
   if (propSubId) api.send({ forget: propSubId }).catch(() => {});
   if (propReqId) api.drop(propReqId);   // the proposal sub is dead at buy time — release its local slot too, or every trade leaks one
-  warmProposal(plan, sym);              // re-quote this shape in the background so the NEXT entry is one trip
+  if (tradeActive(ticket)) warmProposal(plan, sym);     // STOP must not start another background quote
   propBadge();
   const entry = {
     t: Date.now(), source: plan.source, symbol: sym,
@@ -4531,13 +4548,13 @@ async function settlePosition(pos){
     balanceAfter: c.balanceAfter, fast: !!pos.fast,
     contractId: pos.contractId, stake: pos.stake, ratio: pos.ratio };
 }
-async function executeTrade(plan){ return settlePosition(await openPosition(plan)); }
+async function executeTrade(plan, ticket){ return settlePosition(await openPosition(plan, ticket)); }
 /* ONE cycle, MANY contracts: every leg is bought before any of them settles, so the covered
    digits ride the same entry tick instead of laddering one tick apart. */
-async function executeLegs(plans){
+async function executeLegs(plans, ticket){
   const opened = [];
   for (const p of plans){
-    try { opened.push(await openPosition(p)); }
+    try { opened.push(await openPosition(p, ticket)); }
     catch(e){
       // the legs already on the market will still settle on their own — book each as it closes
       opened.forEach(h => { settlePosition(h).then(res => { applyBalanceAfter(res); }).catch(() => {}); });
@@ -6307,7 +6324,7 @@ function paintEntryNow(){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.paceFails = 0; this.paceHeld = false;
+    this.paceFails = 0; this.paceHeld = false; this.tradeGen = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
     /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
@@ -6328,6 +6345,7 @@ class BaseBot {
       if (!ok) return;
     }
     const resume = !!(opts && opts.resume);   // an automatic restart of the SAME session — the session P/L base survives, so the user's TP/SL target is not reset
+    this.tradeGen++;
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
     this.paceFails = 0; this.paceHeld = false;
     this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
@@ -6339,7 +6357,7 @@ class BaseBot {
     this.onStart();
     this.sys(this.startedTxt());
     renderBot(this);
-    this.loop();
+    this.loop(this.tradeGen);
     if (resume) return;                      // an automatic restart: leave the user's tab and ears alone
     if (!state.fastExec) toast("⚡ Fast execution is OFF for " + this.name + " — it still decides on the ~0.5s heartbeat, but sleeps the whole half second instead of lining the next decision up on the very next tick. Tick 'Fast execution' under the bot desk to snap entries to ticks.", "warn", 9000);
     /* Round 86: Bot 11 lifts its own live monitor instead of jumping to the trade log behind it. */
@@ -6430,6 +6448,7 @@ class BaseBot {
   }
   stop(reason, opts){
     if (this.restartTimer){ clearTimeout(this.restartTimer); this.restartTimer = null; this.restartAt = 0; }   // a manual STOP / symbol change / logout cancels a queued auto-restart
+    this.tradeGen++;   // invalidate every proposal/retry still awaiting a reply before leaving STOP
     if (!this.running) return;
     this.running = false;
     this.busy = false;
@@ -6491,8 +6510,8 @@ class BaseBot {
     if (now - (this._holdPaint || 0) >= BOT_STEP_MS){ this._holdPaint = now; renderBot(this); }
     return true;
   }
-  async loop(){
-    while (this.running){
+  async loop(gen){
+    while (this.running && gen === this.tradeGen){
       if (!api.connected){ await waitGap(); continue; }
       if (!state.account){ this.stop("account logged out"); break; }
       try {
@@ -6513,7 +6532,8 @@ class BaseBot {
           break;
         }
         this.busy = true; renderBot(this);
-        const res = this.virtualLeft > 0 ? await simulateTrade(plan, this) : await executeTrade(plan);
+        const ticket = { bot: this, gen: this.tradeGen };
+        const res = this.virtualLeft > 0 ? await simulateTrade(plan, this) : await executeTrade(plan, ticket);
         if (res.virtual){
           this.virtualLeft--;
           this.sys("VIRTUAL warm-up: " + this.virtualLeft + " paper trades left before live");
@@ -6547,6 +6567,7 @@ class BaseBot {
         this.sys((res.virtual ? "VIRTUAL " : "") + (res.won ? "WON " : "LOST ") + plan.type + (plan.barrier != null ? " " + plan.barrier : "") + " · exit digit " + lastDigitChar(res.exit) + " · " + fmtS(res.profit) + (res.fast ? " · ⚡ 1 TRIP" : " · quoted 2 TRIP"));
         if (this.checkLimits()) break;
       } catch(e){
+        if (!this.running || (e && e.code === "BotStopped")) break;
         /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
         if (paceIsRate(e)){
           await this.holdForPace(e);
@@ -6558,7 +6579,7 @@ class BaseBot {
           if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + apiHuman(e), "error"); break; }
           await sleep(2500);
         }
-      } finally { this.busy = false; }
+      } finally { if (gen === this.tradeGen) this.busy = false; }
       await waitGap(BOT_TRADE_GAP_MS);   // Round 87: the next order leaves the moment this one settles
     }
     renderBot(this);
@@ -6908,8 +6929,8 @@ class MatchesBot extends BaseBot {
       outlay: round2(per * r.picks.length), plans };
   }
   /* multi-leg cycle: all legs are bought before any settles, so they ride the same exit tick */
-  async loop(){
-    while (this.running){
+  async loop(gen){
+    while (this.running && gen === this.tradeGen){
       if (!api.connected){ await waitGap(); continue; }
       if (!state.account){ this.stop("account logged out"); break; }
       const cyc = this.planCycle();
@@ -6928,7 +6949,8 @@ class MatchesBot extends BaseBot {
         (cyc.plans.length > 1 ? "combined " : "its window share ") + fmt(cyc.cover, 1) + "% vs " +
         b7BreakEven(cyc.plans.length) + " break-even" + (cyc.locked ? " (hunt " + this.lockCyc + ")" : ""));
       try {
-        const legs = virt ? await simulateLegs(cyc.plans) : await executeLegs(cyc.plans);
+        const ticket = { bot: this, gen: this.tradeGen };
+        const legs = virt ? await simulateLegs(cyc.plans) : await executeLegs(cyc.plans, ticket);
         this.failStreak = 0;
         if (!virt) this.paceRecovered();
         legs.forEach(l => { if (this.settleLeg(l, virt)) this.hitFlag = true; });
@@ -6951,6 +6973,7 @@ class MatchesBot extends BaseBot {
         if (this.checkLimits()) break;                    // TP / SL take precedence over the first-hit bank
         if (this.hitFlag){ this.bankOnHit(); break; }  // the user's rule: one hit ends the run
       } catch(e){
+        if (!this.running || (e && e.code === "BotStopped")) break;
         /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
         if (paceIsRate(e)){
           await this.holdForPace(e);
@@ -6962,7 +6985,7 @@ class MatchesBot extends BaseBot {
           if (this.failStreak >= 5){ this.stop("repeated errors — check stake settings / connection"); toast(this.name + " stopped: " + apiHuman(e), "error"); break; }
           await sleep(2500);
         }
-      } finally { this.busy = false; }
+      } finally { if (gen === this.tradeGen) this.busy = false; }
       renderBot(this);
       await waitGap(BOT_TRADE_GAP_MS);   // Round 87: same zero gap after a multi-leg cycle
     }
