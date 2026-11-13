@@ -4669,6 +4669,8 @@ async function openPosition(plan, ticket){
     buy = retry.buy;
   }
   if (warm) propStat.streak = 0;                        // a warm id that DID buy resets the refusal count
+  /* Round 112: the instant this contract exists is the instant the run's one-second clock starts. */
+  if (ticket && ticket.bot) ticket.bot.lastBuyAt = Date.now();
   if (propSubId) api.send({ forget: propSubId }).catch(() => {});
   if (propReqId) api.drop(propReqId);   // the proposal sub is dead at buy time — release its local slot too, or every trade leaks one
   if (tradeActive(ticket)) warmProposal(plan, sym);     // STOP must not start another background quote
@@ -5729,7 +5731,7 @@ async function simulateLegs(plans){
       contractId: "VIRTUAL", stake: plan.stake, ratio, virtual: true } };
   });
 }
-async function simulateTrade(plan, bot){ const legs = await simulateLegs([plan]); return legs[0].res; }
+async function simulateTrade(plan, bot){ if (bot) bot.lastBuyAt = Date.now(); const legs = await simulateLegs([plan]); return legs[0].res; }
 function watchContract(contractId){
   return new Promise((resolve, reject) => {
     let done = false, tries = 0;
@@ -6271,10 +6273,13 @@ const fastMode = () => !!state.fastExec;
    With fast execution off, `ms` remains an ordinary sleep. Contract settlement and Deriv's request limits
    still govern the order path; this changes only how soon an entry condition is read again. */
 const BOT_STEP_MS = 500;
-/* Round 87: "run after every 0s" — the hold between a contract SETTLING and the next order going out.
-   This is not a request flood: the previous order is always fully settled before this timer even starts,
-   so the real cadence is still set by Deriv's own settlement of the contract. */
-const BOT_TRADE_GAP_MS = 0;
+/* Round 112 (your rule: "open contract after every 1 second like normal runs in deriv.com"): the floor
+   between one contract OPENING and the next. It is measured from the confirmed buy, not from settlement,
+   so a fast-settling contract can no longer fire the next order in the same breath — the run breathes at
+   Deriv Bot's normal one-contract-per-second pace instead of the old Round 87 zero gap. A contract that
+   takes longer than a second to settle still waits for its own settlement first: this is a floor, never a
+   licence to overlap runs. STOP cuts the wait short (see BaseBot.runGap). */
+const BOT_RUN_GAP_MS = 1000;
 /* Round 92: BOT_STEP_MS is the pace of a bot that has NOTHING to wait for — an order has just settled and
    the next one goes out immediately, so this only bites on the HOLD path, where the bot is sitting on an
    unmet entry condition (Bot 11's AI-confidence floor is the one the user feels). The hold is re-read every
@@ -6504,7 +6509,7 @@ function paintEntryNow(){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.paceFails = 0; this.paceHeld = false; this.tradeGen = 0; this.closing = 0;
+    this.paceFails = 0; this.paceHeld = false; this.tradeGen = 0; this.closing = 0; this.lastBuyAt = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
     /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
@@ -6528,6 +6533,7 @@ class BaseBot {
     this.tradeGen++;
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
     this.paceFails = 0; this.paceHeld = false;
+    this.lastBuyAt = 0;   // Round 112: a fresh run's first contract leaves at once; the 1s floor applies between opens
     this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
     this.startPl = this.stats.pl;
     if (!resume) this.sessionPl = this.stats.pl;
@@ -6759,11 +6765,22 @@ class BaseBot {
           await sleep(2500);
         }
       } finally { if (gen === this.tradeGen) this.busy = false; }
-      await waitGap(BOT_TRADE_GAP_MS);   // Round 87: the next order leaves the moment this one settles
+      await this.runGap(gen);   // Round 112: one contract per second, Deriv Bot's normal-run pace
     }
     renderBot(this);
   }
   onSettled(){ /* override */ }
+  /* Round 112: the normal-run breath. Waits out whatever is left of BOT_RUN_GAP_MS since the last confirmed
+     buy, in short slices so STOP is felt within ~100 ms instead of at the end of a full second. It never
+     sleeps past the run: a stopped bot or a bumped tradeGen leaves immediately, and the loop's own guard
+     means no further contract is opened. */
+  async runGap(gen){
+    let left = BOT_RUN_GAP_MS - (Date.now() - (this.lastBuyAt || 0));
+    while (left > 0 && this.running && gen === this.tradeGen){
+      await sleep(Math.min(left, 100));
+      left = BOT_RUN_GAP_MS - (Date.now() - (this.lastBuyAt || 0));
+    }
+  }
   onStart(){ /* override */ }
   onStop(){ /* override */ }
   afterLimitStop(reason, kind){ /* override — fires only when the bot stopped ITSELF on TP / SL / win streak (kind "tp" | "sl" | "streak"), never on a manual STOP, stopAllBots or a market switch */ }
@@ -7129,6 +7146,7 @@ class MatchesBot extends BaseBot {
         b7BreakEven(cyc.plans.length) + " break-even" + (cyc.locked ? " (hunt " + this.lockCyc + ")" : ""));
       try {
         const ticket = { bot: this, gen: this.tradeGen };
+        if (virt) this.lastBuyAt = Date.now();   // Round 112: paper cycles breathe at the same one-second pace
         const legs = virt ? await simulateLegs(cyc.plans) : await executeLegs(cyc.plans, ticket);
         this.failStreak = 0;
         if (!virt) this.paceRecovered();
@@ -7166,7 +7184,7 @@ class MatchesBot extends BaseBot {
         }
       } finally { if (gen === this.tradeGen) this.busy = false; }
       renderBot(this);
-      await waitGap(BOT_TRADE_GAP_MS);   // Round 87: same zero gap after a multi-leg cycle
+      await this.runGap(gen);   // Round 112: same one-second floor between multi-leg cycles
     }
     renderBot(this);
   }
