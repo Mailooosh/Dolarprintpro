@@ -2807,6 +2807,7 @@ const PACE_COOL_MS = 1500;   // a refusal costs this long before the next propos
 const PACE_COOL_MAX = 12000;
 const PACE_RECOVER = 20;     // this many accepted proposals earn a capacity slot back
 const PACE_MIN_BUDGET = 300;    // of Deriv's 360 counted calls a minute — 60 left for whatever else asks
+const PACE_MIN_FLOOR = 60;      // Round 113: a session Deriv keeps refusing settles no lower than this
 const PACE_HOUR_BUDGET = 12000; // of Deriv's 14,400 an hour
 /* The four call types Deriv counts together. Everything else on the socket — ticks, history, pings, forgets —
    is not part of this budget and must not be made to wait for it. */
@@ -2815,13 +2816,20 @@ function paceCounted(r){
 }
 function paceMake(label){
   return { label, cap: PACE_CAP, q: [], pump: null, pumpAt: 0, next: 0, nextBg: 0, coolUntil: 0,
-    strikes: 0, clean: 0, sent: 0, held: 0, drops: 0, limits: 0, log: [], iMin: 0, iHour: 0 };
+    strikes: 0, clean: 0, sent: 0, held: 0, drops: 0, limits: 0, log: [], iMin: 0, iHour: 0,
+    budget: PACE_MIN_BUDGET, cancelTimer: null };
 }
 function paceReset(p){
   if (p.pump) clearTimeout(p.pump);
-  p.pump = null; p.pumpAt = 0; p.q.length = 0;
+  if (p.cancelTimer) clearInterval(p.cancelTimer);
+  p.pump = null; p.pumpAt = 0; p.cancelTimer = null;
+  /* Round 113: orders now wait in this queue too, so a reset must fail them loudly instead of stranding a
+     bot "busy" on a request that will never be sent. */
+  const stranded = p.q.splice(0, p.q.length);
+  stranded.forEach(it => it.reject(Object.assign(new Error("connection reset while this request waited for Deriv's request budget"), { code: "Disconnected" })));
   p.cap = PACE_CAP; p.next = 0; p.nextBg = 0; p.coolUntil = 0; p.strikes = 0; p.clean = 0;
   p.sent = 0; p.held = 0; p.drops = 0; p.limits = 0; p.log.length = 0; p.iMin = 0; p.iHour = 0;
+  p.budget = PACE_MIN_BUDGET;
 }
 /* The shared window. Entries leave it on their own, so the two head indexes only ever move forward and the
    array is compacted once an hour's worth has gone past — nothing is scanned per request. */
@@ -2843,7 +2851,10 @@ function paceBudgetLine(p, now){
   if (!p) return 0;
   paceTrim(p, now);
   if (p.log.length - p.iHour >= PACE_HOUR_BUDGET) return p.log[p.iHour] + PACE_HOUR_MS;
-  if (p.log.length - p.iMin >= PACE_MIN_BUDGET) return p.log[p.iMin] + PACE_MIN_MS;
+  /* Round 113: the ceiling is LEARNED, not assumed. Deriv's published 360/min is the maximum a session may
+     be allowed; a session it keeps refusing is allowed less, and insisting on 300 there is what kept a run
+     holding forever. Each refusal cuts the budget, clean traffic earns it back (see paceRefused/paceAccepted). */
+  if (p.log.length - p.iMin >= p.budget) return p.log[p.iMin] + PACE_MIN_MS;
   return 0;
 }
 function paceIsRate(e){
@@ -2858,6 +2869,24 @@ function paceLineFor(p, tier, now){
 }
 function paceDropErr(){
   return Object.assign(new Error("Deriv is at its request limit, so this background price check was skipped"), { code: "PaceSkip" });
+}
+function paceCancelErr(){
+  return Object.assign(new Error("STOP pressed while this request waited for Deriv's request budget"), { code: "BotStopped" });
+}
+/* A gate wait can be a whole minute when the budget is spent; STOP must not wait for it. One 100 ms sweeper
+   per connection rejects any queued request whose owner has gone away, then lets the next one through. */
+function paceSweepArm(p){
+  if (p.cancelTimer) return;
+  p.cancelTimer = setInterval(() => {
+    let any = false;
+    for (let i = p.q.length - 1; i >= 0; i--){
+      const it = p.q[i];
+      if (!it.cancel) continue;
+      if (it.cancel()){ p.q.splice(i, 1); it.reject(paceCancelErr()); } else any = true;
+    }
+    if (!any){ clearInterval(p.cancelTimer); p.cancelTimer = null; }
+    paceFlush(p, Date.now());
+  }, 100);
 }
 function paceDropStale(p, now){
   for (let i = p.q.length - 1; i >= 0; i--){
@@ -2880,6 +2909,7 @@ function paceFlush(p, now){
   const hotIdx = p.q.findIndex(x => x.tier === "hot");
   const idx = hotIdx >= 0 ? hotIdx : 0;     // an order's price request cuts in front of pricing work
   const it = p.q[idx];
+  if (it.cancel && it.cancel()){ p.q.splice(idx, 1); it.reject(paceCancelErr()); return paceFlush(p, now); }
   const line = paceLineFor(p, it.tier, now);
   if (now < line) return pacePump(p, line, now);
   const step = 1000 / Math.max(1, p.cap);
@@ -2893,12 +2923,14 @@ function paceFlush(p, now){
   paceDropStale(p, t2);
   if (p.q.length) pacePump(p, Math.max(paceLineFor(p, p.q.findIndex(x => x.tier === "hot") >= 0 ? "hot" : "bg"), t2), t2);
 }
-/* Resolves when this proposal may go out; rejects only background work that went stale while it waited. */
-function paceAsk(p, tier, maxWait){
+/* Resolves when this proposal may go out; rejects only background work that went stale while it waited,
+   or an order whose run was stopped while it waited (Round 113). */
+function paceAsk(p, tier, maxWait, cancel){
   return new Promise((resolve, reject) => {
-    p.q.push({ tier, maxWait, added: Date.now(), resolve, reject });
+    p.q.push({ tier, maxWait, added: Date.now(), resolve, reject, cancel: cancel || null });
     /* Re-arm the pump for the order path: a background slot must never decide when a trade may ask for a price. */
     if (tier === "hot" && p.pump && p.pumpAt > paceLineFor(p, "hot")){ clearTimeout(p.pump); p.pump = null; p.pumpAt = 0; }
+    if (cancel) paceSweepArm(p);
     paceFlush(p, Date.now());
   });
 }
@@ -2910,6 +2942,9 @@ function paceRefused(p){
      into the send-spacing too made the line monotonic, so an old long refusal kept holding the queue after
      a newer short one — a 1.5s pause measured as 6s. Never shorten a cool-down already in force. */
   p.coolUntil = Math.max(p.coolUntil, now + cool);
+  /* Round 113: a refusal also means this session's real allowance is below what we asked for, so spend less
+     next minute instead of re-asking at the same rate until the run looks stopped. */
+  p.budget = Math.max(PACE_MIN_FLOOR, Math.round(p.budget * 0.6));
   /* Three refusals inside one cool-down means the cap itself is above what this account is being allowed,
      not that we were one millisecond early — so give Deriv a whole slot rather than waiting again. */
   if (p.strikes >= 3 && p.cap > 1){ p.cap--; p.strikes = 0; }
@@ -2919,19 +2954,27 @@ function paceRefused(p){
 }
 function paceAccepted(p){
   if (p.strikes){ p.strikes = 0; return; }
-  if (++p.clean >= PACE_RECOVER && p.cap < PACE_CAP){ p.cap++; p.clean = 0; }
+  if (++p.clean >= PACE_RECOVER){
+    p.clean = 0;
+    if (p.cap < PACE_CAP) p.cap++;
+    if (p.budget < PACE_MIN_BUDGET) p.budget = Math.min(PACE_MIN_BUDGET, p.budget + 20);   // Round 113: earn the budget back
+  }
 }
 function paceCoolMs(p){ return p ? Math.max(0, p.coolUntil - Date.now()) : 0; }
 function paceGate(p, request, opts, go){
-  if (!request || !request.proposal) return go();          // buys, ticks, forgets: never touched
-  const tier = opts && opts.hot ? "hot" : "bg";
+  if (!paceCounted(request)) return go();          // ticks, history, pings, forgets: never touched
+  /* Round 113: buy, sell and proposal_open_contract share Deriv's minute budget with proposal, so they ask
+     for a slot too. As order-path work they are spaced, never dropped. Before this they went out ungated,
+     which is how a run could spend the whole ceiling on orders and then be refused on its own next price. */
+  const order = !!(request.buy || request.sell || request.proposal_open_contract);
+  const tier = order || (opts && opts.hot) ? "hot" : "bg";
   const maxWait = opts && opts.maxWait !== undefined ? opts.maxWait : (tier === "hot" ? Infinity : PACE_BG_WAIT);
-  return paceAsk(p, tier, maxWait).then(go);
+  return paceAsk(p, tier, maxWait, opts && opts.cancel).then(go);
 }
 /* Deriv's error sentences are written for developers. A client needs the next move, not the JSON. */
 function apiHuman(e){
   const c = String((e && e.code) || ""), m = String((e && e.message) || "");
-  if (paceIsRate(e)) return "Deriv's price/request limit was reached. This bot is HOLDING, NOT stopped: no new order is placed while requests are refused, and the SAME run resumes automatically when pricing is accepted again. Run P/L and recovery stake stay unchanged. If this keeps happening, untick Pre-quote in Settings.";
+  if (paceIsRate(e)) return "Deriv's price/request limit was reached. This bot is HOLDING, NOT stopped: no new order is placed while requests are refused, and the SAME run resumes automatically when pricing is accepted again. Run P/L and recovery stake stay unchanged. Background pre-quoting pauses itself while the limit is in force, and every order now waits its turn inside Deriv's budget.";
   if (c === "PaceSkip") return "A background price check was skipped to stay inside Deriv's request limit.";
   if (c === "Timeout") return "Deriv did not answer that request in time and it was dropped.";
   if (c === "Disconnected" || c === "NetworkError") return "The connection to Deriv dropped — reconnecting.";
@@ -3049,7 +3092,8 @@ class DerivAPI {
     return paceGate(this.prop, request, opts, () => this._subscribe(request, onUpdate, timeoutMs));
   }
   _paced(request){
-    if (!request || !request.proposal) return false;
+    /* Round 113: every call Deriv counts against the shared minute budget asks the gate — not just proposal. */
+    if (!paceCounted(request)) return false;
     if (!this.ws || this.ws.readyState !== 1) return false;
     return true;
   }
@@ -4527,7 +4571,8 @@ function paceLine(){
   /* Deriv counts 360 trading calls a minute for the whole connection, so under any real use this is the
      number that matters; it is only shown once it is actually being spent, to keep the card quiet at rest. */
   if (!p.limits && !p.held && !p.drops && busy < 120) return "";
-  return " · pace " + p.cap + "/s" + (p.limits ? " · Deriv refused " + p.limits + "×" : "") +
+  return " · pace " + p.cap + "/s" + (p.budget < PACE_MIN_BUDGET ? " · budget " + p.budget + "/min" : "") +
+    (p.limits ? " · Deriv refused " + p.limits + "×" : "") +
     (p.drops ? " · " + p.drops + " background quote(s) skipped" : "") +
     (busy >= 120 ? " · " + busy + " of " + PACE_MIN_BUDGET + " Deriv calls this minute" : "") +
     (paceCoolMs(p) > 400 ? " · waiting " + Math.ceil(paceCoolMs(p) / 1000) + "s" : "");
@@ -4535,7 +4580,7 @@ function paceLine(){
 function propBadge(){
   const el = $("#preQuoteStat"); if (!el) return;
   if (!state.preQuote){ el.textContent = "OFF — every entry quotes its price first (two Deriv trips)"; return; }
-  if (propStat.off){ el.textContent = "PAUSED — Deriv refused " + propStat.refused + " pre-quotes in a row; untick and tick this box to retry" + paceLine(); return; }
+  if (propStat.off){ el.textContent = "PAUSED — " + (propStat.refused ? "Deriv refused " + propStat.refused + " pre-quotes in a row" : "Deriv's request limit paused background pricing") + "; untick and tick this box to retry" + paceLine(); return; }
   const t = propStat.hits + propStat.misses;
   el.textContent = t ? propStat.hits + " of " + t + " entries bought in ONE trip" +
     (propStat.refused ? " · " + propStat.refused + " refused and re-quoted" : "") + " · " + propWarm.size + " shape(s) priced ahead" + paceLine()
@@ -4599,7 +4644,7 @@ async function closeContract(rec){
   const bot = rec.bot;
   if (bot){ bot.closing = (bot.closing || 0) + 1; paintBotSafe(bot); }
   try {
-    await api.send({ sell: rec.id, price: 0 });
+    await api.send({ sell: rec.id, price: 0 }, undefined, { hot: true });
     if (bot) bot.sys("STOP — Deriv accepted the early close of " + rec.id + "; the real exit posts when it settles");
     return true;
   } catch(e){
@@ -4643,7 +4688,7 @@ async function openPosition(plan, ticket){
   } else {
     propStat.misses++;
     if (w && propOn()) propForget(key);                 // a stale shape is re-quoted, not trusted
-    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true });
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true, cancel: () => !tradeActive(ticket) });
     if (!tradeActive(ticket)){ releaseQuote(first); throw stoppedTrade(); }
     pr = first.proposal;
     propSubId = (first.subscription && first.subscription.id) || null;
@@ -4652,7 +4697,7 @@ async function openPosition(plan, ticket){
   let buy;
   try {
     assertTradeActive(ticket);
-    buy = (await api.send({ buy: pr.id, price: pr.ask_price })).buy;
+    buy = (await api.send({ buy: pr.id, price: pr.ask_price }, undefined, { cancel: () => !tradeActive(ticket) })).buy;
   } catch(e){
     if (!tradeActive(ticket)) throw stoppedTrade();
     if (!warm) throw e;
@@ -4660,11 +4705,11 @@ async function openPosition(plan, ticket){
     propRefuse();
     propForget(key);
     warmProposal(plan, sym);
-    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true });
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true, cancel: () => !tradeActive(ticket) });
     if (!tradeActive(ticket)){ releaseQuote(first); throw stoppedTrade(); }
     pr = first.proposal;
     assertTradeActive(ticket);
-    const retry = await api.send({ buy: pr.id, price: pr.ask_price });
+    const retry = await api.send({ buy: pr.id, price: pr.ask_price }, undefined, { cancel: () => !tradeActive(ticket) });
     releaseQuote(first);
     buy = retry.buy;
   }
@@ -5256,11 +5301,11 @@ class CopierAPI {
   /* Round 103: same pace gate as the leader's socket, own budget — a follower that mirrors twelve bots has
      to ask Deriv for twelve prices a second, and that is exactly the traffic this limit exists for. */
   send(request, ms, opts){
-    if (!request || !request.proposal || !this.ws || this.ws.readyState !== 1) return this._send(request, ms);
+    if (!paceCounted(request) || !this.ws || this.ws.readyState !== 1) return this._send(request, ms);
     return paceGate(this.prop, request, opts, () => this._send(request, ms));
   }
   subscribe(request, onUpdate, ms, opts){
-    if (!request || !request.proposal || !this.ws || this.ws.readyState !== 1) return this._subscribe(request, onUpdate, ms);
+    if (!paceCounted(request) || !this.ws || this.ws.readyState !== 1) return this._subscribe(request, onUpdate, ms);
     return paceGate(this.prop, request, opts, () => this._subscribe(request, onUpdate, ms));
   }
   _send(request, ms){
@@ -5422,7 +5467,7 @@ async function copierPlace(f, job){
   catch(e){ throw Object.assign(e || new Error("Deriv refused the price request"), { notPlaced: true }); }
   const pr = first.proposal || {};
   const propSubId = (first.subscription && first.subscription.id) || null;
-  const res = await f.api.send({ buy: pr.id, price: pr.ask_price }, 12000);
+  const res = await f.api.send({ buy: pr.id, price: pr.ask_price }, 12000, { hot: true });
   if (propSubId) f.api.send({ forget: propSubId }).catch(() => {});
   f.api.drop(first.req_id);
   return { contractId: (res.buy && res.buy.contract_id) || 0, stake: num(pr.ask_price), sym: sym,
@@ -5765,10 +5810,13 @@ function watchContract(contractId){
             exit: c.exit_spot_display_value || c.exit_spot || c.exit_tick_display_value || c.exit_tick
           });
         }
-      }).catch(err => {
+      }, undefined, { hot: true, cancel: () => done }).catch(err => {
         if (done) return;
         if (++tries > 40){ done = true; reject(err); }
-        else setTimeout(attempt, 2000);
+        /* Round 113: a refused settlement watch used to retry every 2 s — 40 counted calls spent on the very
+           budget Deriv had just refused, which kept the limit in force and the run holding. A rate refusal now
+           waits out the cool-down before asking again; the gate spaces it anyway. */
+        else setTimeout(attempt, paceIsRate(err) ? Math.min(20000, Math.max(4000, paceCoolMs(api.prop) + 1000)) : 2000);
       });
     };
     attempt();
@@ -6644,10 +6692,18 @@ class BaseBot {
     if (opts && opts.limit) this.afterLimitStop(reason, opts.kind);   // only the bot's own limits may hand it back to itself
   }
   sys(msg){ this.syslog.unshift({ t: Date.now(), msg }); if (this.syslog.length > 30) this.syslog.pop(); }
-  async holdForPace(e){
+  async holdForPace(e, gen){
     this.paceFails++;
     if (!this.paceHeld){ this.paceHeld = true; renderBot(this); }
     if (this.paceFails === 1) this.sys(apiHuman(e));
+    /* Round 113: the switch the old message asked the trader to flip is flipped here instead. Background
+       pre-quoting is the traffic a refused session can least afford, so after four refusals in one episode the
+       cache pauses itself and entries quote once each until Pre-quote is ticked again. */
+    if (this.paceFails === 4 && propOn()){
+      propStat.off = true; propClearAll(); propBadge();
+      this.sys("Pre-quote paused itself after 4 refused price requests — entries now quote once each so the run stays inside Deriv's limit. Tick Pre-quote in Settings to retry.");
+      toast(this.name + ": background pre-quoting paused itself to clear Deriv's limit — the run continues", "warn", 8000);
+    }
     if (this.paceFails === 5 || this.paceFails % 25 === 0){
       this.sys("Holding, NOT stopped — " + this.paceFails + " price requests refused. Run P/L is unchanged at " + fmtS(this.limitPl()) +
         "; no new order is placed until Deriv accepts pricing again. Your TP, SL and STOP still apply.");
@@ -6657,7 +6713,13 @@ class BaseBot {
       toast(this.name + " is holding, not stopped — it will resume when Deriv accepts price requests again", "warn", 7000);
     }
     renderBot(this);
-    await sleep(Math.min(30000, Math.max(3000, paceCoolMs(api.prop) + 500)));
+    /* Round 113: wait out the cool-down AND whatever is left of the learned minute budget, in 100 ms slices so
+       STOP is felt at once. Retrying sooner only re-spends the budget Deriv just refused, which is what kept a
+       run holding forever instead of resuming. */
+    const p = api.prop;
+    const wait = Math.min(60000, Math.max(3000, Math.max(paceCoolMs(p), paceBudgetLine(p, Date.now()) - Date.now()) + 500));
+    const until = Date.now() + wait;
+    while (Date.now() < until && this.running && (gen === undefined || gen === this.tradeGen)) await sleep(Math.min(100, until - Date.now()));
   }
   paceRecovered(){
     if (this.paceHeld) this.sys("Pricing accepted again — the same run resumed at " + fmtS(this.limitPl()) + " after " + this.paceFails + " refused price request(s); it was never stopped.");
@@ -6755,7 +6817,7 @@ class BaseBot {
         if (!this.running || (e && e.code === "BotStopped")) break;
         /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
         if (paceIsRate(e)){
-          await this.holdForPace(e);
+          await this.holdForPace(e, gen);
         } else {
           this.paceHeld = false; this.paceFails = 0;
           this.failStreak++;
@@ -7173,7 +7235,7 @@ class MatchesBot extends BaseBot {
         if (!this.running || (e && e.code === "BotStopped")) break;
         /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
         if (paceIsRate(e)){
-          await this.holdForPace(e);
+          await this.holdForPace(e, gen);
         } else {
           this.paceHeld = false; this.paceFails = 0;
           this.failStreak++;
