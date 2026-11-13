@@ -1610,7 +1610,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
         <label>Over · recovery barrier<input type="number" id="b10_ovrec" value="4" min="1" max="8" step="1" title="Recovery rung after a loss. Always forced HARDER than the main barrier (at least main + 1), so the payout climbs to cover the ladder — OVER 4 needs digits 5-9"></label>
         <label>Under · main barrier<input type="number" id="b10_unmain" value="7" min="1" max="9" step="1" title="Main UNDER campaign: win when the closing digit is below this (digits 0-6 for the default 7)"></label>
         <label>Under · recovery barrier<input type="number" id="b10_unrec" value="6" min="1" max="8" step="1" title="Recovery rung after a loss. Always forced HARDER than the main barrier (at most main − 1), so the payout climbs — UNDER 6 needs digits 0-5"></label>
-        <label>Take profit<input type="number" id="b10_tp" value="5" min="0" step="0.5" title="The ONE limit that stops this bot (0 = off). When the session P/L — every run since you pressed START, the Net P/L on this card — reaches +this, the bot stops for good with the green win popup and the amount spoken. Nothing resumes it automatically: a new run needs a fresh START press"></label>
+        <label>Take profit<input type="number" id="b10_tp" value="5" min="0" step="0.5" title="One of the two limits that stop this bot (0 = off) — the other is the WINS-IN-A-ROW STOP panel on the bot desk. When the session P/L — every run since you pressed START, the Net P/L on this card — reaches +this, the bot stops for good with the green win popup and the amount spoken. Nothing resumes it automatically: a new run needs a fresh START press"></label>
         <label>Stop loss<input type="number" id="b10_sl" value="10" min="0" step="0.5" title="Announcement level only on this bot (0 = silent): when the session P/L falls to −this the AI says the amount once and the bot KEEPS TRADING with the ladder still climbing. It does not stop the bot — press STOP yourself to protect the balance"></label>
       </div>
       <div class="stats">
@@ -1629,7 +1629,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <div class="chartwrap"><span class="chartlbl" id="b10_chartlbl">RUN P/L</span><canvas class="botchart" id="b10_chart"></canvas></div>
       <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b10_recent"></tbody></table></div>
       <div class="note" id="b10_expo"></div>
-      <div class="note"><b>Strategy (your rules of 27 Oct — the AI Signal Center's signals, traded as a bot):</b> the Even/Odd bot is gone from this desk. It plays two <b>over/under campaigns</b> — <b>OVER 3, recovering at OVER 4</b>, and <b>UNDER 7, recovering at UNDER 6</b>. Your second rule of 27 Oct is on this card: <b>the side it buys comes from the AI Signal Center itself</b>, not from a second opinion computed here. Once a second the bot runs the center's own rule on the market in the header — over its <b>100 ticks</b> the <b>3 highest-percentage digits</b> must all be <b>RED bars (≥11.5%)</b> and all sit in one group — and takes the <b>OVER 3 / UNDER 6</b> row of that table, including a signal the center has already popped and is holding on its card. So: center says <b>OVER</b> → Bot 10 buys its OVER campaign; center says <b>UNDER</b> → it buys its UNDER campaign; center says <b>EVEN/ODD</b> or nothing → it <b>holds</b>. The center calls UNDER at <b>UNDER 6</b> (digits 0–5) while this card's campaign is <b>UNDER 7</b> (digits 0–6) — every digit 0–5 wins UNDER 7 as well, so a center UNDER signal always covers the buy. <b>Signal source</b> on this card switches back to the Round 77 behaviour (<b>this card's own RED-digit competition</b> over its own window and leaders) whenever you want the bot to read for itself.<br><b>The campaign numbers below are still scored on the card either way</b> — coverage, break-even, live payout and EV for both campaigns and both rungs — so you can see what the signalled side is actually worth before it buys.<br><b>ONE campaign per session:</b> the family of the <b>first entry</b> — OVER or UNDER — is LOCKED for the rest of the run. The bot does not hop to the other side because the hottest digit moved: it re-reads the same campaign every second and, with <b>Buy every tick after lock</b> on (your rule, on by default), keeps buying it <b>every tick</b> until TP. Untick the box to gate every entry again.<br><b>The recovery rung is always the harder barrier:</b> a win stays on the main barrier at base stake; a loss moves to <b>OVER 4</b> (needs digits 5–9) or <b>UNDER 6</b> (needs 0–5) with the stake multiplied ×2.1 per consecutive loss, cut off by the recovery-step limit or the stake cap and then back to main at base. The recovery barrier is forced harder than the main one on the card for exactly that reason — its payout is bigger, so one win can cover the run. <b>Every tick means the ladder moves fast:</b> four straight losses reach the top step in four seconds.<br><b>How often it opens:</b> those numbers are the <b>own-read</b> rule — 20,000 random 100-tick windows through the campaign competition this card runs when "this card's own RED-digit read" is selected: OVER 3 clears on <b>8.7%</b>, UNDER 7 on <b>16.9%</b>, at least one of them on <b>25.2%</b> (both on 0.4%). On the <b>AI Signal Center</b> source the entry is the center's own call, which is <b>stricter</b> — it demands all 3 leaders in one group at its own 100-tick window, and its UNDER row is measured at <b>UNDER 6</b> rather than your UNDER 7 — so expect <b>fewer, not more</b> first entries; with <b>Buy every tick after lock</b> on, the ones it does take then run every tick until TP. Real tick streams are lumpier than random ones, so read all of it as the order of magnitude.<br><b>Honesty:</b> this is a timing filter, not an edge. At this terminal's measured hold (a payout ≈ <b>0.93×</b> of the fair share) OVER 3 quotes ≈ <b>1.55×</b> and needs <b>64.5%</b> of ticks in 4–9, UNDER 7 ≈ <b>1.33×</b> and needs <b>75.2%</b> in 0–6, while their fair shares are 60% and 70% — so on a flat market all four barriers are worth about <b>−0.07 per 1.00</b> staked. The card quotes the <b>real payout for your market with read-only proposals</b> (nothing is bought to quote) and shows each barrier's measured share against its break-even; where a quote is missing it falls back to the theoretical number, which is labelled as such. No gate here lifts that −7% — they decide WHEN a contract is bought, not whether it wins.<br><b>Only the target stops it (your rules of 23 Oct):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. Nothing else halts this bot: the <b>stop-loss level</b> is an announcement only — the AI says the number once and the bot keeps buying the same campaign, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
+      <div class="note"><b>Strategy (your rules of 27 Oct — the AI Signal Center's signals, traded as a bot):</b> the Even/Odd bot is gone from this desk. It plays two <b>over/under campaigns</b> — <b>OVER 3, recovering at OVER 4</b>, and <b>UNDER 7, recovering at UNDER 6</b>. Your second rule of 27 Oct is on this card: <b>the side it buys comes from the AI Signal Center itself</b>, not from a second opinion computed here. Once a second the bot runs the center's own rule on the market in the header — over its <b>100 ticks</b> the <b>3 highest-percentage digits</b> must all be <b>RED bars (≥11.5%)</b> and all sit in one group — and takes the <b>OVER 3 / UNDER 6</b> row of that table, including a signal the center has already popped and is holding on its card. So: center says <b>OVER</b> → Bot 10 buys its OVER campaign; center says <b>UNDER</b> → it buys its UNDER campaign; center says <b>EVEN/ODD</b> or nothing → it <b>holds</b>. The center calls UNDER at <b>UNDER 6</b> (digits 0–5) while this card's campaign is <b>UNDER 7</b> (digits 0–6) — every digit 0–5 wins UNDER 7 as well, so a center UNDER signal always covers the buy. <b>Signal source</b> on this card switches back to the Round 77 behaviour (<b>this card's own RED-digit competition</b> over its own window and leaders) whenever you want the bot to read for itself.<br><b>The campaign numbers below are still scored on the card either way</b> — coverage, break-even, live payout and EV for both campaigns and both rungs — so you can see what the signalled side is actually worth before it buys.<br><b>ONE campaign per session:</b> the family of the <b>first entry</b> — OVER or UNDER — is LOCKED for the rest of the run. The bot does not hop to the other side because the hottest digit moved: it re-reads the same campaign every second and, with <b>Buy every tick after lock</b> on (your rule, on by default), keeps buying it <b>every tick</b> until TP or the wins target. Untick the box to gate every entry again.<br><b>The recovery rung is always the harder barrier:</b> a win stays on the main barrier at base stake; a loss moves to <b>OVER 4</b> (needs digits 5–9) or <b>UNDER 6</b> (needs 0–5) with the stake multiplied ×2.1 per consecutive loss, cut off by the recovery-step limit or the stake cap and then back to main at base. The recovery barrier is forced harder than the main one on the card for exactly that reason — its payout is bigger, so one win can cover the run. <b>Every tick means the ladder moves fast:</b> four straight losses reach the top step in four seconds.<br><b>How often it opens:</b> those numbers are the <b>own-read</b> rule — 20,000 random 100-tick windows through the campaign competition this card runs when "this card's own RED-digit read" is selected: OVER 3 clears on <b>8.7%</b>, UNDER 7 on <b>16.9%</b>, at least one of them on <b>25.2%</b> (both on 0.4%). On the <b>AI Signal Center</b> source the entry is the center's own call, which is <b>stricter</b> — it demands all 3 leaders in one group at its own 100-tick window, and its UNDER row is measured at <b>UNDER 6</b> rather than your UNDER 7 — so expect <b>fewer, not more</b> first entries; with <b>Buy every tick after lock</b> on, the ones it does take then run every tick until TP or the wins target. Real tick streams are lumpier than random ones, so read all of it as the order of magnitude.<br><b>Honesty:</b> this is a timing filter, not an edge. At this terminal's measured hold (a payout ≈ <b>0.93×</b> of the fair share) OVER 3 quotes ≈ <b>1.55×</b> and needs <b>64.5%</b> of ticks in 4–9, UNDER 7 ≈ <b>1.33×</b> and needs <b>75.2%</b> in 0–6, while their fair shares are 60% and 70% — so on a flat market all four barriers are worth about <b>−0.07 per 1.00</b> staked. The card quotes the <b>real payout for your market with read-only proposals</b> (nothing is bought to quote) and shows each barrier's measured share against its break-even; where a quote is missing it falls back to the theoretical number, which is labelled as such. No gate here lifts that −7% — they decide WHEN a contract is bought, not whether it wins.<br><b>Two limits stop it (your rules of 23 Oct, plus the wins target of 13 Nov):</b> take profit is measured on the <b>Net P/L of the whole session since you pressed START</b> (the number on this card); reaching it ends the session for good — the green win popup, the spoken amount, and <b>no auto-restart of any kind</b>: a new run needs a fresh START press. The <b>WINS-IN-A-ROW STOP</b> panel on the bot desk ends the session the same way: this many consecutive wins while the session is in profit bank it with the same popup and the same fresh-START rule. Nothing else halts this bot: the <b>stop-loss level</b> is an announcement only — the AI says the number once and the bot keeps buying the same campaign, so the recovery ladder can climb past your stop-loss level and <b>only you, the STOP button, a market switch (the header dropdown or TRADE AI NOW) or a logout end the run.</b></div>
     </div>
   </div>
 </section>
@@ -1692,6 +1692,26 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     <div>
       <div class="dt">AI TRADING DESK</div>
       <div class="ds">Seven autonomous bots on one grid. Press <b>LOAD</b> on a bot to open its parameter editor below — only one editor is open at a time, and nothing opens until you load it. <b>BOT 8 · Sync Even/Odd</b> lives on the <b>Synchronization</b> tab.</div>
+    </div>
+  </div>
+  <!-- Round 114 (user, 13 Nov): "add a section where i can set the Number runs of wins i want the bots to
+       stop at and apply to all bots" — the wins-in-a-row bank gets its own panel at the top of the desk,
+       and Bot 10 honors it too (its TP-only session-end rule of 23 Oct gains this one exception). -->
+  <div class="panel" id="winStreakPanel" style="margin:0 0 14px;border-left:3px solid var(--green)">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div style="min-width:185px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:.05em">WINS-IN-A-ROW STOP</div>
+        <div style="color:var(--dim);font-size:11px;margin-top:2px;letter-spacing:.04em">APPLIES TO EVERY BOT · EVERY DESK</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-ghost" id="wsMinus" type="button" style="width:34px;height:36px;padding:0;font-size:17px;font-weight:800" title="One win fewer">−</button>
+        <input type="number" id="winStreak" value="3" min="0" max="20" step="1" style="width:72px;height:36px;text-align:center;font-size:18px;font-weight:800" title="Consecutive winning contracts that bank the run and stop the bot (0 = off)">
+        <button class="btn btn-ghost" id="wsPlus" type="button" style="width:34px;height:36px;padding:0;font-size:17px;font-weight:800" title="One win more">+</button>
+        <span id="wsState" style="font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--green);border:1px solid var(--green);border-radius:20px;padding:4px 10px;white-space:nowrap">ON · BANKS AT 3</span>
+      </div>
+      <div style="flex:1;min-width:250px;color:var(--muted);font-size:12px;line-height:1.55">
+        Any bot that wins this many contracts <b>back to back</b> banks the run, stops itself and pops the win card — take-profit target reached or not. It fires <b>only while the run is in profit</b>: a red or flat run keeps trading until the streak lands it above zero. <b>0 = off.</b> Every bot honors it, including Bot 10 — the wins target ends its session exactly like take profit does, with no auto-restart.
+      </div>
     </div>
   </div>
   <div class="botgrid">
@@ -1987,11 +2007,6 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
       <b style="color:var(--text)">Virtual trades before live</b>
       <input type="number" id="virtCount" value="0" min="0" step="1" style="width:66px">
       <span style="color:var(--dim)">— simulated paper trades (no real orders) a bot runs before switching to live orders on your account. 0 = trade live immediately.</span>
-    </label>
-    <label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-size:12px">
-      <b style="color:var(--text)">Stop after N wins in a row</b>
-      <input type="number" id="winStreak" value="3" min="0" max="20" step="1" style="width:66px">
-      <span style="color:var(--dim)">— any bot that wins this many contracts back to back banks the run, stops itself and pops the win card even if the take-profit target was not reached, <b>but only while its run is in profit</b>: a red or flat run is never stopped by this rule, it keeps trading until the streak lands it above zero. 0 = off.</span>
     </label>
     <label style="display:none;gap:7px;align-items:center;color:var(--muted);font-size:12px;cursor:pointer;user-select:none">
       <input type="checkbox" id="cashSound" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer">
@@ -6257,14 +6272,23 @@ function cfg2(){
 /* ---- shared stop rule (user request, 2026-10-15; profit guard added 2026-10-27): bank a good run ----
    Every bot stops itself after this many CONSECUTIVE winning trades and shows the win popup,
    whether or not the take-profit target was reached — BUT ONLY while the run is in profit.
-   A red or flat run is never stopped by the streak (user rule of 27 Oct). 0 = rule off. */
+   A red or flat run is never stopped by the streak (user rule of 27 Oct). 0 = rule off.
+   Round 114 (13 Nov): the number lives in its own WINS-IN-A-ROW STOP panel on the bot desk and applies
+   to EVERY bot — Bot 10's session now banks on it too, exactly like its take profit. */
 function winStreakStop(){ return clampInt($("#winStreak").value, 0, 20, 3); }
+function winStreakPaint(){
+  const el = $("#wsState"); if (!el) return;
+  const n = winStreakStop();
+  el.textContent = n > 0 ? "ON · BANKS AT " + n : "OFF";
+  el.style.color = n > 0 ? "var(--green)" : "var(--dim)";
+  el.style.borderColor = n > 0 ? "var(--green)" : "var(--line2)";
+}
 function limitsText(c, stops){
   const cur = (state.account && state.account.currency) || "USD";
   const n = winStreakStop();
   const tpTxt = "take profit " + (c.tp > 0 ? "+" + fmt(c.tp) + " " + cur : "off") + " · stop loss " + (c.sl > 0 ? "−" + fmt(c.sl) + " " + cur : "off");
   /* `stops` may be true (every limit halts the bot), false (none do) or the list of kinds that
-     still may — Bot 10 passes ["tp"] so only the target ends its session. */
+     still may — Bot 10 passes ["tp","streak"] so the target and the wins bank end its session. */
   if (Array.isArray(stops)){
     const may = k => stops.indexOf(k) >= 0;
     return tpTxt + " (measured on the session since this START) · " +
@@ -6605,8 +6629,9 @@ class BaseBot {
   /* A bot may refuse to stop ITSELF on some of its limits. Bot 10 does (user rules of 2026-10-23:
      first "never stop it, let it trade", then "the pop up after achieving isn't available in even
      odd strategy and never resume trading after TP executed") — so it keeps the take-profit stop
-     WITH the result popup and nothing restarts it, while the stop loss and the win-streak bank no
-     longer halt it at all. stopKinds() is the list of limits that may still stop this bot;
+     WITH the result popup and nothing restarts it, while the stop loss no longer halts it at all.
+     Since 13 Nov ("apply to all bots") the wins-in-a-row bank ends its session the same way TP does.
+     stopKinds() is the list of limits that may still stop this bot;
      anything it left out is announced once by limitMilestones() and the run carries on. */
   stopsOnLimits(){ return true; }
   stopKinds(){ return this.stopsOnLimits() ? ["tp", "sl", "streak"] : []; }
@@ -8730,11 +8755,12 @@ function cfg10(){
 }
 /* Bot 10 must never sit idle (user rule, 2026-10-19), must not be stopped by anything except its
    target (user rule, 2026-10-23 "never stop it, let it trade") and must still show the win card when
-   the target is achieved and never restart after it (same day). Those three rules carry over
-   UNCHANGED to the Over/Under strategy you asked for on 27 Oct: stopKinds() is still ONLY "tp", so
-   take profit ends the session for good with the green popup and the spoken amount, while the
-   stop-loss level and the N-consecutive-wins bank are merely spoken about once and the bot keeps
-   trading. STOP, a market switch (changeSymbol → stopAllBots) or a logout are the other ways out.
+   the target is achieved and never restart after it (same day). Those rules carry over to the
+   Over/Under strategy of 27 Oct with ONE exception added 13 Nov ("apply to all bots"): the
+   N-consecutive-wins bank now ends its session too, with the same green popup and no auto-restart.
+   stopKinds() is ["tp", "streak"] — take profit and the wins target end the session for good, while the
+   stop-loss level is merely spoken about once and the bot keeps trading. STOP, a market switch
+   (changeSymbol → stopAllBots) or a logout are the other ways out.
    What is new is WHAT it buys: the campaign the red-digit rule names (OVER 3 or UNDER 7), then that
    campaign's recovery barrier (OVER 4 / UNDER 6) with the martingale stake while the run is losing. */
 class OverUnderStratBot extends BaseBot {
@@ -8746,7 +8772,7 @@ class OverUnderStratBot extends BaseBot {
   limitPl(){ return round2(this.stats.pl - (this.sessionPl || 0)); }   // restarts do not reset the target
   limitWord(){ return "session P/L"; }
   stopsOnLimits(){ return false; }                                     // only stopKinds() may halt it
-  stopKinds(){ return ["tp"]; }                                        // TP ends the session; SL and win streaks do not
+  stopKinds(){ return ["tp", "streak"]; }                              // TP and the wins target end the session; SL does not
   famTxt(fam, c){ return fam === "OVER" ? "OVER " + c.ovMain + " → recovery OVER " + c.ovRec
                                         : "UNDER " + c.unMain + " → recovery UNDER " + c.unRec; }
   /* Round 78: what names the side, in one line — used by the log, the toast and the card copy. */
@@ -8778,9 +8804,9 @@ class OverUnderStratBot extends BaseBot {
   }
   onStop(){ this.lossStreak = 0; this.runLossAmt = 0; this.rung = "MAIN"; }
   afterLimitStop(reason, kind){
-    /* TP is the only kind stopKinds() allows this bot, so there is no auto-restart to plan for: the
-       session is over until the user presses START again (their rule of 23 Oct). */
-    this.sys((kind === "tp" ? "Target reached" : "Stop loss reached") + " — the session is over, press START to run it again");
+    /* TP and the wins-in-a-row bank are the kinds stopKinds() allows this bot, so there is no auto-restart
+       to plan for: the session is over until the user presses START again (their rule of 23 Oct). */
+    this.sys((kind === "tp" ? "Target reached" : kind === "streak" ? "Wins target reached" : "Stop loss reached") + " — the session is over, press START to run it again");
     renderBot(this);
   }
   stakeFor(runLosses){
@@ -10935,7 +10961,7 @@ function showResultModal(bot, kind, pl){
   $("#resultBal").textContent = fmt((state.account && state.account.balance) || 0) + " " + cur;
   $("#resultConf").textContent = "Contract #" + ((e && e.id) || "—") + " · settled by Deriv";
   $("#resultResume").textContent = bot.restartAt ? "▶ START THE NEW RUN NOW"
-    : (kind === "tp" && bot.stopKinds().length < 3) ? "▶ START A NEW SESSION (TP ENDED THIS ONE)" : "Resume AI Trading";
+    : ((kind === "tp" || kind === "streak") && bot.stopKinds().indexOf("sl") < 0) ? "▶ START A NEW SESSION (" + (kind === "streak" ? "WINS TARGET" : "TP") + " ENDED THIS ONE)" : "Resume AI Trading";
   $("#resultModal").classList.remove("hidden");
   /* Round 91 (your rule of 1 Nov): the card READS itself the moment it lifts. Doing it here instead of at
      the four call sites means a popup can never paint silently — take profit, stop loss, the wins target
@@ -13113,7 +13139,10 @@ function init(){
     if (bot10.running){ bot10.stop("manual stop"); renderBot(bot10); return; }
     bot10.start().then(() => { if (bot10.running) showTab("eostrat"); renderBot(bot10); });
   });
-  $("#winStreak").addEventListener("input", () => { renderBots(); saveSettings(); });
+  $("#winStreak").addEventListener("input", () => { winStreakPaint(); renderBots(); saveSettings(); });
+  $("#wsMinus").addEventListener("click", () => { const el = $("#winStreak"); el.value = Math.max(0, winStreakStop() - 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
+  $("#wsPlus").addEventListener("click", () => { const el = $("#winStreak"); el.value = Math.min(20, winStreakStop() + 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
+  winStreakPaint();
   $("#b4_rules").addEventListener("input", () => { renderBot(bot4); saveSettings(); });
   $("#b4_sweepOn").addEventListener("change", () => {
     if (bot4.running){ bot4.sweepOn() ? sweepSync() : sweepCloseAll(); }
