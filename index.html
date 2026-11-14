@@ -2947,9 +2947,23 @@ function paceFlush(p, now){
 }
 /* Resolves when this proposal may go out; rejects only background work that went stale while it waited,
    or an order whose run was stopped while it waited (Round 113). */
-function paceAsk(p, tier, maxWait, cancel){
+function paceAsk(p, tier, maxWait, cancel, onHold){
   return new Promise((resolve, reject) => {
-    p.q.push({ tier, maxWait, added: Date.now(), resolve, reject, cancel: cancel || null });
+    /* Round 116: an order that parks here waiting for Deriv's budget is HOLDING, not stuck. The owner gets a
+       hold hook so the card/popup say so instead of freezing on "Buying contract"; it clears the moment the
+       request goes out (or is cancelled/dropped/reset). Only the order path passes a hook — background pricing
+       must never paint HOLDING. */
+    const it = { tier, maxWait, added: Date.now(), resolve: null, reject: null, cancel: cancel || null, held: false, holdTimer: null, onHold: onHold || null };
+    const clearHold = () => {
+      if (it.holdTimer){ clearTimeout(it.holdTimer); it.holdTimer = null; }
+      if (it.held){ it.held = false; if (it.onHold) it.onHold(false); }
+    };
+    it.resolve = () => { clearHold(); resolve(); };
+    it.reject = e => { clearHold(); reject(e); };
+    p.q.push(it);
+    if (tier === "hot" && it.onHold){
+      it.holdTimer = setTimeout(() => { it.holdTimer = null; if (!it.held){ it.held = true; it.onHold(true); } }, 1200);
+    }
     /* Re-arm the pump for the order path: a background slot must never decide when a trade may ask for a price. */
     if (tier === "hot" && p.pump && p.pumpAt > paceLineFor(p, "hot")){ clearTimeout(p.pump); p.pump = null; p.pumpAt = 0; }
     if (cancel) paceSweepArm(p);
@@ -2991,7 +3005,28 @@ function paceGate(p, request, opts, go){
   const order = !!(request.buy || request.sell || request.proposal_open_contract);
   const tier = order || (opts && opts.hot) ? "hot" : "bg";
   const maxWait = opts && opts.maxWait !== undefined ? opts.maxWait : (tier === "hot" ? Infinity : PACE_BG_WAIT);
-  return paceAsk(p, tier, maxWait, opts && opts.cancel).then(go);
+  return paceAsk(p, tier, maxWait, opts && opts.cancel, opts && opts.onHold).then(go);
+}
+/* Round 116: the order path's hold hook. A budget wait marks the owning bot HOLDING (the same flag the throttle
+   episode uses) so every read-out — card run strip, lifted monitor, Bot 11 tag — says "Holding — Deriv price
+   limit · still running" instead of a frozen "Buying contract". It clears when the request goes out, but never
+   steals an error-driven hold (paceFails > 0) that is still in force. */
+function paceHoldHook(bot){
+  if (!bot) return null;
+  return on => {
+    if (on){
+      if (!bot.running) return;
+      bot._gateHeld = true;
+      if (!bot.paceHeld){ bot.paceHeld = true; renderBot(bot); }
+      if (!bot._gateSaid || Date.now() - bot._gateSaid > 60000){
+        bot._gateSaid = Date.now();
+        bot.sys("Holding — Deriv price limit · the next order is waiting for a request slot inside Deriv's budget. The SAME run continues automatically; run P/L is unchanged at " + fmtS(bot.limitPl()) + ".");
+      }
+    } else {
+      bot._gateHeld = false;
+      if (bot.paceFails === 0 && bot.paceHeld){ bot.paceHeld = false; renderBot(bot); }
+    }
+  };
 }
 /* Deriv's error sentences are written for developers. A client needs the next move, not the JSON. */
 const HOLD_BODY = "This bot is HOLDING, NOT stopped: no new order is placed while requests are refused, and the SAME run resumes automatically when pricing is accepted again. Run P/L and recovery stake stay unchanged. Background pre-quoting pauses itself while the limit is in force, and every order now waits its turn inside Deriv's budget.";
@@ -4700,6 +4735,7 @@ async function openPosition(plan, ticket){
   const currency = (state.account && state.account.currency) || "USD";
   const sym = plan.symbol || state.symbol;      // all-market bot passes an explicit symbol
   const key = propKeyOf(plan, sym);
+  const holdHook = paceHoldHook(ticket && ticket.bot);   // Round 116: a budget wait on this order shows HOLDING, not a frozen "Buying contract"
   /* The current Options API session rejects a one-off proposal id at buy time
      ("Unknown contract proposal"), which is why even the fallback path asks WITH subscribe:1. */
   let pr = null, propSubId = null, propReqId = null, warm = false;
@@ -4711,7 +4747,7 @@ async function openPosition(plan, ticket){
   } else {
     propStat.misses++;
     if (w && propOn()) propForget(key);                 // a stale shape is re-quoted, not trusted
-    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true, cancel: () => !tradeActive(ticket) });
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true, cancel: () => !tradeActive(ticket), onHold: holdHook });
     if (!tradeActive(ticket)){ releaseQuote(first); throw stoppedTrade(); }
     pr = first.proposal;
     propSubId = (first.subscription && first.subscription.id) || null;
@@ -4720,7 +4756,7 @@ async function openPosition(plan, ticket){
   let buy;
   try {
     assertTradeActive(ticket);
-    buy = (await api.send({ buy: pr.id, price: pr.ask_price }, undefined, { cancel: () => !tradeActive(ticket) })).buy;
+    buy = (await api.send({ buy: pr.id, price: pr.ask_price }, undefined, { cancel: () => !tradeActive(ticket), onHold: holdHook })).buy;
   } catch(e){
     if (!tradeActive(ticket)) throw stoppedTrade();
     if (!warm) throw e;
@@ -4728,11 +4764,11 @@ async function openPosition(plan, ticket){
     propRefuse();
     propForget(key);
     warmProposal(plan, sym);
-    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true, cancel: () => !tradeActive(ticket) });
+    const first = await api.subscribe(propAsk(plan, sym, currency), () => {}, undefined, { hot: true, cancel: () => !tradeActive(ticket), onHold: holdHook });
     if (!tradeActive(ticket)){ releaseQuote(first); throw stoppedTrade(); }
     pr = first.proposal;
     assertTradeActive(ticket);
-    const retry = await api.send({ buy: pr.id, price: pr.ask_price }, undefined, { cancel: () => !tradeActive(ticket) });
+    const retry = await api.send({ buy: pr.id, price: pr.ask_price }, undefined, { cancel: () => !tradeActive(ticket), onHold: holdHook });
     releaseQuote(first);
     buy = retry.buy;
   }
@@ -5803,6 +5839,8 @@ async function simulateTrade(plan, bot){ if (bot) bot.lastBuyAt = Date.now(); co
 function watchContract(contractId, cancel){
   return new Promise((resolve, reject) => {
     let done = false;
+    const tracked0 = OPEN_CONTRACTS.get(String(contractId));
+    const holdHook = paceHoldHook(tracked0 && tracked0.bot);   // Round 116: a budget wait on the settlement watch shows HOLDING too
     const give = err => { if (!done){ done = true; reject(err); } };
     /* Round 115: the retry breath is sliced at 100 ms so STOP (or a bumped run) is felt at once instead of
        at the end of a 20 s cool-down, and the watch never expires while its run is alive. */
@@ -5845,7 +5883,7 @@ function watchContract(contractId, cancel){
             exit: c.exit_spot_display_value || c.exit_spot || c.exit_tick_display_value || c.exit_tick
           });
         }
-      }, undefined, { hot: true, cancel: () => done || !!(cancel && cancel()) }).catch(err => {
+      }, undefined, { hot: true, cancel: () => done || !!(cancel && cancel()), onHold: holdHook }).catch(err => {
         if (done) return;
         if (cancel && cancel()){ give(stoppedTrade()); return; }
         /* Round 115: a refused or dropped settlement watch is the same throttle episode as a refused
@@ -6607,7 +6645,7 @@ function paintEntryNow(){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.paceFails = 0; this.paceHeld = false; this.tradeGen = 0; this.closing = 0; this.lastBuyAt = 0;
+    this.paceFails = 0; this.paceHeld = false; this._gateHeld = false; this._gateSaid = 0; this.tradeGen = 0; this.closing = 0; this.lastBuyAt = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
     /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
@@ -6630,7 +6668,7 @@ class BaseBot {
     const resume = !!(opts && opts.resume);   // an automatic restart of the SAME session — the session P/L base survives, so the user's TP/SL target is not reset
     this.tradeGen++;
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
-    this.paceFails = 0; this.paceHeld = false; this._paceCause = null;
+    this.paceFails = 0; this.paceHeld = false; this._paceCause = null; this._gateHeld = false; this._gateSaid = 0;
     this.lastBuyAt = 0;   // Round 112: a fresh run's first contract leaves at once; the 1s floor applies between opens
     this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
     this.startPl = this.stats.pl;
@@ -6735,7 +6773,7 @@ class BaseBot {
     if (!this.running){ closeOpenFor(this); return; }   // Round 110: a second STOP still retries an open contract
     this.running = false;
     this.busy = false;
-    this.paceHeld = false; this.paceFails = 0; this._paceCause = null;
+    this.paceHeld = false; this.paceFails = 0; this._paceCause = null; this._gateHeld = false;
     this.sys("Stopped" + (reason ? " — " + reason : ""));
     this.onStop();
     closeOpenFor(this);   // Round 110: an already-bought contract is sold now, not left to expiry
@@ -6788,7 +6826,8 @@ class BaseBot {
   }
   paceRecovered(){
     if (this.paceHeld) this.sys("Pricing accepted again — the same run resumed at " + fmtS(this.limitPl()) + " after " + this.paceFails + " refused price request(s); it was never stopped.");
-    this.paceHeld = false; this.paceFails = 0; this._paceCause = null;
+    this.paceFails = 0; this._paceCause = null;
+    this.paceHeld = !!this._gateHeld;   // Round 116: a budget wait still in force keeps HOLDING on screen
   }
   /* Round 95 — the digit you touched. Checked BEFORE the bot's own strategy, so a gated bot does not even run
      its analysis while the tick is on another digit. The hold is re-read at BOT_HOLD_MS because with
@@ -6886,7 +6925,7 @@ class BaseBot {
         if (paceIsRate(e) || paceIsConn(e)){
           await this.holdForPace(e, gen);
         } else {
-          this.paceHeld = false; this.paceFails = 0;
+          this.paceHeld = !!this._gateHeld; this.paceFails = 0;
           this.failStreak++;
           this.sys("Error: " + (e.code || "") + " " + e.message);
           if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
@@ -7306,7 +7345,7 @@ class MatchesBot extends BaseBot {
         if (paceIsRate(e) || paceIsConn(e)){
           await this.holdForPace(e, gen);
         } else {
-          this.paceHeld = false; this.paceFails = 0;
+          this.paceHeld = !!this._gateHeld; this.paceFails = 0;
           this.failStreak++;
           this.sys("Error: " + (e.code || "") + " " + e.message);
           if (e.code === "InvalidToken" || e.code === "AuthorizationRequired"){ this.stop("authorization problem"); break; }
