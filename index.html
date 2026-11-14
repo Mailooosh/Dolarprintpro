@@ -2875,6 +2875,13 @@ function paceBudgetLine(p, now){
 function paceIsRate(e){
   return String((e && e.code) || "") === "RateLimit" || /rate limit/i.test(String((e && e.message) || ""));
 }
+/* Round 115: Deriv's throttle does not only answer "RateLimit" — it also goes silent (the 20 s first-reply
+   timeout fires) and drops the socket mid-request. Those are the SAME episode wearing a different code, and
+   counting them as ordinary errors is what stopped a run five blips after the HOLDING note. They hold too. */
+function paceIsConn(e){
+  const c = String((e && e.code) || "");
+  return c === "Timeout" || c === "Disconnected" || c === "NetworkError";
+}
 /* The earliest a request of this tier may go out. Background pricing waits behind its own share of the
    budget; a request that stands between the trader and an order waits only behind the single last send. */
 function paceLineFor(p, tier, now){
@@ -2987,9 +2994,10 @@ function paceGate(p, request, opts, go){
   return paceAsk(p, tier, maxWait, opts && opts.cancel).then(go);
 }
 /* Deriv's error sentences are written for developers. A client needs the next move, not the JSON. */
+const HOLD_BODY = "This bot is HOLDING, NOT stopped: no new order is placed while requests are refused, and the SAME run resumes automatically when pricing is accepted again. Run P/L and recovery stake stay unchanged. Background pre-quoting pauses itself while the limit is in force, and every order now waits its turn inside Deriv's budget.";
 function apiHuman(e){
   const c = String((e && e.code) || ""), m = String((e && e.message) || "");
-  if (paceIsRate(e)) return "Deriv's price/request limit was reached. This bot is HOLDING, NOT stopped: no new order is placed while requests are refused, and the SAME run resumes automatically when pricing is accepted again. Run P/L and recovery stake stay unchanged. Background pre-quoting pauses itself while the limit is in force, and every order now waits its turn inside Deriv's budget.";
+  if (paceIsRate(e)) return "Deriv's price/request limit was reached. " + HOLD_BODY;
   if (c === "PaceSkip") return "A background price check was skipped to stay inside Deriv's request limit.";
   if (c === "Timeout") return "Deriv did not answer that request in time and it was dropped.";
   if (c === "Disconnected" || c === "NetworkError") return "The connection to Deriv dropped — reconnecting.";
@@ -4762,11 +4770,11 @@ async function openPosition(plan, ticket){
   if (!live) closeContract(rec).catch(() => {});
   return pos;
 }
-async function settlePosition(pos){
+async function settlePosition(pos, ticket){
   const plan = pos.plan;
   let c;
   try {
-    c = await watchContract(pos.contractId);
+    c = await watchContract(pos.contractId, () => !tradeActive(ticket));
   } finally {
     forgetContract(pos.contractId);   // Round 110: settled or given up — STOP can no longer sell it
   }
@@ -4784,7 +4792,7 @@ async function settlePosition(pos){
     balanceAfter: c.balanceAfter, fast: !!pos.fast,
     contractId: pos.contractId, stake: pos.stake, ratio: pos.ratio };
 }
-async function executeTrade(plan, ticket){ return settlePosition(await openPosition(plan, ticket)); }
+async function executeTrade(plan, ticket){ return settlePosition(await openPosition(plan, ticket), ticket); }
 /* ONE cycle, MANY contracts: every leg is bought before any of them settles, so the covered
    digits ride the same entry tick instead of laddering one tick apart. */
 async function executeLegs(plans, ticket){
@@ -4793,12 +4801,12 @@ async function executeLegs(plans, ticket){
     try { opened.push(await openPosition(p, ticket)); }
     catch(e){
       // the legs already on the market will still settle on their own — book each as it closes
-      opened.forEach(h => { settlePosition(h).then(res => { applyBalanceAfter(res); }).catch(() => {}); });
+      opened.forEach(h => { settlePosition(h, ticket).then(res => { applyBalanceAfter(res); }).catch(() => {}); });
       throw e;
     }
   }
   const out = [];
-  for (const h of opened) out.push({ plan: h.plan, res: await settlePosition(h) });
+  for (const h of opened) out.push({ plan: h.plan, res: await settlePosition(h, ticket) });
   return out;
 }
 /* ================= Round 81: COPY TRADING — push your fills to your clients =================
@@ -5792,12 +5800,24 @@ async function simulateLegs(plans){
   });
 }
 async function simulateTrade(plan, bot){ if (bot) bot.lastBuyAt = Date.now(); const legs = await simulateLegs([plan]); return legs[0].res; }
-function watchContract(contractId){
+function watchContract(contractId, cancel){
   return new Promise((resolve, reject) => {
-    let done = false, tries = 0;
+    let done = false;
+    const give = err => { if (!done){ done = true; reject(err); } };
+    /* Round 115: the retry breath is sliced at 100 ms so STOP (or a bumped run) is felt at once instead of
+       at the end of a 20 s cool-down, and the watch never expires while its run is alive. */
+    const retryIn = ms => {
+      const due = Date.now() + ms;
+      const t = setInterval(() => {
+        if (done){ clearInterval(t); return; }
+        if (cancel && cancel()){ clearInterval(t); give(stoppedTrade()); return; }
+        if (Date.now() >= due){ clearInterval(t); attempt(); }
+      }, 100);
+    };
     const attempt = () => {
       if (done) return;
-      if (!api.connected){ setTimeout(attempt, 1500); return; }
+      if (cancel && cancel()){ give(stoppedTrade()); return; }
+      if (!api.connected){ retryIn(1500); return; }
       /* subscribe:1 is required on the new Options API session — without it Deriv
          returns a one-off snapshot and never pushes the settlement, leaving the
          bot stuck "busy" forever on a trade that already closed. */
@@ -5825,13 +5845,19 @@ function watchContract(contractId){
             exit: c.exit_spot_display_value || c.exit_spot || c.exit_tick_display_value || c.exit_tick
           });
         }
-      }, undefined, { hot: true, cancel: () => done }).catch(err => {
+      }, undefined, { hot: true, cancel: () => done || !!(cancel && cancel()) }).catch(err => {
         if (done) return;
-        if (++tries > 40){ done = true; reject(err); }
-        /* Round 113: a refused settlement watch used to retry every 2 s — 40 counted calls spent on the very
-           budget Deriv had just refused, which kept the limit in force and the run holding. A rate refusal now
-           waits out the cool-down before asking again; the gate spaces it anyway. */
-        else setTimeout(attempt, paceIsRate(err) ? Math.min(20000, Math.max(4000, paceCoolMs(api.prop) + 1000)) : 2000);
+        if (cancel && cancel()){ give(stoppedTrade()); return; }
+        /* Round 115: a refused or dropped settlement watch is the same throttle episode as a refused
+           proposal. Giving up after 40 tries stranded the run for minutes and then let the loop re-buy a
+           contract that was already on the market. While the run is alive the watch keeps asking, rate-aware,
+           until Deriv answers — the first accepted subscribe pushes the settlement at once. The card shows
+           HOLDING meanwhile, and only a genuine API error (bad id, permissions) surfaces to the loop. */
+        if (paceIsRate(err) || paceIsConn(err)){
+          const tracked = OPEN_CONTRACTS.get(String(contractId));
+          if (tracked && tracked.bot && !tracked.bot.paceHeld){ tracked.bot.paceHeld = true; renderBot(tracked.bot); }
+          retryIn(paceIsRate(err) ? Math.min(20000, Math.max(4000, paceCoolMs(api.prop) + 1000)) : 2000);
+        } else give(err);
       });
     };
     attempt();
@@ -6604,7 +6630,7 @@ class BaseBot {
     const resume = !!(opts && opts.resume);   // an automatic restart of the SAME session — the session P/L base survives, so the user's TP/SL target is not reset
     this.tradeGen++;
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
-    this.paceFails = 0; this.paceHeld = false;
+    this.paceFails = 0; this.paceHeld = false; this._paceCause = null;
     this.lastBuyAt = 0;   // Round 112: a fresh run's first contract leaves at once; the 1s floor applies between opens
     this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
     this.startPl = this.stats.pl;
@@ -6709,7 +6735,7 @@ class BaseBot {
     if (!this.running){ closeOpenFor(this); return; }   // Round 110: a second STOP still retries an open contract
     this.running = false;
     this.busy = false;
-    this.paceHeld = false; this.paceFails = 0;
+    this.paceHeld = false; this.paceFails = 0; this._paceCause = null;
     this.sys("Stopped" + (reason ? " — " + reason : ""));
     this.onStop();
     closeOpenFor(this);   // Round 110: an already-bought contract is sold now, not left to expiry
@@ -6720,7 +6746,17 @@ class BaseBot {
   async holdForPace(e, gen){
     this.paceFails++;
     if (!this.paceHeld){ this.paceHeld = true; renderBot(this); }
-    if (this.paceFails === 1) this.sys(apiHuman(e));
+    /* Round 115: the same HOLDING note for a silent drop or a lost socket as for an outright refusal —
+       all three are one throttle episode, and the trader reads one promise, not three error codes.
+       The cause line repeats only when the episode CHANGES character (refusals → socket loss), so the
+       log says what Deriv is actually doing now without spamming one line per refusal. */
+    const cause = paceIsRate(e) ? "rate" : "conn";
+    if (this.paceFails === 1 || this._paceCause !== cause){
+      this._paceCause = cause;
+      this.sys((cause === "rate" ? "Deriv's price/request limit was reached. " :
+        "Deriv dropped or deferred a request (" + ((e && e.code) || "connection blip") + ") while its price limit was in force. ") + HOLD_BODY);
+    }
+    this.failStreak = 0;   // a throttle episode is not a config error — it must not leave strikes behind
     /* Round 113: the switch the old message asked the trader to flip is flipped here instead. Background
        pre-quoting is the traffic a refused session can least afford, so after four refusals in one episode the
        cache pauses itself and entries quote once each until Pre-quote is ticked again. */
@@ -6745,10 +6781,14 @@ class BaseBot {
     const wait = Math.min(60000, Math.max(3000, Math.max(paceCoolMs(p), paceBudgetLine(p, Date.now()) - Date.now()) + 500));
     const until = Date.now() + wait;
     while (Date.now() < until && this.running && (gen === undefined || gen === this.tradeGen)) await sleep(Math.min(100, until - Date.now()));
+    /* Round 115: the episode also drops the socket, and a retry into a dead socket used to burn a failStreak
+       on "not connected". Wait out the reconnect too (bounded, STOP-responsive) before asking again. */
+    const connUntil = Date.now() + 30000;
+    while (!api.connected && Date.now() < connUntil && this.running && (gen === undefined || gen === this.tradeGen)) await sleep(100);
   }
   paceRecovered(){
     if (this.paceHeld) this.sys("Pricing accepted again — the same run resumed at " + fmtS(this.limitPl()) + " after " + this.paceFails + " refused price request(s); it was never stopped.");
-    this.paceHeld = false; this.paceFails = 0;
+    this.paceHeld = false; this.paceFails = 0; this._paceCause = null;
   }
   /* Round 95 — the digit you touched. Checked BEFORE the bot's own strategy, so a gated bot does not even run
      its analysis while the tick is on another digit. The hold is re-read at BOT_HOLD_MS because with
@@ -6840,8 +6880,10 @@ class BaseBot {
         if (this.checkLimits()) break;
       } catch(e){
         if (!this.running || (e && e.code === "BotStopped")) break;
-        /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
-        if (paceIsRate(e)){
+        /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder.
+           Round 115: the throttle's silent drops and socket losses hold on the same path — five of them
+           in a row used to stop the run "repeated errors" right after the HOLDING note. */
+        if (paceIsRate(e) || paceIsConn(e)){
           await this.holdForPace(e, gen);
         } else {
           this.paceHeld = false; this.paceFails = 0;
@@ -7258,8 +7300,10 @@ class MatchesBot extends BaseBot {
         if (this.hitFlag){ this.bankOnHit(); break; }  // the user's rule: one hit ends the run
       } catch(e){
         if (!this.running || (e && e.code === "BotStopped")) break;
-        /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder. */
-        if (paceIsRate(e)){
+        /* Round 105: a rate refusal pauses entries; it never ends the run or touches its P/L or ladder.
+           Round 115: the throttle's silent drops and socket losses hold on the same path — five of them
+           in a row used to stop the run "repeated errors" right after the HOLDING note. */
+        if (paceIsRate(e) || paceIsConn(e)){
           await this.holdForPace(e, gen);
         } else {
           this.paceHeld = false; this.paceFails = 0;
