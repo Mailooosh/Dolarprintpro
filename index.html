@@ -1482,6 +1482,25 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <label>Stop loss<input type="number" id="b11_sl" value="10" min="0" step="0.5" title="Stop the bot once run P/L falls to −this (0 = off)"></label>
       <label>Move with the volatility I pick<input type="checkbox" id="b11_followvol" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="Round 104 (your rule of 6 Nov): everything you change on THIS card — contract type, stake, martingale, cap, window, duration, TP, SL, the AI floor — is applied to the run by itself, and so is the market in the header: while Bot 11 is trading, switching volatility moves the same run onto the new market and it carries on, holding until that market has enough ticks to name the contract. Untick it to go back to the old rule, where changing the volatility stops Bot 11 and waits for you to press RUN again. Nothing else changes either way"></label>
     </div>
+    <!-- Round 117 (your rule of 14 Nov): Bot 11's OWN wins-in-a-row stop, right on its card. Unticked it
+         follows the desk WINS-IN-A-ROW STOP above; ticked it banks the run on this card's number instead.
+         A threshold like TP/SL, so b11Apply pushes it into a live run without resetting the ladder. -->
+    <div id="b11_wsPanel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;padding:12px 14px;background:var(--panel2);border:1px solid var(--line2);border-left:3px solid var(--green);border-radius:10px">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;min-width:206px;margin:0">
+        <input type="checkbox" id="b11_wsOn" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;flex:none" title="Give Bot 11 its own wins-in-a-row stop instead of following the desk setting above. Untick to follow the desk.">
+        <span>
+          <span style="display:block;font-size:12.5px;font-weight:800;letter-spacing:.05em">WINS-IN-A-ROW · BOT 11</span>
+          <span style="display:block;color:var(--dim);font-size:10.5px;margin-top:2px;letter-spacing:.04em">THIS BOT'S OWN TARGET</span>
+        </span>
+      </label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-ghost" id="b11_wsMinus" type="button" style="width:32px;height:34px;padding:0;font-size:16px;font-weight:800" title="One win fewer" disabled>−</button>
+        <input type="number" id="b11_ws" value="3" min="0" max="20" step="1" style="width:64px;height:34px;text-align:center;font-size:17px;font-weight:800" title="Bot 11's own consecutive-wins stop (0 = off). Used only when the box is ticked." disabled>
+        <button class="btn btn-ghost" id="b11_wsPlus" type="button" style="width:32px;height:34px;padding:0;font-size:16px;font-weight:800" title="One win more" disabled>+</button>
+        <span id="b11_wsState" style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;white-space:nowrap">DESK · 3</span>
+      </div>
+      <div id="b11_wsNote" style="flex:1;min-width:220px;color:var(--muted);font-size:11.5px;line-height:1.5">Following the desk WINS-IN-A-ROW stop above. Tick the box to give Bot 11 its own number — it banks the run and stops after that many wins in a row, but only while the run is in profit.</div>
+    </div>
     <div class="b11bar">
       <button class="btn" id="b11_create" title="Reads the contract from the current window and creates the run from this card — the button that exists before there IS a run, and the one that re-validates a fresh one. Every edit you make afterwards is applied by itself (Round 104), so pressing it is only for seeing the read-out.">SAVE CHANGES</button>
       <span class="sub" id="b11_createSub">Creates the run from this card. You no longer need it after that — change any setting and Bot 11 applies it to the run on its own.</span>
@@ -6228,7 +6247,7 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
   /* b11_contract is NOT here on purpose: its option list is rebuilt when the family changes, and a
      restored stale value would leave an empty select. It persists as its own dt_b11_contract key. */
-  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl","b11_followvol",
+  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl","b11_followvol","b11_wsOn","b11_ws",
   "b12_stake","b12_dur","b12_win","b12_rec","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","preQuote","virtCount","winStreak","cashSound","aiVoice"];
@@ -6347,9 +6366,37 @@ function winStreakPaint(){
   el.style.color = n > 0 ? "var(--green)" : "var(--dim)";
   el.style.borderColor = n > 0 ? "var(--green)" : "var(--line2)";
 }
+/* Round 117 — paint Bot 11's own wins-in-a-row strip. Unticked: the stepper is disabled and the badge shows
+   the desk number it is following. Ticked: the stepper is live and the badge shows Bot 11's own target (0 =
+   OFF). Repainted by renderBot() and on every change, so the card never drifts from what checkLimits obeys.
+   Reads the DOM only — it never decides a trade. */
+function b11WsPaint(){
+  const on = $("#b11_wsOn"), num = $("#b11_ws"), badge = $("#b11_wsState"), note = $("#b11_wsNote"),
+    minus = $("#b11_wsMinus"), plus = $("#b11_wsPlus");
+  if (!on || !badge) return;
+  const own = !!on.checked;
+  const n = clampInt(num ? num.value : 3, 0, 20, 3);
+  const desk = winStreakStop();
+  if (num) num.disabled = !own;
+  if (minus) minus.disabled = !own;
+  if (plus) plus.disabled = !own;
+  const active = own ? n : desk;
+  badge.textContent = own ? (n > 0 ? "OWN · BANKS AT " + n : "OWN · OFF") : (desk > 0 ? "DESK · " + desk : "DESK · OFF");
+  badge.style.color = active > 0 ? "var(--green)" : "var(--dim)";
+  badge.style.borderColor = active > 0 ? "var(--green)" : "var(--line2)";
+  if (note) note.innerHTML = own
+    ? (n > 0
+        ? "Bot 11 uses <b>its own</b> target: it banks the run and stops after <b>" + n + "</b> win" + (n === 1 ? "" : "s") + " in a row — but only while the run is in profit. The desk setting above is ignored for this bot."
+        : "Bot 11's own wins-in-a-row stop is <b>off</b> (0) — it will not stop on a winning streak, only on take profit, stop loss or a manual STOP.")
+    : (desk > 0
+        ? "Following the desk WINS-IN-A-ROW stop above (<b>" + desk + "</b>). Tick the box to give Bot 11 its own number instead."
+        : "Following the desk WINS-IN-A-ROW stop above, which is currently <b>off</b>. Tick the box to give Bot 11 its own number instead.");
+}
 function limitsText(c, stops){
   const cur = (state.account && state.account.currency) || "USD";
-  const n = winStreakStop();
+  /* Round 117: Bot 11's cfg carries wsOn/ws so its describe() and confirm card name its OWN target; every
+     other bot's cfg has no wsOn, so this falls back to the desk number unchanged. */
+  const n = (c && c.wsOn) ? clampInt(c.ws, 0, 20, 0) : winStreakStop();
   const tpTxt = "take profit " + (c.tp > 0 ? "+" + fmt(c.tp) + " " + cur : "off") + " · stop loss " + (c.sl > 0 ? "−" + fmt(c.sl) + " " + cur : "off");
   /* `stops` may be true (every limit halts the bot), false (none do) or the list of kinds that
      still may — Bot 10 passes ["tp","streak"] so the target and the wins bank end its session. */
@@ -6700,6 +6747,9 @@ class BaseBot {
   stopsOnLimits(){ return true; }
   stopKinds(){ return this.stopsOnLimits() ? ["tp", "sl", "streak"] : []; }
   stopsOnKind(k){ return this.stopKinds().indexOf(k) >= 0; }
+  /* Round 117: the wins-in-a-row target this bot obeys. The desk default for every bot; Bot 11 overrides
+     it with its own card number when the trader ticks "my own". */
+  streakTarget(){ return winStreakStop(); }
   limitMilestones(){
     const c = this.cfg(), pl = this.limitPl();
     const ccy = (state.account && state.account.currency) || "USD";
@@ -6741,7 +6791,7 @@ class BaseBot {
       limitFanfare(false, 900);
       return true;
     }
-    const N = winStreakStop();
+    const N = this.streakTarget();
     if (N > 0 && this.winStreak >= N && this.stopsOnKind("streak")){
       /* Round 76 (user rule of 27 Oct): the wins-in-a-row stop only banks a run that is ACTUALLY IN
          PROFIT. While the session is flat or negative the streak never stops the bot — it keeps
@@ -9069,7 +9119,11 @@ function cfg11(){
     mult: clampFloat($("#b11_mult").value, 1, 3, 2.1),
     maxStake: clampFloat($("#b11_maxstake").value, 1, 100000, 10),
     tp: Math.max(0, +$("#b11_tp").value || 0),
-    sl: Math.max(0, +$("#b11_sl").value || 0)
+    sl: Math.max(0, +$("#b11_sl").value || 0),
+    /* Round 117: Bot 11's own wins-in-a-row stop. wsOn off → follow the desk (#winStreak); wsOn on → use
+       this card's number (0 = off). A threshold, not a bet, so b11Apply keeps the ladder when it moves. */
+    wsOn: !!($("#b11_wsOn") || {}).checked,
+    ws: clampInt($("#b11_ws").value, 0, 20, 3)
   };
 }
 function b11Count(arr, test){ let k = 0; for (let i = 0; i < arr.length; i++) if (test(arr[i])) k++; return k; }
@@ -9152,6 +9206,9 @@ class CustomRunBot extends BaseBot {
   constructor(){ super("b11", "Custom Run Bot (your contract)", "Bot 11 · Custom Run");
     this.run = null; this.lossStreak = 0; this.runLossAmt = 0; this.side = ""; this.lastWhy = ""; }
   cfg(){ return this.run ? this.run.cfg : cfg11(); }
+  /* Round 117: when the trader ticks "my own" on the card, Bot 11 banks on its OWN number (0 = off);
+     otherwise it follows the desk WINS-IN-A-ROW stop like every other bot. */
+  streakTarget(){ const c = this.cfg(); return c.wsOn ? clampInt(c.ws, 0, 20, 0) : winStreakStop(); }
   stakeRaw(c){ return round2(c.stake * Math.pow(c.mult, this.lossStreak)); }
   nextStake(c){ const s = this.stakeRaw(c); return s > c.maxStake ? c.stake : s; }
   startedTxt(){ const r = b11Read(this.cfg()); return "Bot started on " + state.symbol + " · " + (r.ok ? r.lab + " · stake " + fmt(this.nextStake(this.cfg())) : "waiting for a contract (" + r.why + ")"); }
@@ -9294,7 +9351,7 @@ function b11CreateRun(opts){
    still creates/validates a run, but it is no longer the thing that makes an edit take effect. */
 const B11_FIELD_TXT = { trade: "family", kind: "contract", win: "window", confOn: "AI gate", minConf: "AI minimum",
   barrier: "barrier", dur: "duration", stake: "stake", mult: "martingale", maxStake: "stake cap",
-  tp: "take profit", sl: "stop loss" };
+  tp: "take profit", sl: "stop loss", wsOn: "own wins stop", ws: "wins-in-a-row target" };
 function b11ValTxt(k, v){
   if (k === "trade") return B11_LAB_TXT[v] || String(v);
   if (k === "mult") return "×" + fmt(v);
@@ -9302,6 +9359,8 @@ function b11ValTxt(k, v){
   if (k === "win" || k === "dur") return v + " tick" + (+v === 1 ? "" : "s");
   if (k === "minConf") return v + "%";
   if (k === "confOn") return v ? "on" : "off";
+  if (k === "wsOn") return v ? "on (Bot 11's own)" : "off (follows desk)";
+  if (k === "ws") return +v === 0 ? "off" : v + " win" + (+v === 1 ? "" : "s");
   return String(v);
 }
 function b11Apply(){
@@ -9645,6 +9704,18 @@ function initB11UI(){
       ? "Bot 11 will move to a new volatility by itself — change the market in the header and it carries this run across and keeps trading"
       : "Bot 11 will stop when you change the volatility and wait for you to press RUN on the new market", "info", 7000);
   });
+  /* Round 117 — Bot 11's own wins-in-a-row stop. The checkbox switches between following the desk and this
+     card's number; the steppers nudge that number. Both apply live through the same path as every other
+     card field (b11SyncNow / the debounced input listener), repaint the badge, and persist. */
+  $("#b11_wsOn").addEventListener("change", () => {
+    b11WsPaint(); b11SyncNow(); renderBots(); saveSettings();
+    toast($("#b11_wsOn").checked
+      ? "Bot 11 now uses its OWN wins-in-a-row stop — set the number on its card"
+      : "Bot 11 follows the desk WINS-IN-A-ROW stop again", "info", 6000);
+  });
+  $("#b11_ws").addEventListener("change", () => { b11WsPaint(); });
+  $("#b11_wsMinus").addEventListener("click", () => { const el = $("#b11_ws"); el.value = Math.max(0, clampInt(el.value, 0, 20, 3) - 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
+  $("#b11_wsPlus").addEventListener("click", () => { const el = $("#b11_ws"); el.value = Math.min(20, clampInt(el.value, 0, 20, 3) + 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
   $("#b11_create").addEventListener("click", () => b11CreateRun());
   /* ONE press. No run locked -> lock it from the live settings, then start it with skipConfirm:
      "create a run that if i click bot will run automatically without any other option". */
@@ -11019,7 +11090,7 @@ function showResultModal(bot, kind, pl){
   const sl = kind === "sl";
   const streak = kind === "streak";
   const hit = kind === "hit";                 // Bot 7: one covered digit hit, so the run is banked
-  const N = winStreakStop();
+  const N = bot.streakTarget();
   const cur = (state.account && state.account.currency) || "USD";
   /* the trade this popup is about: this bot's newest settled contract */
   let e = null;
@@ -11353,7 +11424,7 @@ function renderBot(b){
       "</td><td><span class='pill " + (r.won ? "w" : "l") + "'>" + (r.won ? "WON" : "LOST") + "</span></td>" +
       "<td>" + exitTxt + "</td><td class='" + (r.profit >= 0 ? "up" : "down") + "'>" + fmtS(r.profit) + "</td></tr>";
   }).join("");
-  if (p === "b11") renderB11Panels(b);   // Round 83 — the create-run bar, the locked-run read-out and the exposure line
+  if (p === "b11"){ renderB11Panels(b); b11WsPaint(); }   // Round 83 read-out + Round 117 own wins-in-a-row strip
   if (p === "b12") renderB12Panels(b);   // Round 97 — the DIFFERS window read and the recovery-stake maths
   if (p === "b1"){
     const c = cfg1(), cur = (state.account && state.account.currency) || "USD";
@@ -13137,7 +13208,7 @@ function init(){
    "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
    "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_tp","b9_sl",
    "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
-   "b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl",
+   "b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_maxstake","b11_tp","b11_sl","b11_ws",
    "b12_win","b12_dur","b12_stake","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl"]
     .forEach(id => { const el = $("#" + id); if (el) el.addEventListener("input", () => { if (id.indexOf("b11_") === 0) b11Sync(); renderBots(); saveSettings(); }); });
   $("#b9_gate").addEventListener("change", () => { renderBots(); saveSettings(); });
@@ -13226,6 +13297,7 @@ function init(){
   $("#wsMinus").addEventListener("click", () => { const el = $("#winStreak"); el.value = Math.max(0, winStreakStop() - 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
   $("#wsPlus").addEventListener("click", () => { const el = $("#winStreak"); el.value = Math.min(20, winStreakStop() + 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
   winStreakPaint();
+  b11WsPaint();   // Round 117 — Bot 11's own wins-in-a-row strip starts in sync with the restored card
   $("#b4_rules").addEventListener("input", () => { renderBot(bot4); saveSettings(); });
   $("#b4_sweepOn").addEventListener("change", () => {
     if (bot4.running){ bot4.sweepOn() ? sweepSync() : sweepCloseAll(); }
