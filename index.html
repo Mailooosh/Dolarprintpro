@@ -2842,6 +2842,15 @@ const PACE_COOL_MAX = 12000;
 const PACE_RECOVER = 20;     // this many accepted proposals earn a capacity slot back
 const PACE_MIN_BUDGET = 300;    // of Deriv's 360 counted calls a minute — 60 left for whatever else asks
 const PACE_MIN_FLOOR = 60;      // Round 113: a session Deriv keeps refusing settles no lower than this
+/* Round 118 (your rule of 17 Nov: "my custom bot is still holding the price … if its ticks that is cause
+   reduce the ticks"): the HOLDING badge is a wait for a request slot, and the traffic spending the minute
+   budget ahead of the orders is our OWN background pre-quoting (up to 8 shapes re-pricing on timers). A run
+   at one contract a second needs ~120–180 counted calls a minute by itself; when background pricing eats the
+   rest, the order path parks on the budget line and the card reads "Holding — Deriv price limit". So the last
+   PACE_ORDER_RESERVE calls of every minute are kept for ORDERS ONLY — background pricing may spend what is
+   above that, never the reserve. On a refused session (budget ratcheted to the floor) the reserve exceeds the
+   whole budget, so background pricing pauses itself entirely and every slot goes to the run. */
+const PACE_ORDER_RESERVE = 180; // a full minute of one-contract-per-second, two-trip entries kept free for orders
 const PACE_HOUR_BUDGET = 12000; // of Deriv's 14,400 an hour
 /* The four call types Deriv counts together. Everything else on the socket — ticks, history, pings, forgets —
    is not part of this budget and must not be made to wait for it. */
@@ -2881,14 +2890,18 @@ function paceStamp(p, request, now){
 function paceBusy(p, now){ paceTrim(p, now); return p.log.length - p.iMin; }
 /* The earliest instant a counted call may go out without pushing this connection past Deriv's own ceiling,
    or 0 when there is room. Order path and pricing both have to answer to it. */
-function paceBudgetLine(p, now){
+function paceBudgetLine(p, now, reserve){
   if (!p) return 0;
   paceTrim(p, now);
   if (p.log.length - p.iHour >= PACE_HOUR_BUDGET) return p.log[p.iHour] + PACE_HOUR_MS;
   /* Round 113: the ceiling is LEARNED, not assumed. Deriv's published 360/min is the maximum a session may
      be allowed; a session it keeps refusing is allowed less, and insisting on 300 there is what kept a run
-     holding forever. Each refusal cuts the budget, clean traffic earns it back (see paceRefused/paceAccepted). */
-  if (p.log.length - p.iMin >= p.budget) return p.log[p.iMin] + PACE_MIN_MS;
+     holding forever. Each refusal cuts the budget, clean traffic earns it back (see paceRefused/paceAccepted).
+     Round 118: background pricing passes a reserve so it stops spending BEFORE the order path's headroom is
+     gone; the order path passes none and keeps the whole learned budget. */
+  const ceiling = p.budget - (reserve || 0);
+  if (ceiling <= 0) return now + PACE_MIN_MS;   // reserve covers the whole budget: background waits a full minute
+  if (p.log.length - p.iMin >= ceiling) return p.log[p.iMin] + PACE_MIN_MS;
   return 0;
 }
 function paceIsRate(e){
@@ -2905,7 +2918,7 @@ function paceIsConn(e){
    budget; a request that stands between the trader and an order waits only behind the single last send. */
 function paceLineFor(p, tier, now){
   const base = tier === "hot" ? Math.max(p.next, p.coolUntil) : Math.max(p.next, p.nextBg, p.coolUntil);
-  const budget = paceBudgetLine(p, now === undefined ? Date.now() : now);
+  const budget = paceBudgetLine(p, now === undefined ? Date.now() : now, tier === "hot" ? 0 : PACE_ORDER_RESERVE);
   return budget > base ? budget : base;
 }
 function paceDropErr(){
@@ -4570,8 +4583,12 @@ function propArm(key, delay){
      exactly the traffic that trips the proposal limit. The cache now reaps itself where it re-arms. */
   if (Date.now() - w.used > PROP_KEEP_MS){ propForget(key); return; }
   /* The re-quote loop must not starve the socket the buys themselves use: with many shapes warm each one
-     waits longer, so the background traffic stays bounded no matter how full the cache is. */
-  const stretch = Math.max(1, Math.min(3, propWarm.size / 4));
+     waits longer, so the background traffic stays bounded no matter how full the cache is.
+     Round 118: while ANY bot is trading, re-quote at half the rate again — the run's orders have first claim
+     on Deriv's minute budget, and a price held a little longer in the background is far cheaper than an order
+     parked on HOLDING waiting for a slot. At rest the cache keeps its snappy one-trip refresh. */
+  const running = BOTS.some(b => b.running);
+  const stretch = Math.max(1, Math.min(3, propWarm.size / 4)) * (running ? 2 : 1);
   w.timer = setTimeout(() => { w.timer = null; propQuote(key); }, Math.round(delay || PROP_REFRESH_MS * stretch));
 }
 /* Ask for a quote again. This is the heart of the speed-up: measured here, a stake-basis DIGIT proposal
@@ -4584,7 +4601,7 @@ function propQuote(key){
      skips the round instead of queueing a quote nobody has asked for, and comes back after the cool-down.
      The same applies when the minute's budget is already spent by real trading: Deriv counts proposal, buy,
      sell and proposal_open_contract together, so a bot that is trading has first claim on all 360. */
-  const cool = Math.max(paceCoolMs(api.prop), paceBudgetLine(api.prop, Date.now()) - Date.now());
+  const cool = Math.max(paceCoolMs(api.prop), paceBudgetLine(api.prop, Date.now(), PACE_ORDER_RESERVE) - Date.now());
   if (cool > PROP_REFRESH_MS){ propArm(key, cool + 250); return; }
   const gen = ++w.gen;
   w.sent = Date.now();
