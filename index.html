@@ -9296,6 +9296,17 @@ class CustomRunBot extends BaseBot {
       this.lossStreak = 0; this.runLossAmt = 0;
     } else { this.lossStreak++; this.runLossAmt = round2(this.runLossAmt + Math.abs(res.profit)); }
   }
+  /* Round 120 (your rule of 22 Nov: "custom bot 11 is resuming previous contracts when i stopped with a
+     loss … i want my bot to start a fresh"): STOP ends the recovery. The martingale step, the run debt and
+     the side it was covering are dropped with the stop, so a restart can never open the doubled stake that
+     belonged to a contract the run no longer has. The market-switch carry (changeSymbol) stops the bot the
+     same way — a loss on one volatility index is not a debt another index has to win back. */
+  onStop(){
+    if (!this.lossStreak && !this.runLossAmt && !this.side) return;
+    this.sys("Ladder cleared with the stop (was step " + this.lossStreak + ", run debt −" + fmt(this.runLossAmt) +
+      ") — the next RUN starts at base stake");
+    this.lossStreak = 0; this.runLossAmt = 0; this.side = "";
+  }
   preview(){
     const c = this.cfg();
     if (!this.run) return { label: "NO RUN YET", cls: "mode-wait", stake: c.stake };
@@ -9757,10 +9768,15 @@ function initB11UI(){
   $("#b11_wsPlus").addEventListener("click", () => { const el = $("#b11_ws"); el.value = Math.min(20, clampInt(el.value, 0, 20, 3) + 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
   $("#b11_create").addEventListener("click", () => b11CreateRun());
   /* ONE press. No run locked -> lock it from the live settings, then start it with skipConfirm:
-     "create a run that if i click bot will run automatically without any other option". */
+     "create a run that if i click bot will run automatically without any other option".
+     Round 120 (your rule: "i want my bot to start a fresh"): the lock is taken EVERY press, not only when
+     there is no run yet, so pressing RUN after a stop re-reads the card and starts at base stake on the
+     contract the card says NOW — the contract you stopped on is never resumed. If the card cannot be
+     priced yet (too few ticks on this market) the press is refused with the reason instead of starting on
+     the stale snapshot. */
   $("#b11_toggle").addEventListener("click", () => {
     if (bot11.running || bot11.busy){ bot11.stop("manual stop"); return; }
-    if (!bot11.run && !b11CreateRun({ quiet: true })) return;
+    if (!b11CreateRun({ quiet: true })) return;
     bot11.start({ skipConfirm: true });
   });
   /* Round 86 — the monitor. Its own RUN/STOP delegates to the card button so one press path decides
