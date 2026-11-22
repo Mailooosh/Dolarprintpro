@@ -6480,6 +6480,12 @@ const BOT_STEP_MS = 500;
    takes longer than a second to settle still waits for its own settlement first: this is a floor, never a
    licence to overlap runs. STOP cuts the wait short (see BaseBot.runGap). */
 const BOT_RUN_GAP_MS = 1000;
+/* Round 119 (your rule: "wait for 1.5 sec after the last run in custom bot 11 hence its holding the
+   contracts"): Bot 11 alone breathes 1.5 s AFTER its contract has settled, not 1 s after the buy. The old
+   floor was measured from the buy, and since settlement itself takes longer than a second that gap was
+   already spent — the next contract left the instant the previous one closed, which is what piled the
+   open contracts up. Every other bot keeps BOT_RUN_GAP_MS from the buy (see BaseBot.runGapFrom). */
+const B11_RUN_GAP_MS = 1500;
 /* Round 92: BOT_STEP_MS is the pace of a bot that has NOTHING to wait for — an order has just settled and
    the next one goes out immediately, so this only bites on the HOLD path, where the bot is sitting on an
    unmet entry condition (Bot 11's AI-confidence floor is the one the user feels). The hold is re-read every
@@ -6709,7 +6715,7 @@ function paintEntryNow(){
 }
 class BaseBot {
   constructor(id, name, source){ this.id = id; this.name = name; this.source = source; this.running = false; this.busy = false; this.failStreak = 0;
-    this.paceFails = 0; this.paceHeld = false; this._gateHeld = false; this._gateSaid = 0; this.tradeGen = 0; this.closing = 0; this.lastBuyAt = 0;
+    this.paceFails = 0; this.paceHeld = false; this._gateHeld = false; this._gateSaid = 0; this.tradeGen = 0; this.closing = 0; this.lastBuyAt = 0; this.lastRunAt = 0;
     this.stats = { trades: 0, wins: 0, losses: 0, pl: 0, staked: 0, paid: 0 }; this.results = []; this.syslog = []; this.runEquity = [0]; this.winStreak = 0; this.restartTimer = null; this.restartAt = 0; this.sessionPl = 0;
     this.tpSaid = false; this.slSaid = false; this.streakHeld = false;
     /* Round 95: the entry-point digit this bot waits for (null = OFF, no gate).
@@ -6734,6 +6740,7 @@ class BaseBot {
     this.running = true; this.failStreak = 0; this.winStreak = 0; this.streakHeld = false;
     this.paceFails = 0; this.paceHeld = false; this._paceCause = null; this._gateHeld = false; this._gateSaid = 0;
     this.lastBuyAt = 0;   // Round 112: a fresh run's first contract leaves at once; the 1s floor applies between opens
+    this.lastRunAt = 0;   // Round 119: same for Bot 11's settlement-anchored 1.5 s breath — a fresh run starts clean
     this._restSaid = false;   // Round 98: a fresh run gets its one "the gate is resting" note again
     this.startPl = this.stats.pl;
     if (!resume) this.sessionPl = this.stats.pl;
@@ -6952,6 +6959,7 @@ class BaseBot {
         this.busy = true; renderBot(this);
         const ticket = { bot: this, gen: this.tradeGen };
         const res = this.virtualLeft > 0 ? await simulateTrade(plan, this) : await executeTrade(plan, ticket);
+        this.lastRunAt = Date.now();   // Round 119: executeTrade returns only once the contract has settled — Bot 11 counts its breath from here
         if (res.virtual){
           this.virtualLeft--;
           this.sys("VIRTUAL warm-up: " + this.virtualLeft + " paper trades left before live");
@@ -7005,15 +7013,21 @@ class BaseBot {
     renderBot(this);
   }
   onSettled(){ /* override */ }
-  /* Round 112: the normal-run breath. Waits out whatever is left of BOT_RUN_GAP_MS since the last confirmed
-     buy, in short slices so STOP is felt within ~100 ms instead of at the end of a full second. It never
+  /* Round 112: the normal-run breath. Waits out whatever is left of the bot's gap since its anchor time,
+     in short slices so STOP is felt within ~100 ms instead of at the end of a full second. It never
      sleeps past the run: a stopped bot or a bumped tradeGen leaves immediately, and the loop's own guard
-     means no further contract is opened. */
+     means no further contract is opened.
+     Round 119: the two numbers are now per-bot hooks — runGapMs() is how long the breath lasts and
+     runGapFrom() is the instant it is measured from (the confirmed buy by default; Bot 11 overrides both
+     to 1.5 s from settlement). */
+  runGapMs(){ return BOT_RUN_GAP_MS; }
+  runGapFrom(){ return this.lastBuyAt || 0; }
   async runGap(gen){
-    let left = BOT_RUN_GAP_MS - (Date.now() - (this.lastBuyAt || 0));
+    const ms = this.runGapMs();
+    let left = ms - (Date.now() - this.runGapFrom());
     while (left > 0 && this.running && gen === this.tradeGen){
       await sleep(Math.min(left, 100));
-      left = BOT_RUN_GAP_MS - (Date.now() - (this.lastBuyAt || 0));
+      left = ms - (Date.now() - this.runGapFrom());
     }
   }
   onStart(){ /* override */ }
@@ -9232,6 +9246,14 @@ class CustomRunBot extends BaseBot {
   /* Round 92 (your rule of 1 Nov: "it executes slowly"): the gate below is re-read ten times a second, so
      the contract leaves within ~0.1 s of the AI gauge clearing your minimum instead of up to 0.5 s after. */
   holdMs(){ return BOT_HOLD_MS; }
+  /* Round 119 (your rule: "wait for 1.5 sec after the last run in custom bot 11 hence its holding the
+     contracts"): Bot 11 waits B11_RUN_GAP_MS from the moment its last contract SETTLED (BaseBot.loop stamps
+     lastRunAt when executeTrade returns), not from the buy. Because settlement itself already costs more
+     than the old 1 s buy-anchored floor, that floor had always been spent and the next contract left the
+     instant the previous one closed — two contracts overlapping on the same tick stream is what read as
+     "holding". The other bots keep the buy-anchored BOT_RUN_GAP_MS, so this is the whole of the change. */
+  runGapMs(){ return B11_RUN_GAP_MS; }
+  runGapFrom(){ return this.lastRunAt || this.lastBuyAt || 0; }
   planNext(){
     if (!this.run) return null;                       // RUN always creates the run first; this is the belt
     const c = this.cfg();
