@@ -4765,6 +4765,91 @@ function closeOpenFor(bot){
   list.forEach(rec => { closeContract(rec).catch(() => {}); });
   return list.length;
 }
+/* Round 121 (your rule of 22 Nov: "my custom bot stop and it gives that info … it still stop and never
+   resumes back even STOP button didn't work at that time"):
+   A contract that is still on the market when its run is stopped had nobody left to read its settlement.
+   STOP asks Deriv to close it early, and a DIGIT contract is refused — "Input validation failed: sell",
+   early close is not offered on digit trades — so it settles at expiry on its own. Either way the stop
+   also cancels the settlement watch, which used to be the ONLY reader of that contract, so the Activity
+   Log row stayed OPEN for ever. The trade monitor counts OPEN rows as a live run: its button stayed red
+   STOP, every press only re-stopped an already-stopped bot, Reset was disabled, and the footer sat on
+   "Stopped — awaiting Deriv settlement" — the bot could not be started again from the monitor.
+   These rows are now handed to a watch of their own, outside the run: it asks Deriv for the contract
+   until the sold push arrives, books the real outcome, and keeps the log honest meanwhile. While the
+   contract is still on the market the monitor says so instead of pretending the run is alive.
+   The watch is bounded on purpose: STRAY_ASK_MAX asks or STRAY_LIFE_MS, whichever comes first, so a
+   contract id Deriv will never answer for cannot turn into an endless request stream. */
+const STRAY = new Map();
+const STRAY_LIFE_MS = 15 * 60 * 1000;
+const STRAY_ASK_MAX = 60;
+function strayRetry(rec, ms){
+  if (rec.done) return;
+  if (rec.timer) clearTimeout(rec.timer);
+  rec.timer = setTimeout(() => strayAsk(rec), Math.max(500, ms));
+}
+function strayAsk(rec){
+  if (rec.done) return;
+  if (Date.now() > rec.deadline || rec.tries > STRAY_ASK_MAX){ giveUpStray(rec, null); return; }
+  if (!api.connected){ strayRetry(rec, 2000); return; }
+  rec.tries++;
+  api.subscribe({ proposal_open_contract: 1, contract_id: rec.id, subscribe: 1 }, msg => {
+    const c = msg && msg.proposal_open_contract;
+    if (!c || rec.done) return;
+    const e = rec.entry;
+    if (e && e.result === "OPEN"){
+      e.entry = c.entry_spot_display_value ?? c.entry_spot ?? c.entry_tick_display_value ?? c.entry_tick ?? e.entry;
+      if (RUN_POP.b && RUN_POP.b.source === e.source) renderRunPop();
+    }
+    if (!(c.is_sold || c.status === "sold")) return;
+    if (msg.req_id) api.drop(msg.req_id);
+    if (msg.subscription && msg.subscription.id) api.send({ forget: msg.subscription.id }).catch(() => {});
+    bookStray(rec, c);
+  }, undefined, { hot: true }).catch(err => {
+    if (rec.done) return;
+    // refused by the price budget or the socket went down: ask again, rate-aware — the contract is still live
+    if (paceIsRate(err) || paceIsConn(err)){
+      strayRetry(rec, paceIsRate(err) ? Math.min(20000, Math.max(4000, paceCoolMs(api.prop) + 1000)) : 2000);
+      return;
+    }
+    giveUpStray(rec, err);   // a real API answer (bad id / permissions) will not improve with retries
+  });
+}
+function watchStraySettlement(pos, bot){
+  const id = String(pos.contractId);
+  if (STRAY.has(id) || !pos.entry) return;
+  const rec = { id, entry: pos.entry, plan: pos.plan, bot: bot || null, timer: null, done: false,
+    deadline: Date.now() + STRAY_LIFE_MS };
+  STRAY.set(id, rec);
+  strayAsk(rec);
+}
+function strayOff(rec){ rec.done = true; if (rec.timer) clearTimeout(rec.timer); STRAY.delete(rec.id); }
+function bookStray(rec, c){
+  strayOff(rec);
+  const e = rec.entry;
+  if (!e || e.result !== "OPEN") return;   // the run itself already booked it — nothing for this watch to do
+  const won = c.status === "won" || (c.status === "sold" && num(c.profit) > 0);
+  e.exit = c.exit_spot_display_value || c.exit_spot || c.exit_tick_display_value || c.exit_tick || e.exit;
+  e.digit = String(e.type || "").indexOf("DIGIT") === 0 ? lastDigitChar(e.exit) : "—";
+  e.result = won ? "WON" : "LOST"; e.profit = num(c.profit); e.closedAt = Date.now();
+  const ba = c.balance_after;
+  if (state.account && ba !== undefined && ba !== null && Number.isFinite(Number(ba))){
+    state.account.balance = Number(ba); renderAccount();
+  }
+  /* The money is real, so the desk totals (actBook) fold it in — but it is NOT added to a stopped run's
+     own stats: that ladder and its take-profit belonged to a run that no longer exists. */
+  if (rec.bot) rec.bot.sys("Contract " + rec.id + " settled after the stop — " + e.type + " " + (won ? "WON" : "LOST") +
+    " " + fmtS(e.profit) + " (exit " + (e.exit || "—") + ") · not counted in the stopped run");
+  if (!e.stopped) copyBroadcast(e, "EXIT", rec.plan);   // a follower that never saw the entry must not see this exit
+  renderActivity(); renderSummary();
+  if (RUN_POP.b) renderRunPop();
+}
+function giveUpStray(rec, err){
+  strayOff(rec);
+  if (rec.bot) rec.bot.sys("Settlement of " + rec.id + " could not be read from Deriv" +
+    (err ? " (" + apiHuman(err) + ")" : " — it never answered for that contract") +
+    " — the log row stays OPEN but no longer blocks a new run");
+  if (RUN_POP.b) renderRunPop();
+}
 /* one leg of a cycle: proposal + buy, NO settlement wait */
 async function openPosition(plan, ticket){
   assertTradeActive(ticket);
@@ -4847,6 +4932,15 @@ async function settlePosition(pos, ticket){
   let c;
   try {
     c = await watchContract(pos.contractId, () => !tradeActive(ticket));
+  } catch(e){
+    /* Round 121: the watch was abandoned — a STOP (or a bumped run) cancelled it while the contract was
+       still on the market. The row would otherwise sit OPEN for ever and keep the trade monitor locked on
+       STOP, so hand the contract to the settlement watch that lives outside this run. */
+    if (pos.entry && pos.entry.result === "OPEN"){
+      pos.entry.orphan = true;
+      watchStraySettlement(pos, ticket && ticket.bot);
+    }
+    throw e;
   } finally {
     forgetContract(pos.contractId);   // Round 110: settled or given up — STOP can no longer sell it
   }
@@ -9302,10 +9396,14 @@ class CustomRunBot extends BaseBot {
      belonged to a contract the run no longer has. The market-switch carry (changeSymbol) stops the bot the
      same way — a loss on one volatility index is not a debt another index has to win back. */
   onStop(){
-    if (!this.lossStreak && !this.runLossAmt && !this.side) return;
-    this.sys("Ladder cleared with the stop (was step " + this.lossStreak + ", run debt −" + fmt(this.runLossAmt) +
-      ") — the next RUN starts at base stake");
+    const step = this.lossStreak, debt = this.runLossAmt;
     this.lossStreak = 0; this.runLossAmt = 0; this.side = "";
+    /* Round 121: the ladder is always dropped, but only announced when there WAS one — the screenshot of
+       22 Nov showed "was step 0, run debt −0.00" on a bot that had no recovery to clear, which read like a
+       fault. A stop at base stake now journals nothing. */
+    if (!step && !debt) return;
+    this.sys("Ladder cleared with the stop (was step " + step + ", run debt −" + fmt(debt) +
+      ") — the next RUN starts at base stake");
   }
   preview(){
     const c = this.cfg();
@@ -9555,7 +9653,11 @@ function renderB11Panels(b){
     : "Not ready: " + live.why + ".";
 }
 const RUN_POP = { b: null, timer: 0, n: 200, pane: "tx", detail: false, focus: null };
-function runPopOpen(b){ return ACT_OPEN.filter(e => e.source === b.source && e.result === "OPEN"); }
+/* Round 121: a row left over from a run that was STOPPED is NOT part of the live run. Counting it as one
+   is what kept the monitor button red and made every press re-stop an already-stopped bot. Orphans are
+   listed and reported separately, and never block RUN. */
+function runPopOpen(b){ return ACT_OPEN.filter(e => e.source === b.source && e.result === "OPEN" && !e.orphan); }
+function runPopStrays(b){ return ACT_OPEN.filter(e => e.source === b.source && e.result === "OPEN" && e.orphan); }
 function runPopTx(b){
   const mine = activity.filter(e => e.source === b.source && (e.result === "OPEN" || e.t >= (b.clearedAt || 0)));
   const open = mine.filter(e => e.result === "OPEN").reverse();
@@ -9568,7 +9670,7 @@ function runPopTxHtml(b){
   if (!rows.length) return "<tr><td colspan='3' class='dempty'>No transactions yet.<br>Confirmed contracts appear here as soon as they are bought.</td></tr>";
   return rows.map(r => {
     const ic = dbotIco(r.type), open = r.result === "OPEN";
-    const result = open ? "Open" : r.result === "WON" ? "Won" : "Lost";
+    const result = open ? (r.orphan ? "Settling" : "Open") : r.result === "WON" ? "Won" : "Lost";
     return "<tr>" +
       "<td><span class='dico " + ic.c + "' aria-hidden='true'>" + ic.g + "</span> <span class='dlab'>" + dbotEsc(dbotLabel(r.type)) + "</span>" +
         "<span class='rpop-row-state" + (open ? " live" : "") + "'>" + result + (r.virtual ? " · Virtual" : "") + "</span>" +
@@ -9594,6 +9696,9 @@ function runPopStatus(b){
   if (b.busy) return { phase: "placing", text: b.virtualLeft > 0 ? "Virtual contract in progress" : "Buying contract" };
   const latest = runPopTx(b)[0];
   if (b.running && latest && Date.now() - (latest.closedAt || latest.t) < 1200) return { phase: "closed", text: "Contract closed" };
+  const stray = runPopStrays(b);
+  if (stray.length && !b.running) return { phase: "open", text: "Stopped — " + stray.length + " contract" + (stray.length > 1 ? "s" : "") +
+    " from the stopped run " + (stray.length > 1 ? "are" : "is") + " still settling at expiry. RUN starts a fresh one." };
   return { phase: "idle", text: b.running ? "Running — waiting for entry" : "Bot is not running" };
 }
 function runPopHtml(id, html){
