@@ -1459,7 +1459,14 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       <button class="btn btn-ghost btn-mini" id="b11_pop" type="button" title="Open Summary, Transactions and Journal without starting or stopping a bot">TRADE MONITOR</button>
       <span class="sub" id="b11_sub">Pick the trade type, contract, SL, TP, stake and martingale below, then press RUN — it creates the run and starts trading it immediately. Nothing else is asked.</span>
     </div>
-    <div class="cfg">
+    <!-- Round 124b: the trade fields and the recovery section are ONE settings category, not two floating
+         strips — the card reads top-down as "what it buys" then "what buys back a loss". -->
+    <div id="b11_sect" style="margin:12px 0 0;padding:14px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px">
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px">
+        <span style="font-size:12.5px;font-weight:800;letter-spacing:.06em">SETTINGS · BOT 11</span>
+        <span style="color:var(--dim);font-size:10.5px;letter-spacing:.04em">THE TRADE AND WHAT BUYS BACK EACH LOSS — CHANGES LOCK INTO THE RUN AS YOU MAKE THEM</span>
+      </div>
+    <div class="cfg" style="margin:10px 0 0;padding:0;background:transparent;border-top:0">
       <label>Trade type
         <select id="b11_trade" title="Which contract family this bot buys">
           <option value="eo">Digits — Even / Odd</option>
@@ -1485,7 +1492,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     <!-- Round 117 (your rule of 14 Nov): Bot 11's OWN wins-in-a-row stop, right on its card. Unticked it
          follows the desk WINS-IN-A-ROW STOP above; ticked it banks the run on this card's number instead.
          A threshold like TP/SL, so b11Apply pushes it into a live run without resetting the ladder. -->
-    <div id="b11_wsPanel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;padding:12px 14px;background:var(--panel2);border:1px solid var(--line2);border-left:3px solid var(--green);border-radius:10px">
+    <div id="b11_wsPanel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;padding:12px 14px;background:transparent;border:1px solid var(--line2);border-left:3px solid var(--green);border-radius:10px">
       <label style="display:flex;align-items:center;gap:9px;cursor:pointer;min-width:206px;margin:0">
         <input type="checkbox" id="b11_wsOn" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;flex:none" title="Give Bot 11 its own wins-in-a-row stop instead of following the desk setting above. Untick to follow the desk.">
         <span>
@@ -1501,26 +1508,36 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
       </div>
       <div id="b11_wsNote" style="flex:1;min-width:220px;color:var(--muted);font-size:11.5px;line-height:1.5">Following the desk WINS-IN-A-ROW stop above. Tick the box to give Bot 11 its own number — it banks the run and stops after that many wins in a row, but only while the run is in profit.</div>
     </div>
-    <!-- Round 122 (your rule of 23 Nov: "add recovery section to custom bot 11 and remove stake cap let bot
-         run thoroughly"). Recovery is now a section of its own on the card, and the STAKE CAP IS GONE: no
-         stake size ever cuts a ladder short again. A losing run keeps stepping until it wins, until TP/SL
-         stops the bot, until you press STOP, or until the STEP LIMIT you set here ends it (0 = none). -->
-    <div id="b11_recPanel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;padding:12px 14px;background:var(--panel2);border:1px solid var(--line2);border-left:3px solid var(--amber);border-radius:10px">
-      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;min-width:206px;margin:0">
-        <input type="checkbox" id="b11_recOn" checked style="accent-color:var(--amber);width:16px;height:16px;cursor:pointer;flex:none" title="On: every loss steps the stake up by the martingale factor and a win clears the ladder. Off: flat stakes — every contract goes out at the base stake and a loss is never chased.">
-        <span>
-          <span style="display:block;font-size:12.5px;font-weight:800;letter-spacing:.05em">RECOVERY · BOT 11</span>
-          <span style="display:block;color:var(--dim);font-size:10.5px;margin-top:2px;letter-spacing:.04em">THE LADDER AFTER EACH LOSS</span>
-        </span>
-      </label>
-      <label style="display:flex;flex-direction:column;gap:3px;margin:0;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--dim)">Martingale ×
-        <input type="number" id="b11_mult" value="2.10" min="1" max="3" step="0.05" style="width:80px;height:34px;text-align:center;font-size:15px;font-weight:800" title="Stake multiplier after each consecutive loss. 1.00 is the same as switching recovery off.">
-      </label>
-      <label style="display:flex;flex-direction:column;gap:3px;margin:0;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--dim)">Max recovery steps
-        <input type="number" id="b11_steps" value="0" min="0" max="50" step="1" style="width:80px;height:34px;text-align:center;font-size:15px;font-weight:800" title="0 = NO LIMIT — the bot runs the ladder as deep as it goes, which is what 'let the bot run thoroughly' means. Any number here cuts a losing run back to base stake after that many consecutive losses.">
-      </label>
-      <span id="b11_recState" style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;white-space:nowrap">RECOVERY ON · NO CAP</span>
-      <div id="b11_recNote" style="flex:1;min-width:220px;color:var(--muted);font-size:11.5px;line-height:1.5"></div>
+    <!-- Round 124 (your rule of 24 Nov: "create a RECOVERY TYPE inside custom bot 11 where i can choose recovery
+         type EVEN ODD, OVER UNDER and RISE AND FALL then if its over under type, i choose which digit prediction
+         i recover with"). The settings row above still decides the TRADE. This section decides the RECOVERY TYPE
+         that buys back each loss, on the same market as the trade. SAME AS THE TRADE keeps the old pure-martingale
+         ladder. The stake cap stays deleted — a run ends on a win, TP/SL, STOP, or the step limit set here. -->
+    <div id="b11_recPanel" style="margin:12px 0 0;padding:12px 14px;background:transparent;border:1px solid var(--line2);border-left:3px solid var(--amber);border-radius:10px">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:9px;cursor:pointer;min-width:206px;margin:0">
+          <input type="checkbox" id="b11_recOn" checked style="accent-color:var(--amber);width:16px;height:16px;cursor:pointer;flex:none" title="On: after a loss the next contract is the recovery type you choose below, at the stepped stake, until a win lands and the trade above takes over again at base. Off: flat stakes, no recovery contract.">
+          <span>
+            <span style="display:block;font-size:12.5px;font-weight:800;letter-spacing:.05em">RECOVERY · BOT 11</span>
+            <span style="display:block;color:var(--dim);font-size:10.5px;margin-top:2px;letter-spacing:.04em">WHAT BUYS BACK EACH LOSS</span>
+          </span>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;margin:0;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--dim)">Recovery type
+          <select id="b11_recType" style="min-width:158px;height:34px;font-size:12px" title="The contract every recovery leg is bought on, always on the market the trade is running. SAME AS THE TRADE just steps the trade above; EVEN/ODD buy the parity contract; OVER/UNDER buy a digit contract at the digit prediction beside this; RISE/FALL buy CALL/PUT."><option value="SAME">Same as the trade</option><option value="EVEN">EVEN</option><option value="ODD">ODD</option><option value="OVER">OVER</option><option value="UNDER">UNDER</option><option value="RISE">RISE</option><option value="FALL">FALL</option></select>
+        </label>
+        <label id="b11_recDigitWrap" style="display:none;flex-direction:column;gap:3px;margin:0;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--dim)">Digit prediction
+          <select id="b11_recDigit" style="min-width:88px;height:34px;font-size:12px;text-align:center" title="The digit the recovery buys on. OVER n wins when the exit tick's last digit is above n; UNDER n wins when it is below n. OVER 9 and UNDER 0 can never win, so they are not offered."></select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;margin:0;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--dim)">Martingale ×
+          <input type="number" id="b11_mult" value="2.10" min="1" max="3" step="0.05" style="width:80px;height:34px;text-align:center;font-size:15px;font-weight:800" title="Stake multiplier after each consecutive loss. 1.00 is the same as switching recovery off.">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;margin:0;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--dim)">Max recovery steps
+          <input type="number" id="b11_steps" value="0" min="0" max="50" step="1" style="width:80px;height:34px;text-align:center;font-size:15px;font-weight:800" title="0 = NO LIMIT — the ladder runs as deep as it goes. Any number here cuts a losing run back to the trade above at base stake after that many consecutive losses.">
+        </label>
+        <span id="b11_recState" style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;white-space:nowrap">RECOVERY ON</span>
+      </div>
+      <div id="b11_recNote" style="margin-top:10px;color:var(--muted);font-size:11.5px;line-height:1.55"></div>
+    </div>
     </div>
     <div class="b11bar">
       <button class="btn" id="b11_create" title="Reads the contract from the current window and creates the run from this card — the button that exists before there IS a run, and the one that re-validates a fresh one. Every edit you make afterwards is applied by itself (Round 104), so pressing it is only for seeing the read-out.">SAVE CHANGES</button>
@@ -1545,7 +1562,7 @@ html[data-theme="light"] .syncwrap .btn-red:hover:not(:disabled){background:#ff5
     <div class="chartwrap"><span class="chartlbl">RUN P/L</span><canvas class="botchart" id="b11_chart"></canvas></div>
     <div class="scrollx"><table class="tbl"><thead><tr><th>Time</th><th>Type</th><th>Buy price</th><th>Payout</th><th>Result</th><th>Exit</th><th>P/L</th></tr></thead><tbody id="b11_recent"></tbody></table></div>
     <div class="note" id="b11_expo"></div>
-    <div class="note"><b>What this bot is:</b> your own contract, no strategy opinions. It buys the trade type and contract type you set, on this market, at your stake, and keeps buying one contract per ~0.5 second decision while the run is live — a loss steps the stake by the martingale factor, a win banks it and drops back to base. <b>Take profit and stop loss both genuinely stop it.</b> With the contract type on <b>AUTO</b> the side is re-read from the last <i>window</i> ticks on every decision, so it can flip between EVEN and ODD (or OVER and UNDER) as the window moves; lock a side in that dropdown if you want it fixed for the run. <b style="color:var(--amber)">AUTO is a description of the ticks that already happened, not a prediction of the next one — over the long run every digit family pays below its own break-even coverage, so martingale sizing can lose a full ladder. The exposure figure above is the real worst case.</b></div>
+    <div class="note"><b>What this bot is:</b> your own contract, no strategy opinions. It buys the trade type and contract type you set, on this market, at your stake, and keeps buying one contract per ~0.5 second decision while the run is live — a loss steps the stake by the martingale factor, a win banks it and drops back to base. <b>Take profit and stop loss both genuinely stop it.</b> With the contract type on <b>AUTO</b> the side is re-read from the last <i>window</i> ticks on every decision, so it can flip between EVEN and ODD (or OVER and UNDER) as the window moves; lock a side in that dropdown if you want it fixed for the run. <b style="color:var(--amber)">AUTO is a description of the ticks that already happened, not a prediction of the next one — over the long run every digit family pays below its own break-even coverage, so martingale sizing can lose a full ladder. The exposure figure above is the real worst case.</b> <b>Recovery is a choice, not a rule:</b> the <b>SETTINGS</b> block above names the trade; its <b>RECOVERY</b> row names the <b>RECOVERY TYPE</b> that buys back a loss — <b>same as the trade</b> (the pure-martingale ladder), <b>EVEN</b>, <b>ODD</b>, <b>OVER</b> or <b>UNDER</b> at the digit prediction beside it, or <b>RISE</b> / <b>FALL</b> — always on the market the trade is running. Leave it on same-as-the-trade and every rung simply climbs on the trade itself.</div>
   </div>
 
   <!-- Round 85: moved out of the row beside the distribution panel to sit under the bot that reads it. -->
@@ -3412,6 +3429,9 @@ async function loadSymbols(){
   }).join("");
   if (!syn.some(s => symKey(s) === state.symbol)) state.symbol = symKey(syn[0]);
   sel.value = state.symbol;
+  /* Round 124: the recovery note names the market the legs go out on, and the market list only exists once
+     active_symbols answers — after sign-in. Repaint here so the card is correct the moment the markets arrive. */
+  b11RecPaint(bot11);
 }
 async function changeSymbol(sym, opts){
   if (sym === state.symbol) return;
@@ -6377,9 +6397,11 @@ const CFG_IDS = ["b1_stake","b1_dur","b1_mult","b1_steps","b1_maxstake","b1_tp",
   "b8_stake","b8_mult","b8_steps","b8_maxstake","b8_dur","b8_win","b8_top","b8_sigma","b8_tp","b8_sl",
   "b9_stake","b9_dur","b9_mult","b9_steps","b9_maxstake","b9_win","b9_top","b9_gate","b9_tp","b9_sl",
   "b10_stake","b10_dur","b10_win","b10_top","b10_every","b10_src","b10_mult","b10_steps","b10_maxstake","b10_ovmain","b10_ovrec","b10_unmain","b10_unrec","b10_tp","b10_sl",
-  /* b11_contract is NOT here on purpose: its option list is rebuilt when the family changes, and a
-     restored stale value would leave an empty select. It persists as its own dt_b11_contract key. */
-  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_steps","b11_tp","b11_sl","b11_followvol","b11_wsOn","b11_ws","b11_recOn",
+  /* b11_contract is NOT here on purpose: its option list is rebuilt (family), and a restored stale value would
+     name a contract this session cannot price. It persists as its own key — dt_b11_contract — and is re-offered
+     only when the list actually contains it. b11_recType and b11_recDigit have fixed option lists, so they ride
+     the blob. */
+  "b11_trade","b11_win","b11_minconf","b11_barrier","b11_dur","b11_stake","b11_mult","b11_steps","b11_tp","b11_sl","b11_followvol","b11_wsOn","b11_ws","b11_recOn","b11_recType","b11_recDigit",
   "b12_stake","b12_dur","b12_win","b12_rec","b12_mult","b12_steps","b12_maxstake","b12_tp","b12_sl",
   "sig_stake","sig_min","sig_max","sig_sens","sig_sound","sig_scanall",
   "fastExec","preQuote","virtCount","winStreak","cashSound","aiVoice"];
@@ -6524,38 +6546,84 @@ function b11WsPaint(){
         ? "Following the desk WINS-IN-A-ROW stop above (<b>" + desk + "</b>). Tick the box to give Bot 11 its own number instead."
         : "Following the desk WINS-IN-A-ROW stop above, which is currently <b>off</b>. Tick the box to give Bot 11 its own number instead.");
 }
-/* Round 122 (your rule of 23 Nov: "add recovery section to custom bot 11 and remove stake cap let bot run
-   thoroughly") — the RECOVERY strip on Bot 11's card. It reads the card and the live ladder and writes text
-   only; it never decides a stake. There is no cap left to describe, so the strip says what ACTUALLY ends a
-   ladder: a win, the step limit you set (0 = none), TP/SL, or STOP. */
+/* Round 124 (your rule of 24 Nov) — the RECOVERY strip is a TYPE picker: EVEN, ODD, OVER or UNDER at a digit
+   prediction, or RISE / FALL, always on the market the trade is running. SAME AS THE TRADE keeps the old
+   pure-martingale ladder. It writes text and rebuilds the digit list only; every decision is made in
+   cfg11()/b11RecOf()/planNext() off these same inputs, so what the card says is what the bot buys. */
+function b11RecDigitBounds(type){ return type === "OVER" ? [0, 8] : type === "UNDER" ? [1, 9] : [0, 9]; }
+function b11RecDigitFill(type){
+  const sel = $("#b11_recDigit"); if (!sel) return 5;
+  const bounds = b11RecDigitBounds(type);
+  if (sel._type !== type){
+    /* Rebuilding the option list would reset the selection to its first entry, silently rewriting the digit the
+       user picked; carry it across, clamped to the new type's bounds. */
+    const prev = sel._type ? sel.value : "5";
+    sel._type = type;
+    let html = "";
+    for (let d = bounds[0]; d <= bounds[1]; d++) html += '<option value="' + d + '">' + d + "</option>";
+    sel.innerHTML = html;
+    sel.value = String(clampInt(prev, bounds[0], bounds[1], 5));
+  }
+  const d = clampInt(sel.value, bounds[0], bounds[1], 5);
+  sel.value = String(d);
+  return d;
+}
+function b11RecLegTxt(type, digit){
+  if (type === "SAME") return "the trade above";
+  return type === "OVER" || type === "UNDER" ? type + " " + digit : type;
+}
 function b11RecPaint(b){
-  const on = $("#b11_recOn"), mult = $("#b11_mult"), stepsEl = $("#b11_steps"), badge = $("#b11_recState"), note = $("#b11_recNote");
+  const on = $("#b11_recOn"), typeSel = $("#b11_recType"), wrap = $("#b11_recDigitWrap"), digitSel = $("#b11_recDigit"),
+    mult = $("#b11_mult"), stepsEl = $("#b11_steps"), badge = $("#b11_recState"), note = $("#b11_recNote");
   if (!on || !badge) return;
   const rec = !!on.checked;
+  const type = b11RecType({ recType: typeSel ? typeSel.value : "SAME" });
+  const digit = b11RecDigitFill(type);
+  const ou = type === "OVER" || type === "UNDER";
+  if (wrap) wrap.style.display = rec && ou ? "flex" : "none";
+  [typeSel, digitSel, mult, stepsEl].forEach(el => { if (el) el.disabled = !rec; });
   const m = clampFloat(mult ? mult.value : 2.1, 1, 3, 2.1);
   const n = clampInt(stepsEl ? stepsEl.value : 0, 0, 50, 0);
   const base = clampFloat(($("#b11_stake") || {}).value, 0.35, 100000, 0.35);
-  if (mult) mult.disabled = !rec;
-  if (stepsEl) stepsEl.disabled = !rec;
-  const step = b ? b.lossStreak : 0, debt = b ? b.runLossAmt : 0;
-  const climb = rec && m > 1;
-  badge.textContent = climb ? (n > 0 ? "RECOVERY ON · ×" + fmt(m) + " · MAX " + n : "RECOVERY ON · ×" + fmt(m) + " · NO LIMIT") : "FLAT STAKES";
-  badge.style.color = climb ? "var(--amber)" : "var(--dim)";
-  badge.style.borderColor = climb ? "var(--amber)" : "var(--line2)";
+  const sym = state.symbol || "the header market";
+  const leg = b11RecLegTxt(type, digit);
+  badge.textContent = !rec ? "FLAT STAKES" : "×" + fmt(m) + " · " + leg + " · " + (n > 0 ? "MAX " + n : "NO LIMIT");
+  badge.style.color = rec ? "var(--amber)" : "var(--dim)";
+  badge.style.borderColor = rec ? "var(--amber)" : "var(--line2)";
   if (!note) return;
-  if (!climb){
+  if (!rec){
     note.innerHTML = "Recovery is <b>off</b> — every contract goes out at the base stake <b>" + fmt(base) +
-      "</b> and a loss is never chased. Tick the box to step the stake up after each loss.";
+      "</b> and a loss is never chased. Tick the box to choose the recovery type that buys back a loss.";
     return;
   }
-  const rung = [];
-  for (let i = 0; i < 4; i++) rung.push(fmt(round2(base * Math.pow(m, i))));
-  note.innerHTML = "<b>No stake cap any more.</b> A loss steps " + rung.join(" → ") + " and keeps climbing" +
-    (n > 0 ? " up to your <b>" + n + "-step</b> limit, then the ladder restarts at base"
-      : " with <b>no step limit either</b> — it only ends when a win lands, TP/SL fires, or you press STOP") +
-    ". A win always drops it back to base." +
-    (step ? " <b>Right now:</b> step " + step + ", run debt −" + fmt(debt) + ", next stake <b>" +
-      fmt(n > 0 && step >= n ? base : round2(base * Math.pow(m, step))) + "</b>." : "");
+  const stakes = [];
+  for (let i = 0; i < 6; i++) stakes.push(fmt(round2(base * Math.pow(m, i))));
+  const limits = (n > 0 ? "cut back to base after your <b>" + n + "-step</b> limit" : "<b style='color:var(--amber)'>no step limit</b> — the run ends on a win, TP/SL or STOP") +
+    ", and no stake cap";
+  const now = (b && b.lossStreak ? " <b>Right now:</b> step " + b.lossStreak + ", run debt −" + fmt(b.runLossAmt) + ", next leg <b>" +
+    (b11RecOf(b.cfg(), b.lossStreak) || { lab: "the trade above" }).lab + "</b> at " + fmt(b.nextStake(b.cfg())) + "." : "");
+  if (type === "SAME"){
+    note.innerHTML = "Recovery is on, but the type is <b>same as the trade</b> — after a loss the trade above is bought again on <b>" +
+      sym + "</b> at <b>×" + fmt(m) + "</b> the stake, until a win drops it back to base. Pick EVEN, ODD, OVER, UNDER, RISE or FALL above to buy a different contract on the way back. Stakes " +
+      stakes.join(" → ") + "… · " + limits + "." + now;
+    return;
+  }
+  let pay = 0;
+  if (state.symbol){
+    if (type === "EVEN" || type === "ODD") pay = synPayOf(state.symbol);
+    else if (type === "OVER") pay = ouPayOf(state.symbol, "DIGITOVER", digit);
+    else if (type === "UNDER") pay = ouPayOf(state.symbol, "DIGITUNDER", digit);
+    else pay = aioPayOf(state.symbol, "RF");
+  }
+  const beTxt = pay > 1 ? " (" + fmt(pay) + "× ⇒ " + fmt(100 / pay, 2) + "% break-even)" : "";
+  const ruleTxt = ou
+    ? type + " " + digit + " wins when the exit tick's last digit is " + (type === "OVER" ? "above " : "below ") + digit + " — "
+    : type === "RISE" ? "RISE buys CALL — the exit tick must be above the entry — "
+    : type === "FALL" ? "FALL buys PUT — the exit tick must be below the entry — "
+    : type + " wins on an exit tick whose last digit is " + (type === "EVEN" ? "even" : "odd") + " — ";
+  note.innerHTML = "After a loss the next contract goes out on <b>" + sym + "</b> as <b>" + leg + "</b>" + beTxt +
+    ", " + ruleTxt + "at <b>×" + fmt(m) + "</b> the stake, again after every further loss, until a win lands and the trade above takes over at base. Stakes " +
+    stakes.join(" → ") + "… · " + limits + ". A recovery leg is a different contract from the trade above, so the AI confidence gate (RISE/FALL only) does not hold it." + now;
 }
 function limitsText(c, stops){
   const cur = (state.account && state.account.currency) || "USD";
@@ -9279,6 +9347,58 @@ const B11_KINDS = {
   match: [["AUTO", "AUTO — the hottest digit of the last ticks"], ["FIXED", "FIXED — my digit"]],
 };
 const B11_USES_BARRIER = { ou: true, match: true, eo: false, rf: false };
+/* ================= Round 124 — the RECOVERY TYPE section (your rule of 24 Nov) =================
+   "delete all recovery bot 11 section and create a RECOVERY TYPE inside custom bot 11 where i can choose
+   recovery type EVEN ODD, OVER UNDER and RISE AND FALL then if its over under type, i choose which digit
+   prediction i recover with".
+   So one choice names the contract that buys back every loss — no market picker, no tap-order digit ladder,
+   no CLEAR. The legs stay on the market the trade is on. SAME is the default: with it the ladder steps the
+   trade above itself, which is exactly what Bot 11 did before any recovery section existed, so a card nobody
+   has touched keeps its old behaviour. */
+const B11_REC_TYPES = ["SAME", "EVEN", "ODD", "OVER", "UNDER", "RISE", "FALL"];
+function b11RecType(c){ return B11_REC_TYPES.indexOf(c.recType) >= 0 ? c.recType : "SAME"; }
+/* The contract a recovery rung buys, or null for "the trade above at the stepped stake". */
+function b11RecOf(c, step){
+  if (!c.recOn || !(step > 0)) return null;
+  const t = b11RecType(c);
+  if (t === "SAME") return null;
+  const sym = state.symbol, pts = feedPrices(sym) || [], win = Math.max(1, c.win | 0), digs = state.digits.slice(-win);
+  let type, barrier = null, lab, pay, p = null, n = 0;
+  if (t === "EVEN" || t === "ODD"){
+    type = t === "EVEN" ? "DIGITEVEN" : "DIGITODD";
+    pay = synPayOf(sym); lab = t;
+    if (digs.length >= 20){
+      let hit = 0;
+      for (let k = 0; k < digs.length; k++){ const dg = digs[k]; if (!isFinite(dg)) continue; if (t === "EVEN" ? dg % 2 === 0 : dg % 2 === 1) hit++; }
+      n = digs.length; p = hit / n * 100;
+    }
+  } else if (t === "OVER" || t === "UNDER"){
+    /* OVER 9 and UNDER 0 can never win, so the card clamps the prediction off them instead of buying a dud. */
+    const d = t === "OVER" ? clampInt(c.recDigit, 0, 8, 5) : clampInt(c.recDigit, 1, 9, 5);
+    type = t === "OVER" ? "DIGITOVER" : "DIGITUNDER"; barrier = d; lab = t + " " + d;
+    pay = ouPayOf(sym, type, d);
+    if (digs.length >= 20){
+      let hit = 0;
+      for (let k = 0; k < digs.length; k++){ const dg = digs[k]; if (!isFinite(dg)) continue; if (t === "OVER" ? dg > d : dg < d) hit++; }
+      n = digs.length; p = hit / n * 100;
+    }
+  } else {
+    type = t === "RISE" ? "CALL" : "PUT"; lab = t;
+    pay = aioPayOf(sym, "RF");
+    if (pts.length >= 45){ const mv = rfMoves(pts, win); n = mv.n; p = t === "RISE" ? mv.upPct : mv.dnPct; }
+  }
+  const r = { type, barrier, lab, sym, side: t, pay, be: 100 / pay, n, p };
+  r.ev = p == null ? null : pay * p / 100 - 1;
+  return r;
+}
+/* One sentence saying what the ladder buys — used by the badge, the journal and the run panel. */
+function b11RecLadderTxt(c){
+  const t = b11RecType(c);
+  if (t === "SAME") return "the trade above at the stepped stake";
+  if (t === "OVER" || t === "UNDER")
+    return t + " " + (t === "OVER" ? clampInt(c.recDigit, 0, 8, 5) : clampInt(c.recDigit, 1, 9, 5)) + " on " + state.symbol;
+  return t + " on " + state.symbol;
+}
 function cfg11(){
   const trade = ($("#b11_trade") || {}).value || "eo";
   const kinds = B11_KINDS[trade] || B11_KINDS.eo;
@@ -9296,11 +9416,13 @@ function cfg11(){
     dur: clampInt($("#b11_dur").value, 1, 10, 1),
     stake: clampFloat($("#b11_stake").value, 0.35, 100000, 0.35),
     mult: clampFloat($("#b11_mult").value, 1, 3, 2.1),
-    /* Round 122 (your rule of 23 Nov: "remove stake cap let bot run thoroughly"): the cap FIELD and its
-       maxStake are gone. No stake size ever cuts a ladder short again — the only brakes on a losing run are
-       the step limit set in the RECOVERY section (0 = none), TP/SL, and STOP. recOn off = flat stakes. */
+    /* Round 122 (your rule of 23 Nov): the cap FIELD and its maxStake are gone — no stake size ever cuts a
+       ladder short. Round 124 (your rule of 24 Nov): RECOVERY TYPE names the contract that buys back a loss —
+       EVEN, ODD, OVER n, UNDER n, RISE or FALL, on the market the trade is on. SAME steps the trade itself. */
     recOn: !!($("#b11_recOn") || {}).checked,
     steps: clampInt($("#b11_steps").value, 0, 50, 0),
+    recType: b11RecType({ recType: ($("#b11_recType") || {}).value }),
+    recDigit: clampInt(($("#b11_recDigit") || {}).value, 0, 9, 5),
     tp: Math.max(0, +$("#b11_tp").value || 0),
     sl: Math.max(0, +$("#b11_sl").value || 0),
     /* Round 117: Bot 11's own wins-in-a-row stop. wsOn off → follow the desk (#winStreak); wsOn on → use
@@ -9387,7 +9509,7 @@ function b11Read(c){
 }
 class CustomRunBot extends BaseBot {
   constructor(){ super("b11", "Custom Run Bot (your contract)", "Bot 11 · Custom Run");
-    this.run = null; this.lossStreak = 0; this.runLossAmt = 0; this.side = ""; this.lastWhy = ""; }
+    this.run = null; this.lossStreak = 0; this.runLossAmt = 0; this.side = ""; this.lastWhy = ""; this.lastRecSig = ""; }
   cfg(){ return this.run ? this.run.cfg : cfg11(); }
   /* Round 117: when the trader ticks "my own" on the card, Bot 11 banks on its OWN number (0 = off);
      otherwise it follows the desk WINS-IN-A-ROW stop like every other bot. */
@@ -9412,6 +9534,33 @@ class CustomRunBot extends BaseBot {
   planNext(){
     if (!this.run) return null;                       // RUN always creates the run first; this is the belt
     const c = this.cfg();
+    /* Round 122: the old "stake exceeds cap — back to base" branch stays DELETED — a deep step is traded at
+       its full size. The step limit is judged first, on the same decision that picks the leg, so a ladder is
+       cut at exactly the depth you set whether it was climbing the trade above or a recovery leg. The limit is
+       the number of RECOVERY RUNGS (loss 1 → rung 1 … loss N → rung N), so it trips only on loss N+1. */
+    if (c.recOn && c.steps > 0 && this.lossStreak > c.steps){
+      this.sys("Recovery reached its " + c.steps + " step limit (−" + fmt(this.runLossAmt) + ") — back to base " +
+        fmt(c.stake) + " and the ladder starts again");
+      this.lossStreak = 0; this.runLossAmt = 0;
+    }
+    /* Round 124 (your rule of 24 Nov): once a loss is on the board, the contract bought is the RECOVERY TYPE
+       named on the card — EVEN, ODD, OVER/UNDER at your digit, or RISE/FALL — on the market the trade is
+       running, at the stepped stake. It keeps going until a win lands, and the trade above takes over again at
+       base. The AI confidence gate is deliberately not applied to a recovery leg: it is a direction forecast,
+       and these legs are the contract you chose. */
+    const rec = b11RecOf(c, this.lossStreak);
+    if (rec){
+      const sig = rec.sym + "|" + rec.type + "|" + rec.barrier;
+      if (this.lastRecSig !== sig){
+        this.lastRecSig = sig;
+        this.sys("Recovery leg " + this.lossStreak + " — " + rec.lab + " on " + rec.sym + " at " +
+          fmt(this.stakeRaw(c)) + " (run debt −" + fmt(this.runLossAmt) + ") · pays " + fmt(rec.pay) + "× = " +
+          fmt(rec.be, 2) + "% break-even" + (rec.p == null ? "" : ", this window " + fmt(rec.p, 1) + "%"));
+      }
+      return { type: rec.type, barrier: rec.barrier, symbol: rec.sym, stake: this.stakeRaw(c),
+        duration: c.dur, source: this.source };
+    }
+    this.lastRecSig = "";
     const r = b11Read(c);
     if (!r.ok){
       if (this.lastWhy !== r.why){ this.lastWhy = r.why; this.sys("Holding — " + r.why); renderBot(this); }
@@ -9437,14 +9586,6 @@ class CustomRunBot extends BaseBot {
       this.lossStreak = 0; this.runLossAmt = 0;
     }
     this.side = r.key;
-    /* Round 122: the old "stake exceeds cap — back to base" branch is DELETED. A deep step is now traded at
-       its full size. The only cut-off left is the step limit from the RECOVERY section (0 = none), and it
-       fires once per ladder because the streak it is judging is reset with it. */
-    if (c.recOn && c.steps > 0 && this.lossStreak >= c.steps){
-      this.sys("Recovery reached its " + c.steps + " step limit (−" + fmt(this.runLossAmt) + ") — back to base " +
-        fmt(c.stake) + " and the ladder starts again");
-      this.lossStreak = 0; this.runLossAmt = 0;
-    }
     return { type: r.type, barrier: r.barrier, stake: this.stakeRaw(c), duration: c.dur, source: this.source };
   }
   onSettled(res){
@@ -9460,7 +9601,7 @@ class CustomRunBot extends BaseBot {
      same way — a loss on one volatility index is not a debt another index has to win back. */
   onStop(){
     const step = this.lossStreak, debt = this.runLossAmt;
-    this.lossStreak = 0; this.runLossAmt = 0; this.side = "";
+    this.lossStreak = 0; this.runLossAmt = 0; this.side = ""; this.lastRecSig = "";
     /* Round 121: the ladder is always dropped, but only announced when there WAS one — the screenshot of
        22 Nov showed "was step 0, run debt −0.00" on a bot that had no recovery to clear, which read like a
        fault. A stop at base stake now journals nothing. */
@@ -9471,6 +9612,10 @@ class CustomRunBot extends BaseBot {
   preview(){
     const c = this.cfg();
     if (!this.run) return { label: "NO RUN YET", cls: "mode-wait", stake: c.stake };
+    /* Round 124: a recovery leg is the type you picked on the card, not read off the window, so it never waits —
+       say which leg is next. */
+    const rec = b11RecOf(c, this.lossStreak);
+    if (rec) return { label: "RECOVERY STEP " + this.lossStreak + " · " + rec.lab, cls: "mode-rec", stake: this.stakeRaw(c) };
     const r = b11Read(c);
     if (!r.ok) return { label: "WAITING · CONTRACT", cls: "mode-wait", stake: this.nextStake(c) };
     if (c.confOn && r.conf == null) return { label: "WAITING · AI GAUGE", cls: "mode-wait", stake: this.nextStake(c) };
@@ -9484,6 +9629,13 @@ class CustomRunBot extends BaseBot {
   subText(){
     const c = this.cfg();
     if (!this.run) return "Choose the trade type, contract, SL, TP, stake and martingale below, then press RUN — it creates the run and starts trading, nothing else is asked";
+    /* Round 124: while a recovery leg is due, the card's type — not the window read — is what gets bought,
+       so the line describes that leg instead of reporting the trade above as unreadable. */
+    const rec = b11RecOf(c, this.lossStreak);
+    if (rec) return "Recovering step " + this.lossStreak + " with " + rec.lab + " on " + rec.sym + " at " +
+      fmt(this.stakeRaw(c)) + " · " + fmt(rec.pay) + "× = " + fmt(rec.be, 2) + "% break-even" +
+      (rec.p == null ? "" : ", " + fmt(rec.p, 1) + "% of its last " + rec.n + " ticks") +
+      " · run debt −" + fmt(this.runLossAmt) + " — a win drops back to the trade at base " + fmt(c.stake);
     const r = b11Read(c);
     if (!r.ok) return "Contract not readable yet — " + r.why;
     return "Buys " + r.lab + " on " + state.symbol + " · " + fmt(r.p, 1) + "% of the last " + r.n + " ticks vs " +
@@ -9493,13 +9645,17 @@ class CustomRunBot extends BaseBot {
           : " · AI conf " + fmt(r.conf, 0) + "% (min " + c.minConf + "%)" + (r.aiSide && r.aiSide !== r.key ? " · AI says " + r.aiSide : ""))
         : " · no AI gate on this family (the confidence gauge is RISE/FALL only)") +
       (c.recOn && this.lossStreak ? " · ladder step " + this.lossStreak + (c.steps > 0 ? "/" + c.steps : "") +
-        " (−" + fmt(this.runLossAmt) + ")" : "");
+        " (−" + fmt(this.runLossAmt) + ") next on " + b11RecLadderTxt(c) : "");
   }
   describe(){
     const c = this.cfg(), r = b11Read(c), cur = (state.account && state.account.currency) || "USD";
     /* Round 122: the cap is gone, so there is no "until the cap stops it" figure left to quote. The exposure
        is stated over a fixed number of rungs instead — your step limit if you set one, otherwise 12. */
     const rungs = c.recOn ? (c.steps > 0 ? Math.min(c.steps, 40) : 12) : 1;
+    /* Round 123: describe the leg that is due next — the one after the current streak, or rung 1 when the run
+       is at base — because that is the contract the recovery section actually puts on the board. */
+    const nextStep = Math.max(1, this.lossStreak), recNow = b11RecOf(c, nextStep);
+    const recStake = round2(c.stake * Math.pow(c.recOn && c.mult > 1 ? c.mult : 1, nextStep));
     let s = c.stake, total = 0, deep = c.stake;
     for (let i = 0; i < rungs; i++){ total += s; deep = s; s = round2(s * (c.recOn ? c.mult : 1)); }
     return "<div class='note' style='margin:0'><b>Contract:</b> " + (r.ok ? "<b>" + r.lab + "</b> (" + B11_LAB_TXT[c.trade] +
@@ -9510,7 +9666,15 @@ class CustomRunBot extends BaseBot {
         ? "<b>Recovery is ON and there is NO stake cap</b>: a loss multiplies the stake ×" + fmt(c.mult) + " and the ladder keeps stepping" +
           (c.steps > 0 ? " up to your " + c.steps + "-step limit, then it starts again at base"
             : " with no step limit either — it only ends when a win lands, TP/SL fires, or you press STOP") +
-          ". A win drops it back to base. "
+          ". A win drops it back to base. " +
+          /* Round 124 (your rule of 24 Nov): the ladder also changes the BET, off this card's own type. */
+          "<b>What each rung buys:</b> " + b11RecLadderTxt(c) +
+          (recNow ? " — the leg after the next loss is <b>" + recNow.lab + " on " + recNow.sym + "</b>, " + fmt(recNow.pay) + "× ⇒ " +
+            fmt(recNow.be, 2) + "% break-even" + (recNow.p == null ? "" : " against " + fmt(recNow.p, 1) +
+            "% of its last " + recNow.n + " ticks (EV " + fmtS(recNow.ev) + " per 1.00)") +
+            ", at " + fmt(recStake) + " " + cur : "") + ". " +
+          (b11RecType(c) !== "SAME" ? "The recovery legs are a different contract from the trade above, so the AI confidence gate does not hold them — it is a direction forecast, and these legs are the type you chose. "
+            : "The type is the trade itself, so every rung climbs on the trade above at the stepped stake. ")
         : "<b>Recovery is OFF</b> — every contract goes out at the base stake " + fmt(c.stake) + " and a loss is never chased. ") +
         (!c.confOn ? "No AI confidence gate applies to this family — the gauge is a direction forecast, so it only gates RISE/FALL. "
         : r.conf == null ? "The AI gauge has no read on this market yet, so nothing is bought. "
@@ -9554,7 +9718,7 @@ function b11CreateRun(opts){
   if (bot11.running){ toast("Bot 11 is running — press STOP before you re-lock its run", "warn", 6000); return null; }
   if (b11ApplyTimer){ clearTimeout(b11ApplyTimer); b11ApplyTimer = null; }   // the snapshot below already carries the live card
   const c = cfg11(), r = b11Read(c);
-  bot11.run = null; bot11.lossStreak = 0; bot11.runLossAmt = 0; bot11.side = "";
+  bot11.run = null; bot11.lossStreak = 0; bot11.runLossAmt = 0; bot11.side = ""; bot11.lastRecSig = "";
   if (!r.ok){
     toast("Cannot create this run: " + r.why, "error", 8000);
     renderBot(bot11);
@@ -9564,7 +9728,8 @@ function b11CreateRun(opts){
   bot11.side = r.key;
   bot11.sys("Run created — " + r.lab + " on " + state.symbol + " · " + fmt(c.stake) + " · " +
     (c.recOn && c.mult > 1
-      ? "recovery ×" + fmt(c.mult) + (c.steps > 0 ? ", max " + c.steps + " steps" : ", no cap and no step limit")
+      ? "recovery ×" + fmt(c.mult) + (c.steps > 0 ? ", max " + c.steps + " steps" : ", no cap and no step limit") +
+        " · each leg " + b11RecLadderTxt(c)
       : "recovery OFF — flat stakes at base") +
     " · " + c.dur + " tick(s) · " + fmt(r.pay) + "× payout (" + fmt(r.be, 2) + "% break-even, this window " + fmt(r.p, 1) + "%)" +
     (c.confOn ? " · AI confidence gate " + c.minConf + "% (RISE/FALL only)" : " · no AI confidence gate on this family"));
@@ -9579,6 +9744,7 @@ function b11CreateRun(opts){
    still creates/validates a run, but it is no longer the thing that makes an edit take effect. */
 const B11_FIELD_TXT = { trade: "family", kind: "contract", win: "window", confOn: "AI gate", minConf: "AI minimum",
   barrier: "barrier", dur: "duration", stake: "stake", mult: "martingale", recOn: "recovery", steps: "recovery steps",
+  recType: "recovery type", recDigit: "recovery digit",
   tp: "take profit", sl: "stop loss", wsOn: "own wins stop", ws: "wins-in-a-row target" };
 function b11ValTxt(k, v){
   if (k === "trade") return B11_LAB_TXT[v] || String(v);
@@ -9586,6 +9752,10 @@ function b11ValTxt(k, v){
   if (k === "stake" || k === "tp" || k === "sl") return fmt(v);
   if (k === "recOn") return v ? "on" : "off (flat stakes)";
   if (k === "steps") return +v === 0 ? "no limit" : v + " step" + (+v === 1 ? "" : "s");
+  /* Round 124: the recovery type and its digit. They are named here because b11Apply compares the whole cfg,
+     and a ladder chasing a debt on UNDER 6 cannot carry across to OVER 4 or RISE. */
+  if (k === "recType") return v === "SAME" ? "same as the trade" : String(v);
+  if (k === "recDigit") return String(v);
   if (k === "win" || k === "dur") return v + " tick" + (+v === 1 ? "" : "s");
   if (k === "minConf") return v + "%";
   if (k === "confOn") return v ? "on" : "off";
@@ -9605,7 +9775,8 @@ function b11Apply(){
      step limit, TP/SL, the window,
      the duration and the AI floor are sizes and thresholds, not bets: the ladder stays exactly where it is
      and simply recomputes off your new base. */
-  const newBet = diff.some(k => k === "trade" || k === "kind" || k === "barrier");
+  const newBet = diff.some(k => k === "trade" || k === "kind" || k === "barrier" ||
+    k === "recType" || k === "recDigit");
   if (newBet){ bot11.lossStreak = 0; bot11.runLossAmt = 0; bot11.side = ""; }
   const parts = diff.map(k => B11_FIELD_TXT[k] + " " + b11ValTxt(k, before[k]) + " → " + b11ValTxt(k, now[k]));
   if (moved) parts.unshift("market → " + state.symbol);
@@ -9691,7 +9862,8 @@ function renderB11Panels(b){
   for (let i = 0; i < rungs; i++){ total += s; deep = s; s = round2(s * (c.recOn ? c.mult : 1)); }
   if (exp) exp.innerHTML = (c.recOn && c.mult > 1
       ? "<b>Recovery exposure over " + rungs + " rung" + (rungs === 1 ? "" : "s") + " ≈ " + fmt(round2(total)) + " " + cur +
-        "</b> — base " + fmt(c.stake) + " then ×" + fmt(c.mult) + " per loss, deepest single contract " + fmt(round2(deep)) + " " + cur + ". " +
+        "</b> — base " + fmt(c.stake) + " then ×" + fmt(c.mult) + " per loss, deepest single contract " + fmt(round2(deep)) + " " + cur +
+        ". Each rung buys " + b11RecLadderTxt(c) + ". " +
         (c.steps > 0 ? "Your " + c.steps + "-step limit cuts a losing run back to base after that many in a row."
           : "<b style='color:var(--amber)'>No stake cap and no step limit, so a losing run keeps climbing.</b>") +
         " Martingale amplifies losses quickly; keep the base stake small."
@@ -9708,6 +9880,7 @@ function renderB11Panels(b){
      typing, so this line is now the "applying" window rather than the old "your edit is being ignored"
      warning — it disappears by itself, and the run never trades numbers nobody typed. */
   const rc = b.run.cfg, r = b11Read(rc), pending = JSON.stringify(rc) !== JSON.stringify(cfg11()) || b.run.market !== state.symbol;
+  const recLeg = b11RecOf(rc, b.lossStreak);
   const kv = [
     ["MARKET", b.run.market + (b.run.market === state.symbol ? "" : " → now " + state.symbol), b.run.market === state.symbol ? "" : "down"],
     ["FAMILY", B11_LAB_TXT[rc.trade] || rc.trade, ""],
@@ -9718,9 +9891,13 @@ function renderB11Panels(b){
     [rc.trade === "match" ? "DIGIT" : "BARRIER", B11_USES_BARRIER[rc.trade] ? rc.barrier : "n/a", ""],
     ["DURATION", rc.dur + " tick" + (rc.dur > 1 ? "s" : ""), ""],
     ["STAKE", fmt(rc.stake), ""],
-    ["RECOVERY", rc.recOn && rc.mult > 1 ? "×" + fmt(rc.mult) + " · " + (rc.steps > 0 ? "max " + rc.steps + " steps" : "no cap, no step limit") : "OFF · flat stakes",
+    /* Round 124: the RECOVERY row names the type you chose, and LADDER NOW says which leg is next. */
+    ["RECOVERY", rc.recOn && rc.mult > 1 ? "×" + fmt(rc.mult) + " · " + (rc.steps > 0 ? "max " + rc.steps + " steps" : "no cap, no step limit") +
+      " · " + b11RecLadderTxt(rc) : "OFF · flat stakes",
       rc.recOn && rc.steps === 0 ? "down" : ""],
-    ["LADDER NOW", b.lossStreak ? "step " + b.lossStreak + " · debt −" + fmt(b.runLossAmt) + " · next " + fmt(b.nextStake(rc)) : "at base " + fmt(rc.stake), b.lossStreak ? "down" : ""],
+    ["LADDER NOW", b.lossStreak ? "step " + b.lossStreak + " · " + (recLeg ? recLeg.lab + " · " : "same trade · ") +
+      "debt −" + fmt(b.runLossAmt) + " · next " + fmt(b.nextStake(rc)) : "at base " + fmt(rc.stake) +
+      (rc.recOn && b11RecType(rc) !== "SAME" ? " · after a loss: " + b11RecLadderTxt(rc) : ""), b.lossStreak ? "down" : ""],
     ["TAKE PROFIT", rc.tp > 0 ? "+" + fmt(rc.tp) : "off", "up"],
     ["STOP LOSS", rc.sl > 0 ? "−" + fmt(rc.sl) : "off", "down"],
     ["PAYOUT", r.ok ? fmt(r.pay) + "× · break-even " + fmt(r.be, 2) + "%" : "—", ""],
@@ -9961,14 +10138,32 @@ function initB11UI(){
   $("#b11_ws").addEventListener("change", () => { b11WsPaint(); });
   $("#b11_wsMinus").addEventListener("click", () => { const el = $("#b11_ws"); el.value = Math.max(0, clampInt(el.value, 0, 20, 3) - 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
   $("#b11_wsPlus").addEventListener("click", () => { const el = $("#b11_ws"); el.value = Math.min(20, clampInt(el.value, 0, 20, 3) + 1); el.dispatchEvent(new Event("input", { bubbles: true })); });
-  /* Round 122 — the RECOVERY section. The switch is a checkbox so it gets its own change handler (the
-     multiplier and the step limit ride the debounced input path); all three apply to a live run on their own,
-     repaint the strip, and persist like every other field on this card. */
+  /* Round 124 (your rule of 24 Nov: "create a RECOVERY TYPE inside custom bot 11 where i can choose recovery
+     type EVEN ODD, OVER UNDER and RISE AND FALL then if its over under type, i choose which digit prediction
+     i recover with"). The type names the contract every recovery leg is bought on — always this market — and
+     the digit select only exists for OVER/UNDER. Both ride CFG_IDS and apply to a live run immediately;
+     either one is a different bet, so b11Apply restarts the ladder at base. */
   $("#b11_recOn").addEventListener("change", () => {
     b11RecPaint(bot11); b11SyncNow(); renderBots(); saveSettings();
     toast($("#b11_recOn").checked
-      ? "Bot 11 recovery is ON — a loss steps the stake by the martingale factor, with no stake cap"
+      ? "Bot 11 recovery is ON — a loss is bought back by the recovery type you chose, at the stepped stake"
       : "Bot 11 recovery is OFF — flat stakes at the base, a loss is never chased", "info", 6000);
+  });
+  $("#b11_recType").addEventListener("change", () => {
+    b11RecPaint(bot11); b11SyncNow(); renderBots(); saveSettings();
+    const c = cfg11();
+    toast(c.recType === "SAME"
+      ? "Bot 11 recovery is back on the trade itself — every rung buys the trade above at the stepped stake"
+      : "Bot 11 now buys back losses with " + b11RecLegTxt(c.recType, c.recDigit) + " on " +
+        (state.symbol || "the header market") +
+        (c.recType === "OVER" || c.recType === "UNDER" ? " — OVER 9 and UNDER 0 can never win, so they are not offered" : ""),
+      "info", 6500);
+  });
+  $("#b11_recDigit").addEventListener("change", () => {
+    b11RecPaint(bot11); b11SyncNow(); renderBots(); saveSettings();
+    const c = cfg11();
+    toast("Bot 11 recovery digit is now " + b11RecLegTxt(c.recType, c.recDigit) + " on " +
+      (state.symbol || "the header market"), "info", 6000);
   });
   $("#b11_create").addEventListener("click", () => b11CreateRun());
   /* ONE press. No run locked -> lock it from the live settings, then start it with skipConfirm:
