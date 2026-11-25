@@ -334,6 +334,7 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .dcirc.most{background:linear-gradient(160deg,#00d68a,#00a066);border-color:#00e699;color:#04150f;box-shadow:0 0 14px rgba(0,192,118,.32)}
 .dcirc.least{background:linear-gradient(160deg,#ff6a72,#cf2b36);border-color:#ff7d84;color:#200406;box-shadow:0 0 14px rgba(255,68,79,.3)}
 .dcirc.low{background:linear-gradient(160deg,#ffb648,#d98d0f);border-color:#ffc069;color:#1c1201;box-shadow:0 0 12px rgba(240,169,46,.26)}
+.dcirc.high2{background:linear-gradient(160deg,#7cb8ff,#2f79d8);border-color:#b9dbff;color:#03111f;box-shadow:0 0 12px rgba(47,121,216,.3)}
 .dcirc.cur{background:linear-gradient(160deg,#7cb8ff,#2f79d8);border-color:#b9dbff;color:#03111f}
 .dcirc.cur::after{content:"";position:absolute;left:50%;top:-11px;transform:translateX(-50%);width:0;height:0;
   border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid var(--blue)}
@@ -341,6 +342,7 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .dcirc.cur.rank-most{box-shadow:0 0 0 3px rgba(0,214,138,.85),0 0 16px rgba(0,192,118,.4)}
 .dcirc.cur.rank-least{box-shadow:0 0 0 3px rgba(255,106,114,.85),0 0 16px rgba(255,68,79,.4)}
 .dcirc.cur.rank-low{box-shadow:0 0 0 3px rgba(255,182,72,.85),0 0 16px rgba(240,169,46,.35)}
+.dcirc.cur.rank-high2{box-shadow:0 0 0 3px rgba(124,184,255,.85),0 0 16px rgba(47,121,216,.4)}
 .dclabel{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;font:600 10px var(--mono);
   letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
 .dclabel i{font-style:normal}
@@ -348,6 +350,7 @@ input[type=checkbox]{width:auto;accent-color:var(--dv)}
 .dotc:first-child{margin-left:0}
 .dotc.cur{background:var(--blue);border-color:#b9dbff}
 .dotc.most{background:var(--green);border-color:#00e699}
+.dotc.high2{background:var(--blue);border-color:#b9dbff}
 .dotc.least{background:var(--red);border-color:#ff7d84}
 .dotc.low{background:var(--amber);border-color:#ffc069}
 .dcchip{padding:3px 8px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);
@@ -1761,15 +1764,18 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
 .dist-panel .dcirc{max-width:104px;border:2.5px solid #dfe9f7;background:radial-gradient(circle at 35% 25%,#fff,#f2f7ff 72%);color:#0b1f3f;box-shadow:inset 0 -6px 12px rgba(31,119,224,.06),0 6px 14px rgba(20,60,130,.08)}
 .dist-panel .dcirc b{font:900 clamp(22px,2.1vw,30px)/1 var(--font);color:#0b1f3f;text-shadow:none}
 .dist-panel .dcirc span{font:800 12.5px var(--font);opacity:1;color:#23466f;margin-top:2px}
-.dist-panel .dcirc.most b,.dist-panel .dcirc.most span,.dist-panel .dcirc.cur.rank-most b,.dist-panel .dcirc.cur.rank-most span{color:#fff;text-shadow:0 1px 2px rgba(6,30,80,.4)}
-.dist-panel .dcirc.most{background:radial-gradient(circle at 35% 20%,#7dbbff,#2f74dc 55%,#1b4cb2);border-color:#1b4cb2;color:#fff;box-shadow:0 0 0 3px #fff,0 0 0 6px #f6c443,0 8px 18px rgba(20,70,150,.22),inset 0 2px 6px rgba(255,255,255,.55)}
-.dist-panel .dcirc.least{background:radial-gradient(circle at 35% 25%,#ffe4e7,#fdb6be 72%);border-color:#ef4d5d;color:#0b1f3f;box-shadow:0 0 0 3px rgba(239,77,93,.14),0 6px 14px rgba(200,30,50,.12)}
-.dist-panel .dcirc.low{background:radial-gradient(circle at 35% 25%,#fff4c9,#ffe483 72%);border-color:#f5b81c;color:#0b1f3f;box-shadow:0 0 0 3px rgba(245,184,28,.16),0 0 18px rgba(245,184,28,.22)}
+.dist-panel .dcirc.most b,.dist-panel .dcirc.most span,.dist-panel .dcirc.high2 b,.dist-panel .dcirc.high2 span,.dist-panel .dcirc.least b,.dist-panel .dcirc.least span,.dist-panel .dcirc.cur.rank-most b,.dist-panel .dcirc.cur.rank-most span,.dist-panel .dcirc.cur.rank-high2 b,.dist-panel .dcirc.cur.rank-high2 span,.dist-panel .dcirc.cur.rank-least b,.dist-panel .dcirc.cur.rank-least span{color:#fff;text-shadow:0 1px 2px rgba(15,25,15,.35)}
+.dist-panel .dcirc.low b,.dist-panel .dcirc.low span,.dist-panel .dcirc.cur.rank-low b,.dist-panel .dcirc.cur.rank-low span{color:#5b4300;text-shadow:none}
+.dist-panel .dcirc.most{background:radial-gradient(circle at 35% 20%,#9dffc0,#16a34a 55%,#15803d);border-color:#15803d;color:#fff;box-shadow:0 0 0 3px #fff,0 0 0 6px #f6c443,0 8px 18px rgba(20,120,60,.25),inset 0 2px 6px rgba(255,255,255,.55)}
+.dist-panel .dcirc.high2{background:radial-gradient(circle at 35% 20%,#7dbbff,#2f74dc 55%,#1b4cb2);border-color:#1b4cb2;color:#fff;box-shadow:0 0 0 3px rgba(47,116,220,.18),0 6px 14px rgba(20,70,150,.18),inset 0 2px 6px rgba(255,255,255,.5)}
+.dist-panel .dcirc.least{background:radial-gradient(circle at 35% 20%,#ffc1c1,#ef4444 55%,#b91c1c);border-color:#b91c1c;color:#fff;box-shadow:0 0 0 3px rgba(239,68,68,.16),0 6px 14px rgba(180,30,30,.18),inset 0 2px 6px rgba(255,255,255,.45)}
+.dist-panel .dcirc.low{background:radial-gradient(circle at 35% 20%,#fff3a1,#facc15 55%,#ca8a04);border-color:#ca8a04;color:#5b4300;box-shadow:0 0 0 3px rgba(250,204,21,.18),0 0 18px rgba(250,204,21,.25),inset 0 2px 6px rgba(255,255,255,.5)}
 .dist-panel .dcirc.cur{background:radial-gradient(circle at 35% 25%,#eaf4ff,#cfe4ff 72%);border-color:#7db4f4;color:#0b1f3f;box-shadow:0 0 0 3px rgba(47,127,232,.18),0 6px 14px rgba(20,60,130,.1)}
 .dist-panel .dcirc.cur::after{display:none}
-.dist-panel .dcirc.cur.rank-most{background:radial-gradient(circle at 35% 20%,#7dbbff,#2f74dc 55%,#1b4cb2);border-color:#1b4cb2;box-shadow:0 0 0 3px #fff,0 0 0 6px #f6c443,0 8px 18px rgba(20,70,150,.22),inset 0 2px 6px rgba(255,255,255,.55)}
-.dist-panel .dcirc.cur.rank-least{background:radial-gradient(circle at 35% 25%,#ffe4e7,#fdb6be 72%);border-color:#ef4d5d;box-shadow:0 0 0 3px rgba(239,77,93,.14),0 6px 14px rgba(200,30,50,.12)}
-.dist-panel .dcirc.cur.rank-low{background:radial-gradient(circle at 35% 25%,#fff4c9,#ffe483 72%);border-color:#f5b81c;box-shadow:0 0 0 3px rgba(245,184,28,.16),0 0 18px rgba(245,184,28,.22)}
+.dist-panel .dcirc.cur.rank-most{background:radial-gradient(circle at 35% 20%,#9dffc0,#16a34a 55%,#15803d);border-color:#15803d;box-shadow:0 0 0 3px #fff,0 0 0 6px #f6c443,0 8px 18px rgba(20,120,60,.25),inset 0 2px 6px rgba(255,255,255,.55)}
+.dist-panel .dcirc.cur.rank-high2{background:radial-gradient(circle at 35% 20%,#7dbbff,#2f74dc 55%,#1b4cb2);border-color:#1b4cb2;box-shadow:0 0 0 3px rgba(47,116,220,.18),0 6px 14px rgba(20,70,150,.18),inset 0 2px 6px rgba(255,255,255,.5)}
+.dist-panel .dcirc.cur.rank-least{background:radial-gradient(circle at 35% 20%,#ffc1c1,#ef4444 55%,#b91c1c);border-color:#b91c1c;box-shadow:0 0 0 3px rgba(239,68,68,.16),0 6px 14px rgba(180,30,30,.18),inset 0 2px 6px rgba(255,255,255,.45)}
+.dist-panel .dcirc.cur.rank-low{background:radial-gradient(circle at 35% 20%,#fff3a1,#facc15 55%,#ca8a04);border-color:#ca8a04;box-shadow:0 0 0 3px rgba(250,204,21,.18),0 0 18px rgba(250,204,21,.25),inset 0 2px 6px rgba(255,255,255,.5)}
 .dist-panel .dcirc .crown{display:none;position:absolute;left:50%;top:-20px;transform:translateX(-50%);width:32px;height:25px;z-index:3;filter:drop-shadow(0 3px 4px rgba(150,95,0,.35))}
 .dist-panel .dcirc .crown svg{width:100%;height:100%;display:block}
 .dist-panel .dcirc.most .crown,.dist-panel .dcirc.cur.rank-most .crown{display:block}
@@ -1778,6 +1784,7 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
 .dclabel .dotc{width:12px;height:12px;margin:0;border:0;box-shadow:none}
 .dclabel .dotc.cur{background:#2f7fe8}
 .dclabel .dotc.most{background:#22c55e}
+.dclabel .dotc.high2{background:#2f74dc}
 .dclabel .dotc.least{background:#ef4d5d}
 .dclabel .dotc.low{background:#f5b81c}
 .dcchip,.dist-panel .dcchip{margin-left:auto;padding:8px 18px;border:0;border-radius:999px;background:linear-gradient(180deg,#2b8cff,#0a55d8);color:#fff;font:900 13px var(--font);letter-spacing:0;box-shadow:0 6px 14px rgba(10,85,216,.25)}
@@ -2080,8 +2087,9 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
     <div class="dclabel">
       <span class="dleg"><i class="dotc cur"></i>CURRENT DIGIT</span>
       <span class="dleg"><i class="dotc most"></i>MOST FREQUENT</span>
+      <span class="dleg"><i class="dotc high2"></i>2ND HOT</span>
       <span class="dleg"><i class="dotc least"></i>LEAST</span>
-      <span class="dleg"><i class="dotc low"></i>2ND</span>
+      <span class="dleg"><i class="dotc low"></i>2ND COLD</span>
       <span class="dcchip" id="distCircChip">0/0</span>
     </div>
     <div id="distBars"><div id="distBase"><span>10% expected</span></div></div>
@@ -4214,11 +4222,11 @@ function renderDistribution(){
   if (!arr.length) return;
   /* order by share, ties broken by digit, so "most"/"least" always name one circle */
   const rank = pcts.map((p, i) => i).sort((x, y) => pcts[y] - pcts[x] || x - y);
-  const most = rank[0], least = rank[9], low = rank[8];
+  const most = rank[0], high2 = rank[1], least = rank[9], low = rank[8];
   const cur = state.digits[state.digits.length - 1];
   for (let i = 0; i < 10; i++){
     const el = $("#dcc_" + i); if (!el) continue;
-    const role = i === most ? "most" : i === least ? "least" : i === low ? "low" : "";
+    const role = i === most ? "most" : i === high2 ? "high2" : i === least ? "least" : i === low ? "low" : "";
     const isCur = i === cur;
     el.className = "dcirc" + (isCur ? " cur" + (role ? " rank-" + role : "") : role ? " " + role : "");
     $("#dccpct_" + i).textContent = fmt(pcts[i], 1) + "%";
