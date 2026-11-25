@@ -1684,49 +1684,146 @@ html[data-theme] .dist-panel .dbar.hot,html[data-theme] .dist-panel .dbar.mid,ht
 .botchart{border:0}
 .djournal .jrow{border-bottom:0}
 .cpyfeed div{border-bottom:0}
+/* ===== REFERENCE GLOSS: floating white pills on a white page, bright blue accents, and the
+   digit panel from the trader's picture — glassy discs, a gold ring plus crown on the hottest
+   digit, a tinted legend row and rounded pink bars. ===== */
+:root{--gloss-line:#e2ecf9;--gloss-s:0 8px 20px rgba(15,60,130,.09),0 2px 5px rgba(15,60,130,.05)}
+header,html[data-theme="light"] header{background:#fff!important;background-image:radial-gradient(80% 130% at 0% -20%,rgba(64,155,255,.10),transparent 58%)!important;padding:10px 16px 2px}
+.hrow,html[data-theme="light"] .hrow{background:transparent;border:0;box-shadow:none;border-radius:0;padding:4px 2px 8px;gap:12px 22px;grid-template-columns:minmax(0,1.04fr) minmax(320px,.96fr);grid-template-areas:"brand conn" "quote market" "quote account" "reset utils"}
+.hcandles{display:none}
+.hbrand{align-items:center;gap:10px}
+.conn{grid-area:conn;justify-self:end}
+.logo{font:800 21px var(--font);color:#0b1f3f;gap:11px;letter-spacing:-.02em}
+.ailogo{width:52px;height:52px;filter:drop-shadow(0 5px 10px rgba(7,84,214,.28))}
+.ailogo .ring{background:conic-gradient(from 0deg,#e8443c,#2f7ff0,#e8443c,#16305c,#e8443c)}
+.ailogo .core{inset:11px}
+.logo .wave{font-size:22px}
+.conn,html[data-theme="light"] .conn{margin-left:auto;padding:9px 16px;min-height:44px;border:1px solid var(--gloss-line);border-radius:999px;background:linear-gradient(180deg,#fff,#f7fbff);box-shadow:var(--gloss-s);color:#0b7a4d;font:800 13.5px var(--font);gap:8px}
+.conn::after{content:"";width:8px;height:8px;flex:0 0 auto;border-right:2.5px solid #9fb4cf;border-bottom:2.5px solid #9fb4cf;transform:translateY(-2px) rotate(45deg);margin-left:4px}
+.conn .dot{width:12px;height:12px}
+.hmarket,html[data-theme="light"] .hmarket{background:linear-gradient(180deg,#fff,#f7fbff);border:1px solid var(--gloss-line);border-radius:999px;box-shadow:var(--gloss-s);padding:10px 20px;min-height:52px;gap:10px}
+.hmarket svg{width:26px;height:26px;fill:#2f7ff0}
+.hmarket::after{right:20px;width:8px;height:8px;border-width:2.5px;border-color:#9fb4cf}
+@media (min-width:761px){.hmarket{justify-self:end;width:100%;max-width:420px}}
+#symbolSelect{font:800 17px var(--font);color:#0b1f3f;padding-right:26px}
+.hprice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding-left:6px}
+.hpico{display:block;width:32px;height:22px;margin-bottom:2px}
+.hpico svg{width:32px;height:22px;fill:none;stroke:#1f7cf5;stroke-width:2.6;stroke-linecap:round;filter:drop-shadow(0 2px 4px rgba(31,124,245,.22))}
+#hdrPrice{font:900 clamp(40px,3.7vw,58px)/1.02 var(--font);letter-spacing:-.035em;color:#0b1f3f}
+#hdrDelta{font:800 20px var(--font);margin-top:3px;min-height:24px;color:#e11d48}
+#hdrDelta.up{color:#0a9a5f}
+.acct,html[data-theme="light"] .acct{background:linear-gradient(180deg,#1a7cf7,#0b4fd4 58%,#073a9f);border:1px solid #7cc3ff;border-radius:999px;min-height:54px;padding:9px 18px;gap:10px;box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 10px 22px rgba(9,60,160,.24)}
+.acctbadge{width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font:900 15px var(--font)}
+#acctSelect{font:800 15px var(--font);letter-spacing:.02em}
+.hwallet{display:none}
+.acct .bal{font:800 17px var(--font);margin-left:auto}
+#resetDemoBtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:360px;min-height:56px;border:1px solid #ff9098;border-radius:999px;background:linear-gradient(180deg,#ff4d57,#e11d2e 58%,#b3111f);color:#fff;font:900 17px var(--font);letter-spacing:.06em;box-shadow:inset 0 2px 0 rgba(255,255,255,.45),0 10px 22px rgba(200,20,35,.24)}
+#resetDemoBtn::before{content:"\23FB";font:900 24px/1 var(--font);margin:0;display:inline-block}
+.hutils #authBtn{border:1px solid #7cc3ff;border-radius:999px;background:linear-gradient(180deg,#2b91ff,#0a57d6);min-height:48px;padding:0 22px;font:800 13px var(--font);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 18px rgba(10,85,216,.22)}
+#b11_mini{border:1px solid #8ccbff;border-radius:999px;background:linear-gradient(180deg,#2b8cff,#0a58d8);color:#fff;font:900 13px var(--font);min-height:46px;padding:0 22px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),0 10px 22px rgba(9,60,160,.26)}
+nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:none;padding:2px 6px 10px;gap:8px}
+.tabbtn,html[data-theme="light"] .tabbtn{margin:6px 0;padding:11px 18px;border:1px solid var(--gloss-line);border-radius:999px;background:linear-gradient(180deg,#fff,#f6fafe);color:#16365e;font:800 13px var(--font);box-shadow:var(--gloss-s);display:inline-flex;align-items:center;gap:8px}
+.tabbtn .tico{display:inline-flex;width:18px;height:18px;flex:0 0 auto;color:#2f7ff0}
+.tabbtn .tico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tabbtn:hover,html[data-theme="light"] .tabbtn:hover{background:linear-gradient(180deg,#fff,#eef6ff);color:#0a4ea8}
+.tabbtn.active,html[data-theme="light"] .tabbtn.active{background:linear-gradient(180deg,#2b8cff,#0a55d8);border-color:#0a55d8;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 8px 18px rgba(10,85,216,.28)}
+.tabbtn.active .tico{color:#fff}
+/* digit distribution */
+.dist-panel,html[data-theme="light"] .dist-panel{border-radius:30px!important;background:#fff!important;box-shadow:0 18px 44px rgba(13,60,130,.12)!important;color:#0b1f3f}
+.dist-panel>h3,html[data-theme="light"] .dist-panel>h3{display:flex;align-items:center;flex-wrap:nowrap;gap:12px;margin:0;padding:14px 20px;background:linear-gradient(105deg,#0a67f5,#0448c9 62%,#03379f)!important;color:#fff;border:0;font:800 19px var(--font);letter-spacing:-.01em;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.dist-panel>h3::before{display:none}
+.dicon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border-radius:50%;background:rgba(255,255,255,.94);box-shadow:0 3px 8px rgba(0,30,90,.25)}
+.dicon svg{width:22px;height:22px;fill:none;stroke:#0a5ce0;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dtitle{flex:0 1 auto;white-space:nowrap}
+.distfreq{margin-left:auto;display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;background:#fff;color:#0b2a58;font:700 14px var(--font);box-shadow:0 3px 9px rgba(0,30,90,.2);white-space:nowrap}
+.distfreq i{width:8px;height:8px;border-right:2px solid #7f97b8;border-bottom:2px solid #7f97b8;transform:translateY(-2px) rotate(45deg)}
+#distMeta{display:none}
+.dwin{padding:16px 20px 0}
+.dwin .wbtns,.dist-panel .dwin .wbtns{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0;order:0;width:auto}
+.dwin .wbtn,.dist-panel .dwin .wbtn{min-height:48px;border:1px solid var(--gloss-line);border-radius:999px;background:linear-gradient(180deg,#fff,#f6fafe);color:#14396e;font:800 15px var(--font);box-shadow:inset 0 1px 0 #fff,0 3px 8px rgba(13,60,130,.08)}
+.dwin .wbtn:hover{background:linear-gradient(180deg,#fff,#eef6ff)}
+.dwin .wbtn.active,.dist-panel .dwin .wbtn.active{background:linear-gradient(180deg,#2b8cff,#0a55d8);border-color:#0a55d8;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 14px rgba(10,85,216,.28)}
+#distCircles{grid-template-columns:repeat(10,minmax(0,1fr));gap:12px;padding:32px 20px 8px;margin:0 auto;max-width:1180px;scroll-margin-top:calc(var(--hdrH,53px) + 120px)}
+@media (max-width:760px){#distCircles{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.dist-panel .dcirc{max-width:104px;border:2.5px solid #dfe9f7;background:radial-gradient(circle at 35% 25%,#fff,#f2f7ff 72%);color:#0b1f3f;box-shadow:inset 0 -6px 12px rgba(31,119,224,.06),0 6px 14px rgba(20,60,130,.08)}
+.dist-panel .dcirc b{font:900 clamp(22px,2.1vw,30px)/1 var(--font);color:#0b1f3f;text-shadow:none}
+.dist-panel .dcirc span{font:800 12.5px var(--font);opacity:1;color:#23466f;margin-top:2px}
+.dist-panel .dcirc.most b,.dist-panel .dcirc.most span,.dist-panel .dcirc.cur.rank-most b,.dist-panel .dcirc.cur.rank-most span{color:#fff;text-shadow:0 1px 2px rgba(6,30,80,.4)}
+.dist-panel .dcirc.most{background:radial-gradient(circle at 35% 20%,#7dbbff,#2f74dc 55%,#1b4cb2);border-color:#1b4cb2;color:#fff;box-shadow:0 0 0 3px #fff,0 0 0 6px #f6c443,0 8px 18px rgba(20,70,150,.22),inset 0 2px 6px rgba(255,255,255,.55)}
+.dist-panel .dcirc.least{background:radial-gradient(circle at 35% 25%,#ffe4e7,#fdb6be 72%);border-color:#ef4d5d;color:#0b1f3f;box-shadow:0 0 0 3px rgba(239,77,93,.14),0 6px 14px rgba(200,30,50,.12)}
+.dist-panel .dcirc.low{background:radial-gradient(circle at 35% 25%,#fff4c9,#ffe483 72%);border-color:#f5b81c;color:#0b1f3f;box-shadow:0 0 0 3px rgba(245,184,28,.16),0 0 18px rgba(245,184,28,.22)}
+.dist-panel .dcirc.cur{background:radial-gradient(circle at 35% 25%,#eaf4ff,#cfe4ff 72%);border-color:#7db4f4;color:#0b1f3f;box-shadow:0 0 0 3px rgba(47,127,232,.18),0 6px 14px rgba(20,60,130,.1)}
+.dist-panel .dcirc.cur::after{display:none}
+.dist-panel .dcirc.cur.rank-most{background:radial-gradient(circle at 35% 20%,#7dbbff,#2f74dc 55%,#1b4cb2);border-color:#1b4cb2;box-shadow:0 0 0 3px #fff,0 0 0 6px #f6c443,0 8px 18px rgba(20,70,150,.22),inset 0 2px 6px rgba(255,255,255,.55)}
+.dist-panel .dcirc.cur.rank-least{background:radial-gradient(circle at 35% 25%,#ffe4e7,#fdb6be 72%);border-color:#ef4d5d;box-shadow:0 0 0 3px rgba(239,77,93,.14),0 6px 14px rgba(200,30,50,.12)}
+.dist-panel .dcirc.cur.rank-low{background:radial-gradient(circle at 35% 25%,#fff4c9,#ffe483 72%);border-color:#f5b81c;box-shadow:0 0 0 3px rgba(245,184,28,.16),0 0 18px rgba(245,184,28,.22)}
+.dist-panel .dcirc .crown{display:none;position:absolute;left:50%;top:-20px;transform:translateX(-50%);width:32px;height:25px;z-index:3;filter:drop-shadow(0 3px 4px rgba(150,95,0,.35))}
+.dist-panel .dcirc .crown svg{width:100%;height:100%;display:block}
+.dist-panel .dcirc.most .crown,.dist-panel .dcirc.cur.rank-most .crown{display:block}
+.dclabel,.dist-panel .dclabel{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:16px 20px 0;padding:12px 16px;border:0;border-radius:16px;background:#f3f8ff;color:#41618a;font:800 10.5px var(--font);letter-spacing:.04em;box-shadow:none}
+.dleg{display:inline-flex;align-items:center;gap:7px;text-transform:uppercase;white-space:nowrap}
+.dclabel .dotc{width:12px;height:12px;margin:0;border:0;box-shadow:none}
+.dclabel .dotc.cur{background:#2f7fe8}
+.dclabel .dotc.most{background:#22c55e}
+.dclabel .dotc.least{background:#ef4d5d}
+.dclabel .dotc.low{background:#f5b81c}
+.dcchip,.dist-panel .dcchip{margin-left:auto;padding:8px 18px;border:0;border-radius:999px;background:linear-gradient(180deg,#2b8cff,#0a55d8);color:#fff;font:900 13px var(--font);letter-spacing:0;box-shadow:0 6px 14px rgba(10,85,216,.25)}
+#distBars,html[data-theme="light"] #distBars{margin:16px 20px 20px;padding:18px 10px 12px;border:0;border-radius:20px;background:#fff;height:210px;box-shadow:none}
+.dist-panel .dcol .pct{font:800 11px var(--font);color:#16365e;margin-bottom:8px}
+.dist-panel .dbar,.dist-panel .dbar.hot,.dist-panel .dbar.mid,.dist-panel .dbar.cold,html[data-theme] .dist-panel .dbar.hot,html[data-theme] .dist-panel .dbar.mid,html[data-theme] .dist-panel .dbar.cold{width:68%;max-width:44px;border:0;border-radius:999px;background:linear-gradient(180deg,#ff7d9c,#f43f5e);box-shadow:0 6px 14px rgba(244,63,94,.22)}
+#distBase,html[data-theme="light"] #distBase{border-top:1px dashed rgba(22,54,94,.18);opacity:1}
+#distBase span{display:none}
+.dist-panel .dcol .dg{color:#33506e;font:900 13px var(--font);margin-top:6px}
+.dist-panel .dcol .cnt{color:#8aa2bd;font:700 9.5px var(--font)}
 /* Phone widths: the desktop arrangement at true screen size — same two-column grids, short inputs. */
 @media (max-width:560px){
-  header{padding:6px}
+  header,html[data-theme="light"] header{padding:6px 6px 0}
   .wrap{padding:8px 8px 30px}
   .tabpanel{padding-top:10px}
-  .hrow{padding:10px;gap:10px;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);border-radius:20px}
+  .hrow,html[data-theme="light"] .hrow{padding:8px 6px 10px;gap:8px;grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);border-radius:0}
   .hbrand{flex-wrap:wrap;gap:6px 8px}
-  .logo{font-size:13px;gap:7px;flex-wrap:wrap;row-gap:2px}
-  .ailogo{width:28px;height:28px}
-  .ailogo .core{inset:6px}
-  .logo .wave{font-size:15px}
-  .conn{margin-left:0;padding:5px 10px;font-size:10.5px;gap:6px}
-  .conn .dot{width:10px;height:10px}
-  .hmarket{padding:8px 10px;gap:6px;border-radius:16px}
+  .logo{font-size:16px;gap:8px;flex-wrap:wrap;row-gap:2px}
+  .ailogo{width:36px;height:36px}
+  .ailogo .core{inset:8px}
+  .logo .wave{font-size:17px}
+  .conn,html[data-theme="light"] .conn{margin-left:0;padding:7px 11px;font-size:11px;gap:6px;min-height:0}
+  .conn::after{width:6px;height:6px;border-width:2px;margin-left:2px}
+  .conn .dot{width:9px;height:9px}
+  .hmarket,html[data-theme="light"] .hmarket{padding:7px 12px;gap:6px;min-height:0;border-radius:999px}
   .hmarket svg{display:none}
-  .hmarket::after{right:13px;width:7px;height:7px;border-width:3px}
-  #symbolSelect{font-size:14px;padding-right:22px}
-  #hdrPrice{font-size:30px}
-  #hdrDelta{font-size:17px;margin-top:4px;min-height:20px}
-  .acct{padding:8px;gap:6px;border-radius:16px}
-  .acctbadge{width:24px;height:24px;border-radius:8px;font-size:12px}
-  #acctSelect{font-size:12px}
+  .hmarket::after{right:12px;width:6px;height:6px;border-width:2px}
+  #symbolSelect{font-size:13px;padding-right:18px}
+  #hdrPrice{font-size:38px}
+  #hdrDelta{font-size:18px;margin-top:3px;min-height:20px}
+  .acct,html[data-theme="light"] .acct{padding:8px 12px;gap:7px;border-radius:999px;min-height:0}
+  .acctbadge{width:28px;height:28px;border-radius:50%;font-size:13px}
+  #acctSelect{font-size:13px}
   .hac.sep,.hwallet{display:none}
-  .acct .bal{font-size:13px}
-  #resetDemoBtn{min-height:44px;border-radius:14px;font-size:13px}
-  #resetDemoBtn::before{font-size:22px;margin-right:6px}
+  .acct .bal{font-size:15px}
+  #resetDemoBtn{min-height:48px;border-radius:999px;font-size:15px}
+  #resetDemoBtn::before{font-size:20px;margin-right:0}
   .hutils{gap:6px}
-  .hutils .btn,.hutils .btn-theme,.hutils #authBtn{min-height:38px;padding:8px 6px;border-radius:10px;font-size:9.5px;letter-spacing:0}
-  .dist-panel{border-radius:18px!important}
-  .dist-panel>h3{padding:14px 14px 12px;gap:8px 10px;font-size:15px}
-  .dist-panel>h3::before{width:26px;height:26px}
-  .dist-panel .wbtns{gap:6px}
-  .dist-panel .wbtn{min-height:40px;padding:5px 4px;font-size:14px;border-radius:10px}
-  #distMeta{font-size:10.5px}
-  #distCircles{gap:14px 10px;padding:16px 12px 12px}
+  .hutils .btn,.hutils .btn-theme,.hutils #authBtn{min-height:42px;padding:8px 14px;border-radius:999px;font-size:10.5px;letter-spacing:.02em}
+  .dist-panel{border-radius:24px!important}
+  .dist-panel>h3{padding:12px 14px;gap:10px;font-size:15.5px}
+  .dicon{width:32px;height:32px}
+  .dicon svg{width:19px;height:19px}
+  .distfreq{padding:8px 12px;font-size:11.5px;gap:8px}
+  .dwin{padding:12px 12px 0}
+  .dist-panel .dwin .wbtns{gap:6px}
+  .dist-panel .dwin .wbtn{min-height:42px;padding:5px 4px;font-size:14px;border-radius:999px}
+  #distCircles{gap:16px 10px;padding:26px 12px 8px}
   .dist-panel .dcirc{border-width:2px}
-  .dist-panel .dcirc b{font-size:19px}
+  .dist-panel .dcirc b{font-size:20px}
   .dist-panel .dcirc span{font-size:9.5px}
-  .dist-panel .dcirc.cur::after{top:-13px}
-  .dist-panel .dclabel{margin:0 12px;padding:8px 10px;font-size:9.5px;flex-wrap:wrap;gap:6px}
-  #distBars{height:150px;gap:4px;margin:12px 12px 16px;padding:14px 8px 10px}
-  .dist-panel .dcol .pct{font-size:9px;margin-bottom:3px}
-  .dist-panel .dcol .dg{font-size:13px;margin-top:5px}
+  .dist-panel .dcirc .crown{top:-16px;width:26px;height:21px}
+  .dist-panel .dclabel{margin:12px 12px 0;padding:9px 10px;font-size:8.5px;flex-wrap:wrap;gap:6px 10px}
+  .dclabel .dleg{gap:5px}
+  .dclabel .dotc{width:10px;height:10px}
+  .dist-panel .dcchip{padding:5px 10px;font-size:10px}
+  #distBars,html[data-theme="light"] #distBars{height:170px;gap:4px;margin:12px 12px 14px;padding:14px 8px 10px}
+  .dist-panel .dcol .pct{font-size:9px;margin-bottom:5px}
+  .dist-panel .dcol .dg{font-size:12px;margin-top:5px}
   .dist-panel .dcol .cnt{font-size:8.5px}
   #distBase span{display:none}
   #card_b11.panel.botcard,#card_b10.panel.botcard{border-radius:18px}
@@ -1892,14 +1989,14 @@ html[data-theme] .dist-panel .dbar.hot,html[data-theme] .dist-panel .dbar.mid,ht
     </div>
     <div class="hbrand">
       <div class="logo"><span class="ailogo"><span class="ring"></span><span class="core"></span></span>Welcome <span class="thin" id="greetName">trader</span><span class="wave" aria-hidden="true">👋</span></div>
-      <div class="conn"><span class="dot connecting" id="connDot"></span><span id="connText">connecting…</span></div>
     </div>
+    <div class="conn"><span class="dot connecting" id="connDot"></span><span id="connText">connecting…</span></div>
     <div class="hfield hmarket">
       <label>Symbol</label>
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="17" width="6" height="11" rx="1"/><rect x="13" y="7" width="6" height="21" rx="1"/><rect x="22" y="12" width="6" height="16" rx="1"/></svg>
       <select id="symbolSelect"><option value="R_100">Volatility 100 Index (R_100)</option></select>
     </div>
-    <div class="hprice"><span id="hdrPrice">—</span><span id="hdrDelta"></span></div>
+    <div class="hprice"><span class="hpico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19v-6M9.3 19V8M14.7 19v-8M20 19V4"/></svg></span><span id="hdrPrice">—</span><span id="hdrDelta"></span></div>
     <div class="acct" id="acctChip">
       <span class="acctbadge demo" id="acctBadge" title="Demo account">D</span>
       <div class="hfield">
@@ -1922,20 +2019,21 @@ html[data-theme] .dist-panel .dbar.hot,html[data-theme] .dist-panel .dbar.mid,ht
 </header>
 
 <nav class="tabs">
-  <button class="tabbtn active" data-tab="dashboard">Dashboard · Digit Distribution</button>
-  <button class="tabbtn" data-tab="eostrat">OVER UNDER STRATEGY</button>
+  <button class="tabbtn active" data-tab="dashboard"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></span><span>Dashboard</span></button>
+  <button class="tabbtn" data-tab="dashboard" data-scroll="#distCircles"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20v-6M10.3 20V9M15.7 20v-8M21 20V5"/></svg></span><span>Digit Distribution</span></button>
+  <button class="tabbtn" data-tab="eostrat"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20"/></svg></span><span>OVER UNDER STRATEGY</span></button>
   <!-- Round 97: the user asked for a header of its own between OVER UNDER STRATEGY and Bots for the new
        DIFFERS BOT — same slot in the bar, same tab mechanism as every other desk. -->
-  <button class="tabbtn" data-tab="differs">DIFFERS BOT</button>
-  <button class="tabbtn" data-tab="bots">Bots</button>
-  <button class="tabbtn" data-tab="sync">Synchronization</button>
-  <button class="tabbtn" data-tab="rf">RISE FALL DESK</button>
-  <button class="tabbtn" data-tab="signals">AI Signal Center</button>
-  <button class="tabbtn" data-tab="allinone">ALL IN ONE</button>
-  <button class="tabbtn" data-tab="activity">Activity Log</button>
+  <button class="tabbtn" data-tab="differs"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 5h7M6 19h7"/><path d="M17.5 6.5l-7 11"/><circle cx="16.6" cy="7.4" r="1.6"/><circle cx="16.6" cy="16.6" r="1.6"/></svg></span><span>DIFFERS BOT</span></button>
+  <button class="tabbtn" data-tab="bots"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M4 12v3M20 12v3"/></svg></span><span>Bots</span></button>
+  <button class="tabbtn" data-tab="sync"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 10a7 7 0 0 1 12-2.5L19 9"/><path d="M19 4.5V9h-4.5"/><path d="M19 14a7 7 0 0 1-12 2.5L5 15"/><path d="M5 19.5V15h4.5"/></svg></span><span>Synchronization</span></button>
+  <button class="tabbtn" data-tab="rf"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 3.5 3L20 7"/><path d="M20 12V7h-5"/></svg></span><span>RISE FALL DESK</span></button>
+  <button class="tabbtn" data-tab="signals"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.4L19 10l-5.1 1.6L12 17l-1.9-5.4L5 10l5.1-1.6z"/><path d="M18.5 16.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg></span><span>AI Signal Center</span></button>
+  <button class="tabbtn" data-tab="allinone"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.2-8 4.2-8-4.2z"/><path d="M4 12.2l8 4.2 8-4.2"/><path d="M4 16.6l8 4.2 8-4.2"/></svg></span><span>ALL IN ONE</span></button>
+  <button class="tabbtn" data-tab="activity"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h4"/></svg></span><span>Activity Log</span></button>
   <!-- Round 81: the trader asked for a "copy trading header next to activity log where i can paste
        clients path to copy my trades" — so the tab sits in the very next slot after Activity Log. -->
-  <button class="tabbtn" data-tab="copy">COPY TRADING</button>
+  <button class="tabbtn" data-tab="copy"><span class="tico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.8 19c.6-3 2.7-4.6 5.2-4.6s4.6 1.6 5.2 4.6"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.6 14.6c2.7-.7 4.6 1 5 3.6"/></svg></span><span>COPY TRADING</span></button>
 </nav>
 
 <button class="btn btn-xs btn-green winrun" id="b11_mini" type="button" data-word="BOT 11"
@@ -1947,20 +2045,26 @@ html[data-theme] .dist-panel .dbar.hot,html[data-theme] .dist-panel .dbar.mid,ht
 <section class="tabpanel show" id="tab_dashboard">
   <div class="grid">
     <div class="panel dist-panel">
-    <h3>Digit Distribution — last digit frequency
-      <span class="wbtns" id="winBtns">
+    <h3>
+      <span class="dicon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.6 15.6L21 21"/><path d="M8 12.4l1.8-2.4 1.7 1.6 2-3.2"/></svg></span>
+      <span class="dtitle">Digit Distribution</span>
+      <span class="distfreq">Digit frequency <i aria-hidden="true"></i></span>
+      <span class="r" id="distMeta"></span>
+    </h3>
+    <div class="dwin"><span class="wbtns" id="winBtns">
         <button class="wbtn" data-w="25">25</button>
         <button class="wbtn" data-w="50">50</button>
         <button class="wbtn active" data-w="100">100</button>
         <button class="wbtn" data-w="250">250</button>
         <button class="wbtn" data-w="500">500</button>
         <button class="wbtn" data-w="1000">1000</button>
-      </span>
-      <span class="r" id="distMeta"></span>
-    </h3>
+      </span></div>
     <div id="distCircles"></div>
     <div class="dclabel">
-      <span><i class="dotc cur"></i>current digit<i class="dotc most"></i>most frequent<i class="dotc least"></i>least<i class="dotc low"></i>2nd least</span>
+      <span class="dleg"><i class="dotc cur"></i>CURRENT DIGIT</span>
+      <span class="dleg"><i class="dotc most"></i>MOST FREQUENT</span>
+      <span class="dleg"><i class="dotc least"></i>LEAST</span>
+      <span class="dleg"><i class="dotc low"></i>2ND</span>
       <span class="dcchip" id="distCircChip">0/0</span>
     </div>
     <div id="distBars"><div id="distBase"><span>10% expected</span></div></div>
@@ -10563,7 +10667,7 @@ function closeRunPop(){
   if (RUN_POP.focus && RUN_POP.focus.isConnected) RUN_POP.focus.focus();
   RUN_POP.focus = null;
 }
-const B11_FLOAT_KEY = "dt_b11_float_v1";
+const B11_FLOAT_KEY = "dt_b11_float_v2";
 function initB11Float(){
   const mini = $("#b11_mini");
   let drag = null, suppressClickUntil = 0;
@@ -10582,7 +10686,10 @@ function initB11Float(){
   let saved = null;
   try { saved = JSON.parse(store.get(B11_FLOAT_KEY) || "null"); } catch (e) {}
   const anchor = () => {
-    const a = $("#winBtns").getBoundingClientRect(), r = mini.getBoundingClientRect();
+    const r = mini.getBoundingClientRect();
+    const ab = $("#authBtn") ? $("#authBtn").getBoundingClientRect() : null;
+    if (ab && ab.width > 0) return place(ab.left - r.width - 10, ab.top + (ab.height - r.height) / 2);
+    const a = $("#winBtns").getBoundingClientRect();
     if ((a.width || a.height) && window.innerWidth > 560) return place(a.right + 9, a.top + (a.height - r.height) / 2);
     if (window.innerWidth <= 560) {
       const u = document.querySelector(".hutils").getBoundingClientRect(), hb = document.querySelector(".hbrand").getBoundingClientRect();
@@ -10596,6 +10703,7 @@ function initB11Float(){
   else {
     anchor();
     new ResizeObserver(() => { if (!store.get(B11_FLOAT_KEY) && !drag) anchor(); }).observe(document.querySelector("header"));
+    window.addEventListener("resize", () => { if (!store.get(B11_FLOAT_KEY) && !drag) anchor(); });
   }
   const finish = e => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -13945,7 +14053,7 @@ function buildDist(){
   for (let i = 0; i < 10; i++){
     const c = document.createElement("div");
     c.className = "dcirc"; c.id = "dcc_" + i;
-    c.innerHTML = "<b>" + i + "</b><span id='dccpct_" + i + "'>—</span>";
+    c.innerHTML = "<i class='crown' aria-hidden='true'><svg viewBox='0 0 26 20'><path d='M1.8 17.2 3 5.4l5.8 4.1L13 1.6l4.2 7.9 5.8-4.1 1.2 11.8z' fill='#f9bd1f' stroke='#e2a007' stroke-width='1.1' stroke-linejoin='round'/><circle cx='3.6' cy='4.1' r='1.5' fill='#ffdd66'/><circle cx='13' cy='1.4' r='1.5' fill='#ffdd66'/><circle cx='22.4' cy='4.1' r='1.5' fill='#ffdd66'/></svg></i><b>" + i + "</b><span id='dccpct_" + i + "'>—</span>";
     wrap.appendChild(c);
   }
   const bars = $("#distBars");
@@ -14022,6 +14130,10 @@ function init(){
     }
     $$(".tabbtn").forEach(x => x.classList.toggle("active", x === b));
     $$(".tabpanel").forEach(p => p.classList.toggle("show", p.id === "tab_" + b.dataset.tab));
+    if (b.dataset.scroll){
+      const t = document.querySelector(b.dataset.scroll);
+      if (t) setTimeout(() => t.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+    }
     if (b.dataset.tab === "activity") drawPlChart();  // canvas has 0 width while hidden
     if (b.dataset.tab === "dashboard") drawPriceChart();
     if (b.dataset.tab === "bots") renderBots();
