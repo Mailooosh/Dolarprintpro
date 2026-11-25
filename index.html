@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=1200">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DolarPrintPro</title>
 <!-- Round 75: Deriv typesets its apps in IBM Plex. If the fonts ever fail to load the app falls
      straight back to the system stack below — nothing depends on the network for layout. -->
@@ -1496,6 +1496,112 @@ input,select,textarea{font-weight:700}
 #card_b11>.dbot .dgrid .stat.alt{background:#e9f3ff}
 #card_b11>.note{margin:12px 16px;border:1px solid #7fb7e8;border-radius:12px;background:#edf6ff;color:#244568;font-weight:600}
 #card_b11>.note:empty{display:none}
+/* Phone widths: the desktop arrangement at true screen size — same two-column grids, short inputs. */
+@media (max-width:560px){
+  header{padding:6px}
+  .wrap{padding:8px 8px 30px}
+  .tabpanel{padding-top:10px}
+  .hrow{padding:10px;gap:10px;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);border-radius:20px}
+  .hbrand{flex-wrap:wrap;gap:6px 8px}
+  .logo{font-size:13px;gap:7px;flex-wrap:wrap;row-gap:2px}
+  .ailogo{width:28px;height:28px}
+  .ailogo .core{inset:6px}
+  .logo .wave{font-size:15px}
+  .conn{margin-left:0;padding:5px 10px;font-size:10.5px;gap:6px}
+  .conn .dot{width:10px;height:10px}
+  .hmarket{padding:8px 10px;gap:6px;border-radius:16px}
+  .hmarket svg{display:none}
+  .hmarket::after{right:13px;width:7px;height:7px;border-width:3px}
+  #symbolSelect{font-size:14px;padding-right:22px}
+  #hdrPrice{font-size:30px}
+  #hdrDelta{font-size:17px;margin-top:4px;min-height:20px}
+  .acct{padding:8px;gap:6px;border-radius:16px}
+  .acctbadge{width:24px;height:24px;border-radius:8px;font-size:12px}
+  #acctSelect{font-size:12px}
+  .hac.sep,.hwallet{display:none}
+  .acct .bal{font-size:13px}
+  #resetDemoBtn{min-height:44px;border-radius:14px;font-size:13px}
+  #resetDemoBtn::before{font-size:22px;margin-right:6px}
+  .hutils{gap:6px}
+  .hutils .btn,.hutils .btn-theme,.hutils #authBtn{min-height:38px;padding:8px 6px;border-radius:10px;font-size:9.5px;letter-spacing:0}
+  .dist-panel{border-radius:18px!important}
+  .dist-panel>h3{padding:14px 14px 12px;gap:8px 10px;font-size:15px}
+  .dist-panel>h3::before{width:26px;height:26px}
+  .dist-panel .wbtns{gap:6px}
+  .dist-panel .wbtn{min-height:40px;padding:5px 4px;font-size:14px;border-radius:10px}
+  #distMeta{font-size:10.5px}
+  #distCircles{gap:14px 10px;padding:16px 12px 12px}
+  .dist-panel .dcirc{border-width:2px}
+  .dist-panel .dcirc b{font-size:19px}
+  .dist-panel .dcirc span{font-size:9.5px}
+  .dist-panel .dcirc.cur::after{top:-13px}
+  .dist-panel .dclabel{margin:0 12px;padding:8px 10px;font-size:9.5px;flex-wrap:wrap;gap:6px}
+  #distBars{height:150px;gap:4px;margin:12px 12px 16px;padding:14px 8px 10px}
+  .dist-panel .dcol .pct{font-size:9px;margin-bottom:3px}
+  .dist-panel .dcol .dg{font-size:13px;margin-top:5px}
+  .dist-panel .dcol .cnt{font-size:8.5px}
+  #distBase span{display:none}
+  #card_b11.panel.botcard,#card_b10.panel.botcard{border-radius:18px}
+  #card_b11>h3{flex-wrap:wrap;gap:8px 10px;padding:12px 14px;font-size:17px}
+  #card_b11>h3::before{width:30px;height:26px;border-radius:9px}
+  #card_b11>h3 .mode-badge,html[data-theme="light"] #card_b11>h3 .mode-badge{font-size:10.5px;padding:6px 9px}
+  #card_b11>#b11_runbar{padding:8px 14px}
+  #card_b11>.botrun{gap:8px 10px;padding:12px 14px}
+  #card_b11>.botrun .sub{flex-basis:100%;font-size:12px}
+  #card_b11 #b11_pop{flex:0 0 auto;min-height:46px;padding:10px 18px;font-size:12.5px}
+  #b11_sect{margin:10px!important}
+  #b11_sect>div:first-child{padding:12px 14px!important;gap:4px 10px!important}
+  #b11_sect>div:first-child span{font-size:14px!important}
+  #b11_sect>div:first-child span+span{font-size:9px!important}
+  #card_b11 #b11_sect>.cfg{gap:12px 10px;padding:14px!important}
+  #card_b11 #b11_sect>.cfg>label{justify-content:flex-end;gap:6px;font-size:12.5px}
+  #card_b11 #b11_sect>.cfg>label:has(#b11_followvol){justify-content:flex-start;flex-wrap:wrap;font-size:13px}
+  #card_b11 #b11_sect>.cfg input,#card_b11 #b11_sect>.cfg select{min-height:44px;padding:9px 8px;font-size:16px;text-overflow:ellipsis}
+  #card_b11 #b11_wsPanel{margin:10px 10px 0!important;padding:12px!important;gap:10px}
+  #card_b11 #b11_wsPanel>label{min-width:0!important;flex:1 1 100%}
+  #card_b11 #b11_wsNote{flex-basis:100%!important;min-width:0!important;font-size:11.5px}
+  #card_b11 #b11_recPanel{margin:10px 10px 12px!important}
+  #card_b11 #b11_recPanel>div:first-child{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px 8px!important;padding:12px!important}
+  #card_b11 #b11_recPanel>div:first-child>label{font-size:12px!important}
+  #card_b11 #b11_recPanel>div:first-child>label:first-child{font-size:13px!important;flex-wrap:wrap}
+  #card_b11 #b11_recPanel input,#card_b11 #b11_recPanel select{height:44px!important;min-height:44px;font-size:16px!important}
+  #card_b11 #b11_recState{font-size:10px}
+  #card_b11 #b11_recNote{padding:12px 14px;font-size:12px}
+  #card_b11>.b11bar{padding:12px 14px;gap:8px}
+  #card_b11>.b11bar .sub{flex-basis:100%;font-size:11.5px}
+  #card_b11>.b11run{margin:10px}
+  #card_b11>.dbot{margin:0 10px 12px!important}
+  #card_b11>.dbot .drunbar{padding:10px;gap:10px}
+  #card_b11 #b11_toggle{min-height:50px;font-size:17px}
+  #card_b11>.note{margin:10px}
+  #card_b10>h3{padding:12px 14px;gap:10px;font-size:17px}
+  #card_b10>h3::before{font-size:28px}
+  .b10info{width:26px;height:26px;font-size:16px}
+  .b10hero{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);margin:10px;border-radius:14px}
+  .b10visual{min-height:190px}
+  #eoTradeBtn{left:10px;right:10px;bottom:10px;width:calc(100% - 20px);padding:10px 6px;font-size:15px;border-radius:12px}
+  .b10herocopy{padding:12px;gap:10px}
+  .b10herocopy .mode-badge{font-size:12px;padding:6px 8px}
+  #eoScanStatus{font-size:12.5px}
+  #card_b10>#eoScanwrap,#card_b10>#eoBars{margin-left:10px;margin-right:10px}
+  #card_b10>.botrun{padding:12px 14px;gap:8px}
+  #card_b10>.botrun .sub{font-size:11.5px}
+  .b10settings{margin:10px;border-radius:14px}
+  .b10settingshead{padding:12px 14px;font-size:17px}
+  .b10gear,.b10gear svg{width:24px;height:24px}
+  #card_b10 .b10settings .cfg{gap:12px 10px;padding:14px}
+  #card_b10 .b10settings .cfg label{font-size:12.5px;gap:6px;justify-content:flex-end}
+  #card_b10 .b10settings .cfg .b10check{justify-content:flex-start;flex-wrap:wrap;font-size:13.5px;gap:8px}
+  #card_b10 .b10settings .cfg input,#card_b10 .b10settings .cfg select{min-height:44px;padding:9px 8px;font-size:16px;text-overflow:ellipsis}
+  #card_b10>.runbar{padding:10px 14px}
+  #card_b10>.dbot{margin:0 10px 12px!important}
+  #card_b10>.dbot .drunbar{gap:8px;padding:10px}
+  #card_b10>.dbot .drunbar .btn{min-height:46px;padding:8px 4px;font-size:12.5px;border-radius:11px}
+  #card_b10 #b10_pop::before{display:none}
+  #card_b10>.note,#card_b10>#b10_gates{margin:10px}
+  #card_b10>.dbot .dgrid,#card_b11>.dbot .dgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #card_b10>.dbot .dgrid .stat.alt:last-child,#card_b11>.dbot .dgrid .stat.alt:last-child{grid-column:auto}
+}
 </style>
 <script>
 /* Round 82: theme bootstrap. This runs before the first paint, so a trader who chose dark mode never
@@ -10287,15 +10393,21 @@ function initB11Float(){
   };
   let saved = null;
   try { saved = JSON.parse(store.get(B11_FLOAT_KEY) || "null"); } catch (e) {}
+  const anchor = () => {
+    const a = $("#winBtns").getBoundingClientRect(), r = mini.getBoundingClientRect();
+    if ((a.width || a.height) && window.innerWidth > 560) return place(a.right + 9, a.top + (a.height - r.height) / 2);
+    if (window.innerWidth <= 560) {
+      const u = document.querySelector(".hutils").getBoundingClientRect(), hb = document.querySelector(".hbrand").getBoundingClientRect();
+      return place(hb.right - r.width, u.top + (u.height - r.height) / 2);
+    }
+    const hdr = document.querySelector("header").getBoundingClientRect();
+    const tabs = document.querySelector("nav.tabs").getBoundingClientRect();
+    return place(12, hdr.bottom + tabs.height + 8);
+  };
   if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) place(saved.left, saved.top);
   else {
-    const anchor = $("#winBtns").getBoundingClientRect(), r = mini.getBoundingClientRect();
-    if (anchor.width || anchor.height) place(anchor.right + 9, anchor.top + (anchor.height - r.height) / 2);
-    else {
-      const hdr = document.querySelector("header").getBoundingClientRect();
-      const tabs = document.querySelector("nav.tabs").getBoundingClientRect();
-      place(12, hdr.bottom + tabs.height + 8);
-    }
+    anchor();
+    new ResizeObserver(() => { if (!store.get(B11_FLOAT_KEY) && !drag) anchor(); }).observe(document.querySelector("header"));
   }
   const finish = e => {
     if (!drag || e.pointerId !== drag.id) return;
