@@ -1780,6 +1780,10 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
   header,html[data-theme="light"] header{padding:6px 6px 0}
   .wrap{padding:8px 8px 30px}
   .tabpanel{padding-top:10px}
+  nav.tabs,html[data-theme="light"] nav.tabs{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:4px;padding:8px 6px 10px;overflow:visible;-webkit-mask-image:none;mask-image:none}
+  .tabbtn,html[data-theme="light"] .tabbtn{width:100%;max-width:42px;justify-self:center;aspect-ratio:1/1;margin:2px 0;padding:0;justify-content:center;gap:0;border-radius:999px}
+  .tabbtn>span:not(.tico){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+  .tabbtn .tico,.tabbtn .tico svg{width:19px;height:19px}
   .hrow,html[data-theme="light"] .hrow{padding:8px 6px 10px;gap:8px;grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);border-radius:0}
   .hbrand{flex-wrap:wrap;gap:6px 8px}
   .logo{font-size:16px;gap:8px;flex-wrap:wrap;row-gap:2px}
