@@ -1780,7 +1780,7 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
 .dist-panel .dcirc .crown svg{width:100%;height:100%;display:block}
 .dist-panel .dcirc.most .crown,.dist-panel .dcirc.cur.rank-most .crown{display:block}
 .dist-panel .dcirc .tickcur{display:none;position:absolute;right:-10px;top:-16px;width:26px;height:26px;z-index:4;filter:drop-shadow(0 2px 3px rgba(10,20,40,.45))}
-.dist-panel .dcirc .tickcur svg{width:100%;height:100%;display:block}
+.dist-panel .dcirc .tickcur svg{width:100%;height:100%;display:block;transform:rotate(180deg)}
 .dist-panel .dcirc.cur .tickcur{display:block;animation:curhop .4s cubic-bezier(.2,1.7,.4,1)}
 @keyframes curhop{from{transform:translateY(-12px) scale(.5);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 .dclabel,.dist-panel .dclabel{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:16px 20px 0;padding:12px 16px;border:0;border-radius:16px;background:#f3f8ff;color:#41618a;font:800 10.5px var(--font);letter-spacing:.04em;box-shadow:none}
@@ -10764,7 +10764,7 @@ function closeRunPop(){
   if (RUN_POP.focus && RUN_POP.focus.isConnected) RUN_POP.focus.focus();
   RUN_POP.focus = null;
 }
-const B11_FLOAT_KEY = "dt_b11_float_v2";
+const B11_FLOAT_KEY = "dt_b11_float_v3";
 function initB11Float(){
   const mini = $("#b11_mini");
   let drag = null, suppressClickUntil = 0;
@@ -10784,17 +10784,13 @@ function initB11Float(){
   try { saved = JSON.parse(store.get(B11_FLOAT_KEY) || "null"); } catch (e) {}
   const anchor = () => {
     const r = mini.getBoundingClientRect();
-    if (window.innerWidth <= 560) {
-      const t = document.querySelector("nav.tabs").getBoundingClientRect();
-      return place(10, t.bottom + 10);
-    }
-    const ab = $("#authBtn") ? $("#authBtn").getBoundingClientRect() : null;
-    if (ab && ab.width > 0) return place(ab.left - r.width - 10, ab.top + (ab.height - r.height) / 2);
-    const a = $("#winBtns").getBoundingClientRect();
-    if (a.width > 240 && window.innerWidth > 560) return place(a.right + 9, a.top + (a.height - r.height) / 2);
-    const hdr = document.querySelector("header").getBoundingClientRect();
     const tabs = document.querySelector("nav.tabs").getBoundingClientRect();
-    return place(12, hdr.bottom + tabs.height + 8);
+    if (window.innerWidth <= 560) return place(10, tabs.bottom + 10);
+    /* Round 127 (your rule of 26 Nov: "run button of bot 11 isn't floating like before"): the bubble
+       floats over the CONTENT again — under the header and the tab pills at the right edge — instead of
+       wedging itself into the header button cluster the old authBtn/winBtns anchors allowed. */
+    const hdr = document.querySelector("header").getBoundingClientRect();
+    return place(Math.max(hdr.right, tabs.right) - r.width - 12, tabs.bottom + 10);
   };
   if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) place(saved.left, saved.top);
   else {
