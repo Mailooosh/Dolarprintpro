@@ -5495,11 +5495,22 @@ function contractLive(rec){ return !!(rec && rec.entry && rec.entry.result === "
 function paintBotSafe(b){ if (!b) return; try { renderBot(b); } catch(e){} }
 async function closeContract(rec){
   if (!contractLive(rec) || rec.closing) return false;
-  rec.closing = true;
   const bot = rec.bot;
+  /* Round 128 (your rule of 26 Nov: "please fix this issue and found the bag thats causing this"):
+     DIGIT contracts are NOT sellable on Deriv at all — an early-close request is refused by the
+     exchange itself — so don't spend the request or log a refusal. It settles at expiry and the
+     stray watch books the real outcome. */
+  if (String((rec.entry && rec.entry.type) || "").indexOf("DIGIT") === 0){
+    if (bot) bot.sys("Contract " + rec.id + " is a digit trade — Deriv settles it at expiry, no early close");
+    return false;
+  }
+  rec.closing = true;
   if (bot){ bot.closing = (bot.closing || 0) + 1; paintBotSafe(bot); }
   try {
-    await api.send({ sell: rec.id, price: 0 }, undefined, { hot: true });
+    /* THE BAG: rec.id is a String for the Map key, but Deriv validates sell/contract_id as INTEGER
+       fields and refused the string outright ("Input validation failed: sell"). The running bots'
+       own settlement watch always passed the raw number — that is why only STOP-close broke. */
+    await api.send({ sell: num(rec.id), price: 0 }, undefined, { hot: true });
     if (bot) bot.sys("STOP — Deriv accepted the early close of " + rec.id + "; the real exit posts when it settles");
     return true;
   } catch(e){
@@ -5529,8 +5540,10 @@ function closeOpenFor(bot){
 /* Round 121 (your rule of 22 Nov: "my custom bot stop and it gives that info … it still stop and never
    resumes back even STOP button didn't work at that time"):
    A contract that is still on the market when its run is stopped had nobody left to read its settlement.
-   STOP asks Deriv to close it early, and a DIGIT contract is refused — "Input validation failed: sell",
-   early close is not offered on digit trades — so it settles at expiry on its own. Either way the stop
+   STOP asks Deriv to close it early, and a digit contract is not sellable so it settles at expiry
+   on its own (the refusal that used to appear here was NOT that — see the Round 128 note in
+   closeContract: the sell carried the id as a string and Deriv rejected the type outright). Either
+   way the stop
    also cancels the settlement watch, which used to be the ONLY reader of that contract, so the Activity
    Log row stayed OPEN for ever. The trade monitor counts OPEN rows as a live run: its button stayed red
    STOP, every press only re-stopped an already-stopped bot, Reset was disabled, and the footer sat on
@@ -5553,7 +5566,8 @@ function strayAsk(rec){
   if (Date.now() > rec.deadline || rec.tries > STRAY_ASK_MAX){ giveUpStray(rec, null); return; }
   if (!api.connected){ strayRetry(rec, 2000); return; }
   rec.tries++;
-  api.subscribe({ proposal_open_contract: 1, contract_id: rec.id, subscribe: 1 }, msg => {
+  /* Round 128: same bag as the sell — contract_id must be the NUMBER, not the Map-key string. */
+  api.subscribe({ proposal_open_contract: 1, contract_id: num(rec.id), subscribe: 1 }, msg => {
     const c = msg && msg.proposal_open_contract;
     if (!c || rec.done) return;
     const e = rec.entry;
