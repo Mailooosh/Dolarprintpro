@@ -2142,25 +2142,6 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
       <label>Stop loss<input type="number" id="b11_sl" value="10" min="0" step="0.5" title="Stop the bot once run P/L falls to −this (0 = off)"></label>
       <label>Move with the volatility I pick<input type="checkbox" id="b11_followvol" checked style="accent-color:var(--green);width:15px;height:15px;cursor:pointer" title="Round 104 (your rule of 6 Nov): everything you change on THIS card — contract type, stake, martingale, recovery, window, duration, TP, SL, the AI floor — is applied to the run by itself, and so is the market in the header: while Bot 11 is trading, switching volatility moves the same run onto the new market and it carries on, holding until that market has enough ticks to name the contract. Untick it to go back to the old rule, where changing the volatility stops Bot 11 and waits for you to press RUN again. Nothing else changes either way"></label>
     </div>
-    <!-- Round 117 (your rule of 14 Nov): Bot 11's OWN wins-in-a-row stop, right on its card. Unticked it
-         follows the desk WINS-IN-A-ROW STOP above; ticked it banks the run on this card's number instead.
-         A threshold like TP/SL, so b11Apply pushes it into a live run without resetting the ladder. -->
-    <div id="b11_wsPanel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;padding:12px 14px;background:transparent;border:1px solid var(--line2);border-left:3px solid var(--green);border-radius:10px">
-      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;min-width:206px;margin:0">
-        <input type="checkbox" id="b11_wsOn" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;flex:none" title="Give Bot 11 its own wins-in-a-row stop instead of following the desk setting above. Untick to follow the desk.">
-        <span>
-          <span style="display:block;font-size:12.5px;font-weight:800;letter-spacing:.05em">WINS-IN-A-ROW · BOT 11</span>
-          <span style="display:block;color:var(--dim);font-size:10.5px;margin-top:2px;letter-spacing:.04em">THIS BOT'S OWN TARGET</span>
-        </span>
-      </label>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="btn btn-ghost" id="b11_wsMinus" type="button" style="width:32px;height:34px;padding:0;font-size:16px;font-weight:800" title="One win fewer" disabled>−</button>
-        <input type="number" id="b11_ws" value="3" min="0" max="20" step="1" style="width:64px;height:34px;text-align:center;font-size:17px;font-weight:800" title="Bot 11's own consecutive-wins stop (0 = off). Used only when the box is ticked." disabled>
-        <button class="btn btn-ghost" id="b11_wsPlus" type="button" style="width:32px;height:34px;padding:0;font-size:16px;font-weight:800" title="One win more" disabled>+</button>
-        <span id="b11_wsState" style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;white-space:nowrap">DESK · 3</span>
-      </div>
-      <div id="b11_wsNote" style="flex:1;min-width:220px;color:var(--muted);font-size:11.5px;line-height:1.5">Following the desk WINS-IN-A-ROW stop above. Tick the box to give Bot 11 its own number — it banks the run and stops after that many wins in a row, but only while the run is in profit.</div>
-    </div>
     <!-- Round 124 (your rule of 24 Nov: "create a RECOVERY TYPE inside custom bot 11 where i can choose recovery
          type EVEN ODD, OVER UNDER and RISE AND FALL then if its over under type, i choose which digit prediction
          i recover with"). The settings row above still decides the TRADE. This section decides the RECOVERY TYPE
@@ -2190,6 +2171,26 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
         <span id="b11_recState" style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;white-space:nowrap">RECOVERY ON</span>
       </div>
       <div id="b11_recNote" style="margin-top:10px;color:var(--muted);font-size:11.5px;line-height:1.55"></div>
+    </div>
+    <!-- Round 117 (your rule of 14 Nov): Bot 11's OWN wins-in-a-row stop, right on its card. Unticked it
+         follows the desk WINS-IN-A-ROW STOP above; ticked it banks the run on this card's number instead.
+         A threshold like TP/SL, so b11Apply pushes it into a live run without resetting the ladder.
+         This round ("WIN IN A ROW BE UNDER THE RECOVERY SECTION"): moved BELOW the recovery panel. -->
+    <div id="b11_wsPanel" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0;padding:12px 14px;background:transparent;border:1px solid var(--line2);border-left:3px solid var(--green);border-radius:10px">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;min-width:206px;margin:0">
+        <input type="checkbox" id="b11_wsOn" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;flex:none" title="Give Bot 11 its own wins-in-a-row stop instead of following the desk setting above. Untick to follow the desk.">
+        <span>
+          <span style="display:block;font-size:12.5px;font-weight:800;letter-spacing:.05em">WINS-IN-A-ROW · BOT 11</span>
+          <span style="display:block;color:var(--dim);font-size:10.5px;margin-top:2px;letter-spacing:.04em">THIS BOT'S OWN TARGET</span>
+        </span>
+      </label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-ghost" id="b11_wsMinus" type="button" style="width:32px;height:34px;padding:0;font-size:16px;font-weight:800" title="One win fewer" disabled>−</button>
+        <input type="number" id="b11_ws" value="3" min="0" max="20" step="1" style="width:64px;height:34px;text-align:center;font-size:17px;font-weight:800" title="Bot 11's own consecutive-wins stop (0 = off). Used only when the box is ticked." disabled>
+        <button class="btn btn-ghost" id="b11_wsPlus" type="button" style="width:32px;height:34px;padding:0;font-size:16px;font-weight:800" title="One win more" disabled>+</button>
+        <span id="b11_wsState" style="font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);border-radius:20px;padding:4px 10px;white-space:nowrap">DESK · 3</span>
+      </div>
+      <div id="b11_wsNote" style="flex:1;min-width:220px;color:var(--muted);font-size:11.5px;line-height:1.5">Following the desk WINS-IN-A-ROW stop above. Tick the box to give Bot 11 its own number — it banks the run and stops after that many wins in a row, but only while the run is in profit.</div>
     </div>
     </div>
     <div class="b11bar">
@@ -7358,13 +7359,13 @@ const BOT_STEP_MS = 500;
    Deriv Bot's normal one-contract-per-second pace instead of the old Round 87 zero gap. A contract that
    takes longer than a second to settle still waits for its own settlement first: this is a floor, never a
    licence to overlap runs. STOP cuts the wait short (see BaseBot.runGap). */
-const BOT_RUN_GAP_MS = 1000;
+const BOT_RUN_GAP_MS = 500;  /* this round ("INCREASE THE SPEED OF THE BOT"): floor halved, 1 s → 0.5 s. */
 /* Round 119 (your rule: "wait for 1.5 sec after the last run in custom bot 11 hence its holding the
    contracts"): Bot 11 alone breathes 1.5 s AFTER its contract has settled, not 1 s after the buy. The old
    floor was measured from the buy, and since settlement itself takes longer than a second that gap was
    already spent — the next contract left the instant the previous one closed, which is what piled the
    open contracts up. Every other bot keeps BOT_RUN_GAP_MS from the buy (see BaseBot.runGapFrom). */
-const B11_RUN_GAP_MS = 1500;
+const B11_RUN_GAP_MS = 500;  /* this round ("INCREASE THE SPEED OF THE BOT"): post-settlement wait cut 1.5 s → 0.5 s. */
 /* Round 92: BOT_STEP_MS is the pace of a bot that has NOTHING to wait for — an order has just settled and
    the next one goes out immediately, so this only bites on the HOLD path, where the bot is sitting on an
    unmet entry condition (Bot 11's AI-confidence floor is the one the user feels). The hold is re-read every
