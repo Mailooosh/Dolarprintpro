@@ -1801,7 +1801,9 @@ nav.tabs,html[data-theme="light"] nav.tabs{background:#fff;border:0;box-shadow:n
 .dist-panel .dcol .cnt{color:#8aa2bd;font:700 9.5px var(--font)}
 /* Phone widths: the desktop arrangement at true screen size — same two-column grids, short inputs. */
 @media (max-width:560px){
-  #b11_mini{left:auto!important;right:10px;top:auto!important;bottom:14px}
+  /* Round 127 (your rule of 26 Nov: the RUN button "isn't floating" on the phone): the old
+     left:auto!important/right:10px/bottom:14px pin overrode every drag the JS made, so the bubble
+     snapped back to the corner. The phone now uses the same JS anchor + drag as the desktop. */
   header,html[data-theme="light"] header{padding:6px 6px 0}
   .wrap{padding:8px 8px 30px}
   .tabpanel{padding-top:10px}
@@ -10785,7 +10787,7 @@ function initB11Float(){
   const anchor = () => {
     const r = mini.getBoundingClientRect();
     const tabs = document.querySelector("nav.tabs").getBoundingClientRect();
-    if (window.innerWidth <= 560) return place(10, tabs.bottom + 10);
+    if (window.innerWidth <= 560) return place(window.innerWidth - r.width - 10, window.innerHeight - r.height - 14);
     /* Round 127 (your rule of 26 Nov: "run button of bot 11 isn't floating like before"): the bubble
        floats over the CONTENT again — under the header and the tab pills at the right edge — instead of
        wedging itself into the header button cluster the old authBtn/winBtns anchors allowed. */
