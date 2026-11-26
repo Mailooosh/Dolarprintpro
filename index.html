@@ -2962,13 +2962,13 @@ IF streak &lt;= -3 THEN DIGIT OVER 5</textarea>
   </div>
 
   <div class="panel" style="margin-top:14px">
-    <h3>Every volatility index · digit heat (last 100 ticks)</h3>
+    <h3>Every volatility index · digit heat (1000/500/250/100/50 tick windows)</h3>
     <div class="scrollx"><table class="tbl"><thead><tr><th>Market</th><th>3 highest digits</th><th>Red bars</th><th>Qualifying setup</th><th>Confidence</th></tr></thead><tbody id="sigScanBody"></tbody></table></div>
   </div>
 
   <div class="sigcard" id="signalCard">
     <div class="dir" id="sigcDir">—</div>
-    <div class="meta" id="sigcMeta">Monitoring the live tick stream… a signal appears when the 3 highest red digits over the last 100 ticks all sit in one group.</div>
+    <div class="meta" id="sigcMeta">Monitoring the live tick stream… a signal appears when the 3 highest red digits across the last 1000/500/250/100/50 tick windows all sit in one group.</div>
     <div class="sigactions">
       <button class="btn btn-blue btn-big" id="sigConfirm" disabled>RUN BOT</button>
       <button class="btn btn-ghost" id="sigSkip" disabled>SKIP</button>
@@ -4436,13 +4436,61 @@ function digitHeatOf(src, win, topN){
   };
 }
 function digitHeat(win){ return digitHeatOf(state.digits, win); }
+/* ---- Round 126 (your rule of 26 Nov: "let all the AIs use a strategy in the last 1000, 500, 250, 100
+   and 50 ticks so green bar and blue bar to be on the winning side of the market am trading with even odd
+   and over under"): every EVEN/ODD and OVER/UNDER digit decision — the Signal Center, the sync desk,
+   Bot 9, ALL IN ONE, Bot 10's own read, the scanner and Bot 11's AUTO sides — now reads this CONSENSUS
+   snapshot instead of one window. It returns the same shape digitHeatOf() does, so every consumer works
+   unchanged:
+     pcts     = the mean share of each digit across every window that has 30+ ticks;
+     hot      = a digit is consensus-RED only when its bar was at least DIGIT_HOT_PCT in at least HALF of
+                those windows — a spike that only lives in the last 50 ticks cannot name the side alone;
+     rank/top = ordered by the mean share, so the leaders (the dashboard's GREEN then BLUE digit) are the
+                digits that stay hot across the long AND the short stretch — the winning side of the market.
+   While the history is short (right after a symbol switch) several windows return the same slice; counting
+   the same slice five times would fake a majority, so each distinct length is only counted once. ---- */
+const AI_STRATEGY_WINDOWS = [1000, 500, 250, 100, 50];
+function digitHeatConsensus(src, topN){
+  topN = topN || SIG_TOP_N;
+  const hs = [], seen = {};
+  for (const w of AI_STRATEGY_WINDOWS){
+    const h = digitHeatOf(src, w, topN);
+    if (h && !seen[h.n]){ seen[h.n] = 1; hs.push(h); }
+  }
+  if (!hs.length) return null;
+  if (hs.length === 1) return hs[0];
+  const need = Math.ceil(hs.length / 2);
+  const psum = [0,0,0,0,0,0,0,0,0,0], votes = [0,0,0,0,0,0,0,0,0,0];
+  let nMax = 0;
+  for (const h of hs){
+    if (h.n > nMax) nMax = h.n;
+    for (let d = 0; d < 10; d++){
+      psum[d] += h.pcts[d];
+      if (h.pcts[d] >= DIGIT_HOT_PCT) votes[d]++;
+    }
+  }
+  const pcts = psum.map(p => p / hs.length);
+  const hot = [];
+  for (let d = 0; d < 10; d++) if (votes[d] >= need) hot.push(d);
+  const rank = pcts.map((p, d) => ({ d, p })).sort((a, b) => b.p - a.p);
+  const top = rank.slice(0, topN);
+  const topDigits = top.map(t => t.d);
+  const holds = f => topDigits.filter(f).length;
+  const inGroup = f => hot.filter(f);
+  return {
+    n: nMax, nWindows: hs.length, wins: hs.map(h => h.n), topN, pcts, hot, rank, top, topDigits,
+    topRed: top.every(t => votes[t.d] >= need),
+    topIn: { even: holds(d => d % 2 === 0), odd: holds(d => d % 2 === 1), low: holds(d => d <= 5), high: holds(d => d >= 4) },
+    groups: { even: inGroup(d => d % 2 === 0), odd: inGroup(d => d % 2 === 1), low: inGroup(d => d <= 5), high: inGroup(d => d >= 4) }
+  };
+}
 /* Round 78: the AI Signal Center's candidate table, exposed in full so Bot 10 can trade IT.
    digitSignalPlanFor() still returns the FIRST candidate exactly as before — an EVEN/ODD claim still
    shadows OVER/UNDER on the Signal card — but the table is now built once and every qualifying side
    keeps its own label, group, confidence and reason. Nothing about the Signal Center's own behaviour
    changed: it is the same filter, the same 100-tick window and the same 3 RED leaders. */
 function signalPlansFor(digs){
-  const h = digitHeatOf(digs);
+  const h = digitHeatConsensus(digs);
   const out = { h, plans: [] };
   if (!h || h.top.length < SIG_TOP_N || !h.topRed) return out;
   const digits = h.topDigits;
@@ -4457,7 +4505,7 @@ function signalPlansFor(digs){
   out.plans = cands.map(b => ({
     type: b.type, barrier: b.barrier, label: b.label, g: b.g, conf,
     hot: digits.slice(), n: h.n,
-    reason: "the " + SIG_TOP_N + " highest RED digits over the last " + h.n + " ticks [" +
+    reason: "the " + SIG_TOP_N + " highest RED digits across the " + AI_STRATEGY_WINDOWS.join("/") + "-tick windows [" +
             digits.map(d => d + " " + fmt(h.pcts[d], 1) + "%").join(", ") +
             "] all sit in the " + b.g + " group"
   }));
@@ -4492,8 +4540,8 @@ function signalReadFor10(digs, sym){
     return { ou: null, fam: null, plans: r.plans, n: r.h ? r.h.n : 0, sym: s,
       why: r.plans.length
         ? "the AI Signal Center reads " + r.plans.map(p => p.label).join(" / ") + " on these digits — that is a parity signal, not an OVER or UNDER one, so Bot 10 holds"
-        : "no AI Signal Center signal on " + s + ": its " + SIG_TOP_N + " highest of the last " + (r.h ? r.h.n : 0) +
-          " ticks" + (r.h && !r.h.topRed ? " are not all RED" : r.h && r.h.top.length < SIG_TOP_N ? " are not counted yet" : " do not all sit on one OVER/UNDER side") };
+        : "no AI Signal Center signal on " + s + ": its " + SIG_TOP_N + " highest across the " + AI_STRATEGY_WINDOWS.join("/") +
+          "-tick windows" + (r.h && !r.h.topRed ? " are not all RED" : r.h && r.h.top.length < SIG_TOP_N ? " are not counted yet" : " do not all sit on one OVER/UNDER side") };
   }
   return { ou, fam: ou.type === "DIGITOVER" ? "OVER" : "UNDER", plans: r.plans, n: ou.n, sym: s,
     why: (ou.live ? "ACTIVE SIGNAL " + (ou.id || "") + " (" + ou.left + "s left) — the AI Signal Center says"
@@ -4681,19 +4729,19 @@ async function runSignalBot(s){
    shared sweep feed pool the Synchronization desk scans, and ranks the setups by confidence. */
 const sigScan = { on: false, rows: [], timer: null, stepMs: 1800, at: 0, read: 0, seen: "" };
 function sigDigitsFor(sym){
-  if (sym === state.symbol) return state.digits.slice(-SIG_DIGIT_WIN);
+  if (sym === state.symbol) return state.digits.slice(-AI_STRATEGY_WINDOWS[0]);
   const prices = feedPrices(sym);
   if (!prices || !prices.length) return null;
   const pip = feedPip(sym);
   if (!pip) return null;                       // no pip size yet — the last digit would be a guess
-  return prices.slice(-SIG_DIGIT_WIN).map(q => digitOfQ(q, pip));
+  return prices.slice(-AI_STRATEGY_WINDOWS[0]).map(q => digitOfQ(q, pip));
 }
 function sigScanSurvey(){
   const rows = [];
   for (const sym of scanSymbols()){
     const digs = sigDigitsFor(sym);
     if (!digs || digs.length < 30) continue;
-    const h = digitHeatOf(digs);
+    const h = digitHeatConsensus(digs);
     if (!h) continue;
     const plan = digitSignalPlanFor(digs);
     rows.push({ sym, n: h.n, heat: h, plan, conf: plan ? plan.conf : 0, current: sym === state.symbol });
@@ -4847,7 +4895,7 @@ function renderSignalCard(){
         " · holds E" + h.topIn.even + "/O" + h.topIn.odd +
         "/U" + h.topIn.low + "/V" + h.topIn.high + " of " + SIG_TOP_N
       : "";
-    $("#sigcMeta").textContent = "Watching every volatility index for the " + SIG_TOP_N + " highest red digits over the last " + SIG_DIGIT_WIN + " ticks all sitting in one group — on this market it updates tick by tick, and with the all-market scan on, a setup anywhere lands here." + heatTxt;
+    $("#sigcMeta").textContent = "Watching every volatility index for the " + SIG_TOP_N + " highest red digits across the " + AI_STRATEGY_WINDOWS.join("/") + "-tick windows all sitting in one group — on this market it updates tick by tick, and with the all-market scan on, a setup anywhere lands here." + heatTxt;
     $("#sigConfirm").disabled = true; $("#sigSkip").disabled = true;
     $("#sigConfirm").textContent = "RUN BOT";
     card.style.borderColor = "";
@@ -4971,12 +5019,18 @@ function scoreMarket(sym){
     prices = f.prices; pip = f.pip; last = f.last;
   }
   const digits = prices.slice(-100).map(q => digitOfQ(q, pip));
+  const wide = prices.slice(-AI_STRATEGY_WINDOWS[0]).map(q => digitOfQ(q, pip));
+  const hc = digitHeatConsensus(wide);
   const row = { sym, last, pip, n: digits.length, eo: null, ou: null, rf: null,
                 bestType: null, bestSide: null, bestEdge: 0, strength: -1, current: sym === state.symbol };
   if (digits.length >= 30){
-    const ev = digits.filter(d => d % 2 === 0).length / digits.length * 100;
-    const o3 = digits.filter(d => d > 3).length / digits.length * 100;
-    const u6 = digits.filter(d => d < 6).length / digits.length * 100;
+    /* Round 126: the scanner's EVEN/ODD and OVER/UNDER reads now use the same 1000/500/250/100/50-tick
+       consensus as the Signal Center; it falls back to the last 100 when history is shorter. */
+    const share = f => hc ? [0,1,2,3,4,5,6,7,8,9].filter(f).reduce((a, d) => a + hc.pcts[d], 0)
+                          : digits.filter(f).length / digits.length * 100;
+    const ev = share(d => d % 2 === 0);
+    const o3 = share(d => d > 3);
+    const u6 = share(d => d < 6);
     row.eo = { side: ev >= 50 ? "EVEN" : "ODD", pct: ev >= 50 ? ev : 100 - ev, edge: ev - 50 };
     const over = o3 - 60, under = u6 - 60;
     row.ou = over >= under
@@ -8551,7 +8605,7 @@ function syncAnalyze(sym, win, topN, sig){
   if (n < 20) return null;
   const even = digits.filter(x => x % 2 === 0).length;
   const payout = synPayOf(sym);
-  const h = digitHeatOf(digits, w, t);
+  const h = digitHeatConsensus(prices.slice(-AI_STRATEGY_WINDOWS[0]).map(q => digitOfQ(q, pip)), t);
   const side = (type, label, key, rival, hits) => {
     const p = n ? hits / n * 100 : 0;
     const be = 100 / payout;
@@ -8721,7 +8775,7 @@ function syn9Analyze(sym, win, topN){
   const n = digits.length;
   if (n < 20) return null;
   const payout = syn9PayOf(sym), be = 100 / payout, sd = Math.sqrt(60 * 40 / n);
-  const h = digitHeatOf(digits, w, t);
+  const h = digitHeatConsensus(prices.slice(-AI_STRATEGY_WINDOWS[0]).map(q => digitOfQ(q, pip)), t);
   const mk = (key, type, barrier, label, gk, rk, hits) => {
     const p = hits / n * 100;
     return { key, type, barrier, label, n, payout, heat: heatSetup(h, gk, rk),
@@ -9446,7 +9500,7 @@ function aioDigits(sym, win, topN){
   const digits = prices.slice(-w).map(q => digitOfQ(q, pip));
   const n = digits.length;
   if (n < 20) return null;
-  const h = digitHeatOf(digits, w, t);
+  const h = digitHeatConsensus(prices.slice(-AI_STRATEGY_WINDOWS[0]).map(q => digitOfQ(q, pip)), t);
   const mk = (key, gk, rk, type, barrier, label, pay, base, test) => {
     const p = n ? digits.filter(test).length / n * 100 : 0;
     const be = 100 / pay, sd = Math.sqrt(base * (100 - base) / n) || 1;
@@ -9735,7 +9789,7 @@ function ouCampaign(h, c, sym, fam){
 }
 function ouRead(digs, c, sym, lockFam){
   const src = digs && digs.length ? digs : state.digits;
-  const h = digitHeatOf(src, c.win, c.top);
+  const h = digitHeatConsensus(src, c.top);
   if (!h) return null;
   const s = sym || state.symbol;
   const cands = [ouCampaign(h, c, s, "OVER"), ouCampaign(h, c, s, "UNDER")];
@@ -9837,7 +9891,7 @@ class OverUnderStratBot extends BaseBot {
     const c = cfg10();
     this.sys("Entry source: " + (c.src === "own"
       ? "this card's own RED-digit competition over the last " + c.win + " ticks (" + c.top + " leaders)"
-      : "the AI Signal Center's own signal — " + SIG_TOP_N + " highest RED digits over its last " + SIG_DIGIT_WIN +
+      : "the AI Signal Center's own signal — " + SIG_TOP_N + " highest RED digits over its last " + AI_STRATEGY_WINDOWS.join("/") +
         " ticks; an EVEN/ODD or empty center call means HOLD"));
     /* payouts differ per market, so the four barriers are quoted for real (read-only proposals).
        Throttled: the loop may restart the bot often, and a stale cache is only a fallback number. */
@@ -9969,7 +10023,7 @@ class OverUnderStratBot extends BaseBot {
       "<b>SIGNAL SOURCE (" + (sigMode ? "AI SIGNAL CENTER — your rule of 27 Oct" : "this card's own read") + "):</b> " +
       (sigMode
         ? ("this bot does NOT run its own opinion to decide when to buy — it buys what the <b>AI Signal Center</b> signals. Once a second it reads the center's own table (" +
-           SIG_TOP_N + " highest digits, all RED bars over its " + SIG_DIGIT_WIN + "-tick window) for " + state.symbol +
+           SIG_TOP_N + " highest digits, all RED bars over its " + AI_STRATEGY_WINDOWS.join("/") + "-tick window) for " + state.symbol +
            " and takes the <b>OVER / UNDER</b> row of it — the exact signal the Signal card pops, including a signal that is <b>already active on the card</b>. " +
            "Right now it reads: " + (a && a.sig ? a.sig.why : "waiting for ticks…") + "<br>" +
            "<b>What that means for the barriers:</b> the center's UNDER signal is measured at <b>UNDER 6</b> (digits 0–5) while your UNDER campaign on this card is <b>UNDER " + c.unMain +
@@ -10123,14 +10177,19 @@ function b11Read(c){
     return o;
   }
   const digs = state.digits.slice(-c.win);
+  /* Round 126 (your rule of 26 Nov): the AUTO sides now come from the 1000/500/250/100/50-tick consensus
+     heat — the side the dashboard's GREEN and BLUE leader digits sit on. The card's own window still
+     supplies the raw counts the card displays. */
+  const hc = digitHeatConsensus(state.digits);
   o.n = digs.length;
   if (o.n < 20){ o.why = "waiting for " + Math.min(20, c.win) + " ticks on " + sym + " (has " + o.n + ")"; return o; }
   if (c.trade === "eo"){
     const even = b11Count(digs, d => d % 2 === 0), odd = o.n - even;
     let side = c.kind;
     if (c.kind === "AUTO"){
-      if (even === odd){ o.why = "the last " + o.n + " ticks split exactly 50/50 — pick EVEN or ODD yourself"; return o; }
-      side = even > odd ? "EVEN" : "ODD";
+      const evS = hc ? hc.pcts[0] + hc.pcts[2] + hc.pcts[4] + hc.pcts[6] + hc.pcts[8] : even / o.n * 100;
+      if (Math.abs(evS - 50) < 0.05){ o.why = "the last " + o.n + " ticks split exactly 50/50 — pick EVEN or ODD yourself"; return o; }
+      side = evS > 50 ? "EVEN" : "ODD";
     }
     o.type = side === "EVEN" ? "DIGITEVEN" : "DIGITODD"; o.key = o.lab = side;
     o.p = (side === "EVEN" ? even : odd) / o.n * 100;
@@ -10146,8 +10205,15 @@ function b11Read(c){
     let side = c.kind;
     if (c.kind === "AUTO"){
       if (over === 0 && under === 0){ o.why = "every one of the last " + o.n + " ticks landed exactly on " + b; return o; }
-      side = evO === evU ? "" : (evO > evU ? "OVER" : "UNDER");
-      if (!side){ o.why = "OVER " + b + " and UNDER " + b + " price out identical on this window — pick a side"; return o; }
+      if (hc){
+        let sO = 0, sU = 0;
+        for (let d = 0; d <= 9; d++){ if (d > b) sO += hc.pcts[d]; else if (d < b) sU += hc.pcts[d]; }
+        const eO = payO * sO / 100 - 1, eU = payU * sU / 100 - 1;
+        side = eO === eU ? "" : (eO > eU ? "OVER" : "UNDER");
+      } else {
+        side = evO === evU ? "" : (evO > evU ? "OVER" : "UNDER");
+      }
+      if (!side){ o.why = "OVER " + b + " and UNDER " + b + " price out identical across the tick windows — pick a side"; return o; }
     }
     const cnt = side === "OVER" ? over : under;
     if (cnt === 0){ o.why = side + " " + b + " has not won a single one of the last " + o.n + " ticks"; return o; }
@@ -10160,7 +10226,7 @@ function b11Read(c){
   }
   let digit = c.barrier;
   if (c.kind === "AUTO"){
-    const h = digitHeatOf(state.digits, c.win, 1);
+    const h = digitHeatConsensus(state.digits, 1);
     if (!h){ o.why = "the digit window needs 30+ ticks on " + sym + " (has " + o.n + ")"; return o; }
     digit = h.rank[0].d;
   }
@@ -12041,7 +12107,7 @@ async function runEoTradeAI(){
     speak("Analysing every volatility market for the Over Under Strategy.", { force: true, interrupt: true, now: true });
     bot10.sys("AI scan started — " + syms.length + " markets, " + (c.src === "own"
       ? "this card's own RED-digit competition for OVER " + c.ovMain + " and UNDER " + c.unMain + " over the last " + win + " ticks"
-      : "the AI SIGNAL CENTER's OVER/UNDER signal (its " + SIG_TOP_N + " highest RED digits over " + SIG_DIGIT_WIN + " ticks) for OVER " + c.ovMain + " and UNDER " + c.unMain));
+      : "the AI SIGNAL CENTER's OVER/UNDER signal (its " + SIG_TOP_N + " highest RED digits across " + AI_STRATEGY_WINDOWS.join("/") + "-tick windows) for OVER " + c.ovMain + " and UNDER " + c.unMain));
     sweepSync();
     const t0 = Date.now();
     let rows = [];
@@ -12073,7 +12139,7 @@ async function runEoTradeAI(){
     cleared.forEach(r => { famCount[r.fam] = (famCount[r.fam] || 0) + 1; });
     const sigSrc = c.src !== "own";
     const head1 = "<b>" + plural(rows.length, "market") + " " + (sigSrc
-        ? "asked for the AI Signal Center's signal (its own read: the " + SIG_TOP_N + " highest digits of its last " + SIG_DIGIT_WIN + " ticks)"
+        ? "asked for the AI Signal Center's signal (its own read: the " + SIG_TOP_N + " highest digits across its last " + AI_STRATEGY_WINDOWS.join("/") + "-tick windows)"
         : "read over the last " + win + " ticks") + ".</b> " +
       "<b>" + cleared.length + " of " + plural(rows.length, "market") + (sigSrc ? " had an OVER/UNDER signal from the center"
         : " had a campaign the RED leaders all win") + "</b>" +
